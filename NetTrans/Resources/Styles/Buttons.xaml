@@ -2,7 +2,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- .primary-btn.primary-btn--accent -->
+    <!-- .primary-btn (accent variant) -->
     <Style x:Key="PrimaryAccentButtonStyle" TargetType="Button">
         <Setter Property="Background" Value="{ThemeResource AccentBrush}"/>
         <Setter Property="Foreground" Value="{ThemeResource AccentForegroundBrush}"/>
@@ -55,7 +55,7 @@
         </Setter>
     </Style>
 
-    <!-- .primary-btn--sm -->
+    <!-- .primary-btn (small variant) -->
     <Style x:Key="PrimaryAccentSmallButtonStyle" TargetType="Button" BasedOn="{StaticResource PrimaryAccentButtonStyle}">
         <Setter Property="Height" Value="30"/>
         <Setter Property="Padding" Value="12,0"/>
@@ -113,7 +113,7 @@
         </Setter>
     </Style>
 
-    <!-- .ghost-btn.ghost-btn--icon / .ghost-btn.ghost-btn--active toggled via IsChecked on a ToggleButton elsewhere -->
+    <!-- .ghost-btn (icon variant) / .ghost-btn (active state) toggled via IsChecked on a ToggleButton elsewhere -->
     <Style x:Key="GhostIconButtonStyle" TargetType="Button" BasedOn="{StaticResource GhostButtonStyle}">
         <Setter Property="Padding" Value="0"/>
         <Setter Property="Width" Value="32"/>
@@ -221,7 +221,7 @@
         </Setter>
     </Style>
 
-    <!-- .cmdbtn.cmdbtn--primary -->
+    <!-- .cmdbtn (primary variant) -->
     <Style x:Key="CommandBarPrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource PrimaryAccentButtonStyle}">
         <Setter Property="Height" Value="30"/>
         <Setter Property="Padding" Value="14,0"/>

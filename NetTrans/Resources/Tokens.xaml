@@ -7,7 +7,7 @@
         Color/opacity/theme-dependent tokens live in ThemeDictionaries so they
         swap automatically with ActualTheme. AccentBrush lives outside the theme
         dictionaries because it is a single user-chosen value shared by both
-        themes (same as --accent being set inline on .app in the web prototype).
+        themes (same as the `accent` CSS variable being set inline on .app in the web prototype).
     -->
 
     <ResourceDictionary.ThemeDictionaries>

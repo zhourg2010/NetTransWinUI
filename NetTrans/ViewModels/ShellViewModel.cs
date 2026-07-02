@@ -207,7 +207,13 @@ public sealed partial class ShellViewModel : ObservableObject
                 PropertyChangedEventHandler handler = (_, e) =>
                 {
                     if (e.PropertyName == nameof(DownloadItemViewModel.IsChecked)) RecomputePickedCount();
-                    if (e.PropertyName == nameof(DownloadItemViewModel.Status)) OnPropertyChanged(nameof(PageSubtitle));
+                    if (e.PropertyName == nameof(DownloadItemViewModel.Status))
+                    {
+                        OnPropertyChanged(nameof(PageSubtitle));
+                        // Re-bucket into the active status filter (e.g. a Downloading item that
+                        // was just Paused shouldn't linger in a "Downloading" filtered view).
+                        if (StatusFilter != "all") RefreshFilteredLists();
+                    }
                 };
                 vm.PropertyChanged += handler;
                 _wired[vm] = handler;

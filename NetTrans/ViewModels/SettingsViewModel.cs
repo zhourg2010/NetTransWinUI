@@ -10,31 +10,31 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly AppSettings _settings;
 
     [ObservableProperty]
-    public partial string CurrentPage { get; set; } = "general";
+    private string _currentPage = "general";
 
     [ObservableProperty]
-    public partial string DefaultSavePath { get; set; }
+    private string _defaultSavePath;
 
     [ObservableProperty]
-    public partial int MaxSimultaneousDownloads { get; set; }
+    private int _maxSimultaneousDownloads;
 
     [ObservableProperty]
-    public partial int SegmentsPerFile { get; set; }
+    private int _segmentsPerFile;
 
     [ObservableProperty]
-    public partial bool VerifyChecksums { get; set; }
+    private bool _verifyChecksums;
 
     [ObservableProperty]
-    public partial bool AutoExtractArchives { get; set; }
+    private bool _autoExtractArchives;
 
     [ObservableProperty]
-    public partial bool NotifyOnCompletion { get; set; }
+    private bool _notifyOnCompletion;
 
     [ObservableProperty]
-    public partial bool LaunchAtSignIn { get; set; }
+    private bool _launchAtSignIn;
 
     [ObservableProperty]
-    public partial bool ResumeInterruptedDownloads { get; set; }
+    private bool _resumeInterruptedDownloads;
 
     /// <summary>
     /// Takes the caller's already-loaded AppSettings/store (ShellViewModel's) rather than

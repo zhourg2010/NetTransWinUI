@@ -26,49 +26,49 @@ public sealed partial class ShellViewModel : ObservableObject
     public ObservableCollection<DownloadItemViewModel> FilteredCompletedDownloads { get; } = new();
 
     [ObservableProperty]
-    public partial string CurrentSection { get; set; } = "active";
+    private string _currentSection = "active";
 
     [ObservableProperty]
-    public partial string SearchQuery { get; set; } = "";
+    private string _searchQuery = "";
 
     [ObservableProperty]
-    public partial string StatusFilter { get; set; } = "all"; // all | downloading | queued | paused | issues
+    private string _statusFilter = "all"; // all | downloading | queued | paused | issues
 
     [ObservableProperty]
-    public partial DownloadItemViewModel? SelectedItem { get; set; }
+    private DownloadItemViewModel? _selectedItem;
 
     [ObservableProperty]
-    public partial ElementTheme AppTheme { get; set; }
+    private ElementTheme _appTheme;
 
     [ObservableProperty]
-    public partial string AccentHex { get; set; } = "#0067C0";
+    private string _accentHex = "#0067C0";
 
     [ObservableProperty]
-    public partial string Density { get; set; } = "comfy";
+    private string _density = "comfy";
 
     [ObservableProperty]
-    public partial bool ShowDetailPane { get; set; } = true;
+    private bool _showDetailPane = true;
 
     [ObservableProperty]
-    public partial bool IsThrottled { get; set; }
+    private bool _isThrottled;
 
     [ObservableProperty]
-    public partial bool IsPasteBarVisible { get; set; }
+    private bool _isPasteBarVisible;
 
     [ObservableProperty]
-    public partial string PasteBarUrl { get; set; } = "";
+    private string _pasteBarUrl = "";
 
     [ObservableProperty]
-    public partial string PasteBarHost { get; set; } = "";
+    private string _pasteBarHost = "";
 
     [ObservableProperty]
-    public partial bool NewDownloadDialogOpen { get; set; }
+    private bool _newDownloadDialogOpen;
 
     [ObservableProperty]
-    public partial bool SettingsDialogOpen { get; set; }
+    private bool _settingsDialogOpen;
 
     [ObservableProperty]
-    public partial string PrefillUrl { get; set; } = "";
+    private string _prefillUrl = "";
 
     public string TotalSpeedText => FormatHelpers.Speed(Engine.TotalSpeed);
     public string MonthlyTotalText => FormatHelpers.Bytes(Engine.BytesTransferredThisMonth);
@@ -236,7 +236,7 @@ public sealed partial class ShellViewModel : ObservableObject
     }
 
     [ObservableProperty]
-    public partial int PickedCount { get; set; }
+    private int _pickedCount;
 
     public string SelectedCountText => $"{PickedCount} selected";
     public Visibility SelectedCountVisible => PickedCount > 0 ? Visibility.Visible : Visibility.Collapsed;

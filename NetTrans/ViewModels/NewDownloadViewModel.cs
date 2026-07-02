@@ -9,37 +9,37 @@ public sealed partial class NewDownloadViewModel : ObservableObject
     private readonly IDownloadEngine _engine;
 
     [ObservableProperty]
-    public partial string Url { get; set; } = "";
+    private string _url = "";
 
     [ObservableProperty]
-    public partial string SaveAs { get; set; } = "";
+    private string _saveAs = "";
 
     [ObservableProperty]
-    public partial string SaveTo { get; set; } = @"C:\Users\you\Downloads";
+    private string _saveTo = @"C:\Users\you\Downloads";
 
     [ObservableProperty]
-    public partial string Category { get; set; } = "apps";
+    private string _category = "apps";
 
     [ObservableProperty]
-    public partial string StartOption { get; set; } = "now";
+    private string _startOption = "now";
 
     [ObservableProperty]
-    public partial bool AdvancedExpanded { get; set; }
+    private bool _advancedExpanded;
 
     [ObservableProperty]
-    public partial int Connections { get; set; } = 16;
+    private int _connections = 16;
 
     [ObservableProperty]
-    public partial string SpeedLimit { get; set; } = "off";
+    private string _speedLimit = "off";
 
     [ObservableProperty]
-    public partial string AutoExtract { get; set; } = "If archive";
+    private string _autoExtract = "If archive";
 
     [ObservableProperty]
-    public partial string AfterDownload { get; set; } = "Do nothing";
+    private string _afterDownload = "Do nothing";
 
     [ObservableProperty]
-    public partial string HttpReferer { get; set; } = "";
+    private string _httpReferer = "";
 
     public string ResolvedHint => Uri.TryCreate(Url.Split('\n').FirstOrDefault()?.Trim(), UriKind.Absolute, out var uri)
         ? $"Resolved · {uri.Host} · supports resume"

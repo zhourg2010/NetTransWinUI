@@ -28,22 +28,22 @@ public sealed partial class DownloadItemViewModel : ObservableObject
     public string? Duration => Model.Duration;
 
     [ObservableProperty]
-    public partial long Done { get; set; }
+    private long _done;
 
     [ObservableProperty]
-    public partial double Speed { get; set; }
+    private double _speed;
 
     [ObservableProperty]
-    public partial DownloadStatus Status { get; set; }
+    private DownloadStatus _status;
 
     [ObservableProperty]
-    public partial string? ErrorMessage { get; set; }
+    private string? _errorMessage;
 
     [ObservableProperty]
-    public partial bool IsSelected { get; set; }
+    private bool _isSelected;
 
     [ObservableProperty]
-    public partial bool IsChecked { get; set; }
+    private bool _isChecked;
 
     public double[] SegmentProgress => Model.SegmentProgress;
     public double[] SpeedHistory => Model.SpeedHistory;

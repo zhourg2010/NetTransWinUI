@@ -11,6 +11,10 @@
     <UseWinUI>true</UseWinUI>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- net8.0's implied default is C# 12, which doesn't support the CommunityToolkit.Mvvm
+         "partial property" ObservableProperty style used throughout the ViewModels (needs C# 13).
+         Force it explicitly so both TFMs compile the same source identically. -->
+    <LangVersion>13.0</LangVersion>
 
     <!-- Unpackaged (no MSIX) desktop app. Flip WindowsPackageType to "MSIX" and
          add a Package.appxmanifest if you'd rather ship through MSIX/Store. -->

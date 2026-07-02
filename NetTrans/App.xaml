@@ -1,0 +1,21 @@
+<Application
+    x:Class="NetTrans.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="ms-appx:///Resources/Tokens.xaml"/>
+                <ResourceDictionary Source="ms-appx:///Resources/Icons.xaml"/>
+                <ResourceDictionary Source="ms-appx:///Resources/Styles/Buttons.xaml"/>
+                <ResourceDictionary Source="ms-appx:///Resources/Styles/NavItem.xaml"/>
+                <ResourceDictionary Source="ms-appx:///Resources/Styles/Row.xaml"/>
+                <ResourceDictionary Source="ms-appx:///Resources/Styles/Toggle.xaml"/>
+                <ResourceDictionary Source="ms-appx:///Resources/Styles/TextBox.xaml"/>
+                <ResourceDictionary Source="ms-appx:///Resources/Styles/Modal.xaml"/>
+                <ResourceDictionary Source="ms-appx:///Resources/Styles/Text.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

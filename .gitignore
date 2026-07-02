@@ -1,0 +1,22 @@
+## .NET / Visual Studio
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+## WinUI / MSIX packaging output
+AppPackages/
+BundleArtifacts/
+*.appx
+*.appxbundle
+*.appxsym
+*.msix
+*.msixbundle
+
+## Windows App SDK / Self-contained publish output
+publish/
+
+## Rider / VS Code
+.idea/
+.vscode/

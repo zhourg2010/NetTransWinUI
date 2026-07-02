@@ -1,0 +1,305 @@
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Media;
+using NetTrans.Models;
+using NetTrans.Services;
+using Windows.UI;
+
+namespace NetTrans.ViewModels;
+
+public sealed partial class ShellViewModel : ObservableObject
+{
+    public IDownloadEngine Engine { get; }
+    private readonly IClipboardWatcher _clipboardWatcher;
+    private readonly ISettingsStore _settingsStore;
+    private readonly AppSettings _settings;
+
+    public ObservableCollection<DownloadItemViewModel> FilteredActiveDownloads { get; } = new();
+    public ObservableCollection<DownloadItemViewModel> FilteredCompletedDownloads { get; } = new();
+
+    [ObservableProperty]
+    public partial string CurrentSection { get; set; } = "active";
+
+    [ObservableProperty]
+    public partial string SearchQuery { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string StatusFilter { get; set; } = "all"; // all | downloading | queued | paused | issues
+
+    [ObservableProperty]
+    public partial DownloadItemViewModel? SelectedItem { get; set; }
+
+    [ObservableProperty]
+    public partial ElementTheme AppTheme { get; set; }
+
+    [ObservableProperty]
+    public partial string AccentHex { get; set; } = "#0067C0";
+
+    [ObservableProperty]
+    public partial string Density { get; set; } = "comfy";
+
+    [ObservableProperty]
+    public partial bool ShowDetailPane { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool IsThrottled { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsPasteBarVisible { get; set; }
+
+    [ObservableProperty]
+    public partial string PasteBarUrl { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string PasteBarHost { get; set; } = "";
+
+    [ObservableProperty]
+    public partial bool NewDownloadDialogOpen { get; set; }
+
+    [ObservableProperty]
+    public partial bool SettingsDialogOpen { get; set; }
+
+    [ObservableProperty]
+    public partial string PrefillUrl { get; set; } = "";
+
+    public string TotalSpeedText => FormatHelpers.Speed(Engine.TotalSpeed);
+    public string MonthlyTotalText => FormatHelpers.Bytes(Engine.BytesTransferredThisMonth);
+
+    public string PageTitle => CurrentSection switch
+    {
+        "active" => "Active downloads",
+        "completed" => "Completed",
+        "scheduled" => "Scheduled",
+        "history" => "History",
+        "settings" => "Settings",
+        _ => "",
+    };
+
+    public string PageSubtitle => CurrentSection switch
+    {
+        "active" => BuildActiveSubtitle(),
+        "completed" => $"{Engine.CompletedDownloads.Count} items · {MonthlyTotalText} this month",
+        "scheduled" => "Next: Tonight at 02:00",
+        "history" => "All transfers from the last 90 days",
+        "settings" => "Preferences for NetTrans",
+        _ => "",
+    };
+
+    public Visibility FilterBarVisible => CurrentSection is "active" or "completed" or "history" ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility DetailPaneVisible => ShowDetailPane && CurrentSection == "active" ? Visibility.Visible : Visibility.Collapsed;
+
+    private string BuildActiveSubtitle()
+    {
+        int downloading = Engine.ActiveDownloads.Count(d => d.IsDownloading);
+        int queued = Engine.ActiveDownloads.Count(d => d.IsQueued);
+        int paused = Engine.ActiveDownloads.Count(d => d.IsPaused);
+        int error = Engine.ActiveDownloads.Count(d => d.IsError);
+        return $"{downloading} downloading · {queued} queued · {paused} paused · {error} error";
+    }
+
+    public static readonly string[] AccentSwatches = ["#0067C0", "#107C10", "#8764B8", "#C42B1C", "#CA5010", "#038387"];
+
+    public ShellViewModel(IDownloadEngine engine, IClipboardWatcher clipboardWatcher, ISettingsStore settingsStore)
+    {
+        Engine = engine;
+        _clipboardWatcher = clipboardWatcher;
+        _settingsStore = settingsStore;
+        _settings = settingsStore.Load();
+
+        AccentHex = _settings.Accent;
+        Density = _settings.Density;
+        ShowDetailPane = _settings.ShowDetailPane;
+        IsThrottled = _settings.Throttled;
+        engine.IsThrottled = _settings.Throttled;
+        AppTheme = _settings.Theme switch
+        {
+            "light" => ElementTheme.Light,
+            "dark" => ElementTheme.Dark,
+            _ => ElementTheme.Default,
+        };
+
+        ApplyAccent(AccentHex);
+
+        Engine.ActiveDownloads.CollectionChanged += (_, _) => { WireItemNotifications(); RefreshFilteredLists(); };
+        Engine.CompletedDownloads.CollectionChanged += (_, _) => { WireItemNotifications(); RefreshFilteredLists(); };
+        WireItemNotifications();
+        RefreshFilteredLists();
+        SelectedItem = Engine.ActiveDownloads.FirstOrDefault();
+
+        _clipboardWatcher.UrlDetected += OnClipboardUrlDetected;
+        _clipboardWatcher.Start();
+    }
+
+    private void OnClipboardUrlDetected(object? sender, ClipboardUrlDetected e)
+    {
+        PasteBarUrl = e.Url;
+        PasteBarHost = e.Host;
+        IsPasteBarVisible = true;
+    }
+
+    partial void OnSearchQueryChanged(string value) => RefreshFilteredLists();
+    partial void OnStatusFilterChanged(string value) => RefreshFilteredLists();
+
+    partial void OnCurrentSectionChanged(string value)
+    {
+        OnPropertyChanged(nameof(PageTitle));
+        OnPropertyChanged(nameof(PageSubtitle));
+        OnPropertyChanged(nameof(FilterBarVisible));
+        OnPropertyChanged(nameof(DetailPaneVisible));
+    }
+
+    partial void OnShowDetailPaneChanged(bool value) => OnPropertyChanged(nameof(DetailPaneVisible));
+
+    private void RefreshFilteredLists()
+    {
+        var q = SearchQuery.Trim().ToLowerInvariant();
+
+        IEnumerable<DownloadItemViewModel> active = Engine.ActiveDownloads;
+        if (!string.IsNullOrEmpty(q))
+        {
+            active = active.Where(d => d.Name.ToLowerInvariant().Contains(q) || d.Host.ToLowerInvariant().Contains(q));
+        }
+        active = StatusFilter switch
+        {
+            "downloading" => active.Where(d => d.IsDownloading),
+            "queued" => active.Where(d => d.IsQueued),
+            "paused" => active.Where(d => d.IsPaused),
+            "issues" => active.Where(d => d.IsError),
+            _ => active,
+        };
+
+        FilteredActiveDownloads.Clear();
+        foreach (var item in active) FilteredActiveDownloads.Add(item);
+
+        FilteredCompletedDownloads.Clear();
+        foreach (var item in Engine.CompletedDownloads) FilteredCompletedDownloads.Add(item);
+
+        OnPropertyChanged(nameof(TotalSpeedText));
+        OnPropertyChanged(nameof(MonthlyTotalText));
+    }
+
+    public void RefreshLiveStats()
+    {
+        OnPropertyChanged(nameof(TotalSpeedText));
+        OnPropertyChanged(nameof(MonthlyTotalText));
+    }
+
+    private readonly HashSet<DownloadItemViewModel> _wired = new();
+
+    private void WireItemNotifications()
+    {
+        foreach (var vm in Engine.ActiveDownloads.Concat(Engine.CompletedDownloads))
+        {
+            if (_wired.Add(vm))
+            {
+                vm.PropertyChanged += (_, e) =>
+                {
+                    if (e.PropertyName == nameof(DownloadItemViewModel.IsChecked)) RecomputePickedCount();
+                    if (e.PropertyName == nameof(DownloadItemViewModel.Status)) OnPropertyChanged(nameof(PageSubtitle));
+                };
+            }
+        }
+        RecomputePickedCount();
+    }
+
+    [ObservableProperty]
+    public partial int PickedCount { get; set; }
+
+    public string SelectedCountText => $"{PickedCount} selected";
+    public Visibility SelectedCountVisible => PickedCount > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+    private void RecomputePickedCount()
+    {
+        PickedCount = Engine.ActiveDownloads.Concat(Engine.CompletedDownloads).Count(d => d.IsChecked);
+        OnPropertyChanged(nameof(SelectedCountText));
+        OnPropertyChanged(nameof(SelectedCountVisible));
+    }
+
+    [RelayCommand]
+    private void SetSection(string section) => CurrentSection = section;
+
+    [RelayCommand]
+    private void OpenNewDownload()
+    {
+        PrefillUrl = IsPasteBarVisible ? PasteBarUrl : "";
+        NewDownloadDialogOpen = true;
+    }
+
+    [RelayCommand]
+    private void OpenSettings() => SettingsDialogOpen = true;
+
+    [RelayCommand]
+    private void PauseAll() => Engine.PauseAll();
+
+    [RelayCommand]
+    private void ResumeAll() => Engine.ResumeAll();
+
+    [RelayCommand]
+    private void DismissPasteBar() => IsPasteBarVisible = false;
+
+    [RelayCommand]
+    private void DownloadFromPasteBar()
+    {
+        OpenNewDownload();
+    }
+
+    [RelayCommand]
+    private void ToggleThrottle()
+    {
+        IsThrottled = !IsThrottled;
+        Engine.IsThrottled = IsThrottled;
+        _settings.Throttled = IsThrottled;
+        _settingsStore.Save(_settings);
+    }
+
+    [RelayCommand]
+    private void CloseDetail() => ShowDetailPane = false;
+
+    public void SetAccent(string hex)
+    {
+        AccentHex = hex;
+        ApplyAccent(hex);
+        _settings.Accent = hex;
+        _settingsStore.Save(_settings);
+    }
+
+    public void SetTheme(string theme)
+    {
+        AppTheme = theme switch
+        {
+            "light" => ElementTheme.Light,
+            "dark" => ElementTheme.Dark,
+            _ => ElementTheme.Default,
+        };
+        _settings.Theme = theme;
+        _settingsStore.Save(_settings);
+    }
+
+    public void SetDensity(string density)
+    {
+        Density = density;
+        _settings.Density = density;
+        _settingsStore.Save(_settings);
+    }
+
+    private static void ApplyAccent(string hex)
+    {
+        var color = ColorFromHex(hex);
+        var resources = Application.Current.Resources;
+        resources["AccentColor"] = color;
+        resources["AccentBrush"] = new SolidColorBrush(color);
+        resources["AccentHoverBrush"] = new SolidColorBrush(color) { Opacity = 0.9 };
+    }
+
+    private static Color ColorFromHex(string hex)
+    {
+        hex = hex.TrimStart('#');
+        byte r = Convert.ToByte(hex[..2], 16);
+        byte g = Convert.ToByte(hex[2..4], 16);
+        byte b = Convert.ToByte(hex[4..6], 16);
+        return Color.FromArgb(255, r, g, b);
+    }
+}

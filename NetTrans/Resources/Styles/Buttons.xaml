@@ -1,0 +1,318 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- .primary-btn.primary-btn--accent -->
+    <Style x:Key="PrimaryAccentButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{ThemeResource AccentBrush}"/>
+        <Setter Property="Foreground" Value="{ThemeResource AccentForegroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource Stroke3Brush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{ThemeResource RadiusControl}"/>
+        <Setter Property="FontSize" Value="13.5"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Padding" Value="14,0"/>
+        <Setter Property="Height" Value="36"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}">
+                        <StackPanel Orientation="Horizontal" Spacing="8"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    Padding="{TemplateBinding Padding}">
+                            <ContentPresenter Content="{TemplateBinding Content}"
+                                               ContentTemplate="{TemplateBinding ContentTemplate}"
+                                               TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </StackPanel>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="Root.Background" Value="{ThemeResource AccentHoverBrush}"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Target="Root.Opacity" Value="0.92"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <VisualState.Setters>
+                                        <Setter Target="Root.Opacity" Value="0.42"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- .primary-btn--sm -->
+    <Style x:Key="PrimaryAccentSmallButtonStyle" TargetType="Button" BasedOn="{StaticResource PrimaryAccentButtonStyle}">
+        <Setter Property="Height" Value="30"/>
+        <Setter Property="Padding" Value="12,0"/>
+        <Setter Property="FontSize" Value="12.5"/>
+    </Style>
+
+    <!-- .ghost-btn -->
+    <Style x:Key="GhostButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{ThemeResource BgLayerBrush}"/>
+        <Setter Property="Foreground" Value="{ThemeResource Text1Brush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource Stroke2Brush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{ThemeResource RadiusControl}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Padding" Value="12,0"/>
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}">
+                        <StackPanel Orientation="Horizontal" Spacing="8"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    Padding="{TemplateBinding Padding}">
+                            <ContentPresenter Content="{TemplateBinding Content}"
+                                               ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                        </StackPanel>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="Root.Background" Value="{ThemeResource BgHoverBrush}"/>
+                                        <Setter Target="Root.BorderBrush" Value="{ThemeResource Stroke3Brush}"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Target="Root.Background" Value="{ThemeResource BgPressBrush}"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <VisualState.Setters>
+                                        <Setter Target="Root.Opacity" Value="0.42"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- .ghost-btn.ghost-btn--icon / .ghost-btn.ghost-btn--active toggled via IsChecked on a ToggleButton elsewhere -->
+    <Style x:Key="GhostIconButtonStyle" TargetType="Button" BasedOn="{StaticResource GhostButtonStyle}">
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Width" Value="32"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+    </Style>
+
+    <!-- .iconbtn -->
+    <Style x:Key="IconButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{ThemeResource Text2Brush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="{ThemeResource RadiusControl}"/>
+        <Setter Property="Width" Value="32"/>
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{TemplateBinding CornerRadius}">
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="Root.Background" Value="{ThemeResource BgHoverBrush}"/>
+                                        <Setter Target="Root.(TextElement.Foreground)" Value="{ThemeResource Text1Brush}"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Target="Root.Background" Value="{ThemeResource BgPressBrush}"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <VisualState.Setters>
+                                        <Setter Target="Root.Opacity" Value="0.4"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- .link-btn -->
+    <Style x:Key="LinkButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{ThemeResource AccentBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+
+    <!-- .cmdbtn (top command bar) -->
+    <Style x:Key="CommandBarTextButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{ThemeResource Text1Brush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="{ThemeResource RadiusControl}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Height" Value="36"/>
+        <Setter Property="Padding" Value="12,0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}">
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    Padding="{TemplateBinding Padding}">
+                            <ContentPresenter Content="{TemplateBinding Content}"/>
+                        </StackPanel>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="Root.Background" Value="{ThemeResource BgHoverBrush}"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Target="Root.Background" Value="{ThemeResource BgPressBrush}"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <VisualState.Setters>
+                                        <Setter Target="Root.Opacity" Value="0.42"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- .cmdbtn.cmdbtn--primary -->
+    <Style x:Key="CommandBarPrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource PrimaryAccentButtonStyle}">
+        <Setter Property="Height" Value="30"/>
+        <Setter Property="Padding" Value="14,0"/>
+    </Style>
+
+    <!-- .winbtn window caption buttons -->
+    <Style x:Key="WindowCaptionButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{ThemeResource Text2Brush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Width" Value="46"/>
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root" Background="{TemplateBinding Background}">
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="Root.Background" Value="{ThemeResource BgHoverBrush}"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Target="Root.Background" Value="{ThemeResource BgPressBrush}"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="WindowCaptionCloseButtonStyle" TargetType="Button" BasedOn="{StaticResource WindowCaptionButtonStyle}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root" Background="{TemplateBinding Background}">
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="Root.Background" Value="#C42B1C"/>
+                                        <Setter Target="Root.(TextElement.Foreground)" Value="White"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Target="Root.Background" Value="#A4231710"/>
+                                        <Setter Target="Root.(TextElement.Foreground)" Value="White"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        The reference icons are stroked line-art (Fluent System Icons Regular
+        rendered as open/near-open paths with fill:none), not solid glyphs, so
+        we render them with a Path (Stroke) rather than PathIcon (Fill-only).
+        Override Width/Height/Stroke/StrokeThickness/Fill per usage.
+    -->
+    <Style x:Key="StrokeIconStyle" TargetType="Path">
+        <Setter Property="Stretch" Value="Uniform"/>
+        <Setter Property="StrokeLineJoin" Value="Round"/>
+        <Setter Property="StrokeStartLineCap" Value="Round"/>
+        <Setter Property="StrokeEndLineCap" Value="Round"/>
+        <Setter Property="StrokeThickness" Value="1.4"/>
+        <Setter Property="Stroke" Value="{ThemeResource Text2Brush}"/>
+        <Setter Property="Fill" Value="Transparent"/>
+        <Setter Property="Width" Value="16"/>
+        <Setter Property="Height" Value="16"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+</ResourceDictionary>

@@ -1,0 +1,146 @@
+<ContentDialog
+    x:Class="NetTrans.Views.Dialogs.NewDownloadDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Style="{StaticResource AppContentDialogStyle}"
+    MinWidth="560" MaxWidth="560"
+    DefaultButton="Primary">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <Border Grid.Row="0" Style="{StaticResource ModalHeadBorderStyle}">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0">
+                    <TextBlock Style="{StaticResource ModalTitleTextStyle}" Text="New download"/>
+                    <TextBlock Style="{StaticResource ModalSubTextStyle}" Text="Paste one or more URLs · one per line" Margin="0,2,0,0"/>
+                </StackPanel>
+                <Button Grid.Column="1" Style="{StaticResource IconButtonStyle}" Click="OnCancelClick">
+                    <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconClose}" Width="14" Height="14" StrokeThickness="1.6"/>
+                </Button>
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" MaxHeight="480">
+            <StackPanel Padding="22,18" Spacing="14">
+                <StackPanel Spacing="6">
+                    <TextBlock Style="{StaticResource FieldLabelStyle}" Text="Source URL"/>
+                    <TextBox x:Name="UrlBox" Style="{StaticResource FieldTextAreaStyle}"
+                             Text="{x:Bind ViewModel.Url, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconCheck}" Width="11" Height="11" StrokeThickness="2" Stroke="{ThemeResource OkBrush}"/>
+                        <TextBlock Text="{x:Bind ViewModel.ResolvedHint, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource Text3Brush}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="14" RowSpacing="12">
+                    <StackPanel Grid.Column="0" Grid.Row="0" Spacing="6">
+                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="Save as"/>
+                        <TextBox Style="{StaticResource FieldTextBoxStyle}" Text="{x:Bind ViewModel.SaveAs, Mode=TwoWay}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Grid.Row="0" Spacing="6">
+                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="Save to"/>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                            <TextBox Grid.Column="0" Style="{StaticResource FieldTextBoxStyle}" Text="{x:Bind ViewModel.SaveTo, Mode=TwoWay}"/>
+                            <Button Grid.Column="1" Style="{StaticResource GhostIconButtonStyle}" Height="32">
+                                <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconFolder}" Width="13" Height="13" StrokeThickness="1.4"/>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                    <StackPanel Grid.Column="0" Grid.Row="1" Spacing="6">
+                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="Category"/>
+                        <ComboBox Style="{StaticResource FieldComboBoxStyle}" SelectedValuePath="Tag"
+                                  SelectedValue="{x:Bind ViewModel.Category, Mode=TwoWay}">
+                            <ComboBoxItem Content="Apps &amp; installers" Tag="apps"/>
+                            <ComboBoxItem Content="Video" Tag="video"/>
+                            <ComboBoxItem Content="Music" Tag="music"/>
+                            <ComboBoxItem Content="Documents" Tag="docs"/>
+                            <ComboBoxItem Content="Archives" Tag="archives"/>
+                        </ComboBox>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Grid.Row="1" Spacing="6">
+                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="Start"/>
+                        <ComboBox Style="{StaticResource FieldComboBoxStyle}" SelectedValuePath="Tag"
+                                  SelectedValue="{x:Bind ViewModel.StartOption, Mode=TwoWay}">
+                            <ComboBoxItem Content="Right now" Tag="now"/>
+                            <ComboBoxItem Content="Add to queue" Tag="queue"/>
+                            <ComboBoxItem Content="Schedule for off-peak (02:00)" Tag="schedule"/>
+                            <ComboBoxItem Content="Don't start" Tag="manual"/>
+                        </ComboBox>
+                    </StackPanel>
+                </Grid>
+
+                <Button Background="Transparent" BorderThickness="0" Padding="8,0" Height="28"
+                        HorizontalAlignment="Left" Click="OnAdvancedToggleClick">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Path x:Name="AdvancedChevron" Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconChevron}" Width="11" Height="11" StrokeThickness="1.6"/>
+                        <TextBlock Text="Advanced options" FontSize="12.5" Foreground="{ThemeResource Text2Brush}"/>
+                    </StackPanel>
+                </Button>
+
+                <StackPanel x:Name="AdvancedPanel" Spacing="12" Visibility="Collapsed">
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="14" RowSpacing="12">
+                        <StackPanel Grid.Column="0" Grid.Row="0" Spacing="6">
+                            <TextBlock Style="{StaticResource FieldLabelStyle}" Text="Connections"/>
+                            <ComboBox Style="{StaticResource FieldComboBoxStyle}">
+                                <ComboBoxItem Content="4"/>
+                                <ComboBoxItem Content="8"/>
+                                <ComboBoxItem Content="16" IsSelected="True"/>
+                                <ComboBoxItem Content="32"/>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Grid.Row="0" Spacing="6">
+                            <TextBlock Style="{StaticResource FieldLabelStyle}" Text="Speed limit"/>
+                            <ComboBox Style="{StaticResource FieldComboBoxStyle}" SelectedValuePath="Tag"
+                                      SelectedValue="{x:Bind ViewModel.SpeedLimit, Mode=TwoWay}">
+                                <ComboBoxItem Content="No limit" Tag="off"/>
+                                <ComboBoxItem Content="5 MB/s" Tag="5 MB/s"/>
+                                <ComboBoxItem Content="10 MB/s" Tag="10 MB/s"/>
+                                <ComboBoxItem Content="25 MB/s" Tag="25 MB/s"/>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Grid.Column="0" Grid.Row="1" Spacing="6">
+                            <TextBlock Style="{StaticResource FieldLabelStyle}" Text="Auto-extract"/>
+                            <ComboBox Style="{StaticResource FieldComboBoxStyle}">
+                                <ComboBoxItem Content="If archive" IsSelected="True"/>
+                                <ComboBoxItem Content="Never"/>
+                                <ComboBoxItem Content="Always"/>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Grid.Row="1" Spacing="6">
+                            <TextBlock Style="{StaticResource FieldLabelStyle}" Text="After download"/>
+                            <ComboBox Style="{StaticResource FieldComboBoxStyle}">
+                                <ComboBoxItem Content="Do nothing" IsSelected="True"/>
+                                <ComboBoxItem Content="Open file"/>
+                                <ComboBoxItem Content="Open folder"/>
+                                <ComboBoxItem Content="Verify checksum"/>
+                            </ComboBox>
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Spacing="6">
+                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="HTTP referer (optional)"/>
+                        <TextBox Style="{StaticResource FieldTextBoxStyle}" PlaceholderText="https://example.com/page"
+                                 Text="{x:Bind ViewModel.HttpReferer, Mode=TwoWay}"/>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="2" Style="{StaticResource ModalFootBorderStyle}">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconLink}" Width="12" Height="12" StrokeThickness="1.4" Stroke="{ThemeResource Text3Brush}"/>
+                    <TextBlock FontSize="12" Foreground="{ThemeResource Text3Brush}" Text="1 URL · resolves on start"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Style="{StaticResource GhostButtonStyle}" Content="Cancel" Click="OnCancelClick"/>
+                    <Button Style="{StaticResource PrimaryAccentSmallButtonStyle}" Click="OnStartClick">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconDownload}" Width="13" Height="13" Stroke="White" StrokeThickness="1.8"/>
+                            <TextBlock Text="Start download"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</ContentDialog>

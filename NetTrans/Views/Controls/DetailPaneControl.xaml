@@ -1,0 +1,188 @@
+<UserControl
+    x:Class="NetTrans.Views.Controls.DetailPaneControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:NetTrans.Views.Controls"
+    xmlns:vm="using:NetTrans.ViewModels"
+    xmlns:conv="using:NetTrans.Converters"
+    Width="{ThemeResource DetailPaneWidth}">
+
+    <UserControl.Resources>
+        <conv:SpeedFormatConverter x:Key="SpeedFormatConverter"/>
+        <conv:ShareToOpacityConverter x:Key="ShareToOpacityConverter"/>
+    </UserControl.Resources>
+
+    <Border Background="{ThemeResource BgAcrylicBrush}" BorderThickness="1,0,0,0" BorderBrush="{ThemeResource Stroke1Brush}">
+
+        <!-- Empty state -->
+        <StackPanel x:Name="EmptyState" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="8" Padding="24"
+                    Visibility="{x:Bind conv:BindingHelpers.VisibleIfNull(ViewModel.SelectedItem), Mode=OneWay}">
+            <Border Width="80" Height="80" CornerRadius="40" Background="{ThemeResource BgSubtleBrush}"
+                    BorderThickness="1" BorderBrush="{ThemeResource Stroke2Brush}" HorizontalAlignment="Center" Margin="0,0,0,6">
+                <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconDownload}" Width="42" Height="42"
+                      StrokeThickness="1.1" Stroke="{ThemeResource Text3Brush}"/>
+            </Border>
+            <TextBlock Text="Select a download" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Pick an item to see live stats, sources, and segment progress." FontSize="12.5"
+                       Foreground="{ThemeResource Text3Brush}" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="240" HorizontalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Populated state -->
+        <ScrollViewer x:Name="PopulatedState" Padding="18,18,18,22"
+                      Visibility="{x:Bind conv:BindingHelpers.VisibleIfNotNull(ViewModel.SelectedItem), Mode=OneWay}">
+            <StackPanel Spacing="16" DataContext="{x:Bind ViewModel.SelectedItem, Mode=OneWay}">
+
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                    <controls:FileBadgeControl Grid.Column="0" Kind="{Binding Kind}" BadgeSize="48"/>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Top">
+                        <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" LineHeight="19"/>
+                        <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,4,0,0">
+                            <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconGlobe}" Width="11" Height="11" StrokeThickness="1.4" Stroke="{ThemeResource Text3Brush}"/>
+                            <TextBlock Text="{Binding Host}" FontSize="12" Foreground="{ThemeResource Text3Brush}"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <Button Grid.Column="2" Style="{StaticResource IconButtonStyle}" Click="OnCloseClick" VerticalAlignment="Top">
+                        <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconClose}" Width="14" Height="14" StrokeThickness="1.5"/>
+                    </Button>
+                </Grid>
+
+                <Border Style="{StaticResource CardBorderStyle}" Padding="14,14,14,12">
+                    <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                            <TextBlock Text="{Binding PercentText}" FontSize="32" FontWeight="SemiBold" CharacterSpacing="-20"/>
+                        </StackPanel>
+                        <controls:ProgressTrackControl Percent="{Binding Percent}" Status="{Binding Status}" SegmentCount="0"/>
+                        <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                            <TextBlock Grid.Column="0" Text="{Binding DoneText}" FontSize="12.5" Foreground="{ThemeResource Text2Brush}"/>
+                            <TextBlock Grid.Column="1" Margin="4,0,0,0" FontSize="12.5" Foreground="{ThemeResource Text3Brush}">
+                                <Run Text="of "/><Run Text="{Binding SizeText}"/>
+                            </TextBlock>
+                            <TextBlock Grid.Column="3" Text="{Binding StatusLabel}" FontSize="12.5" FontWeight="SemiBold" Foreground="{Binding StatusTextBrush}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+                    <Border Grid.Column="0" Grid.Row="0" Style="{StaticResource CardBorderStyle}" Padding="12,12,12,10" MinHeight="86">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="SPEED" Style="{StaticResource UppercaseSectionHeadStyle}"/>
+                            <TextBlock FontSize="18" FontWeight="SemiBold">
+                                <Run Text="{Binding SpeedText}"/>
+                            </TextBlock>
+                            <controls:SparklineControl Values="{Binding SpeedHistory}" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="1" Grid.Row="0" Style="{StaticResource CardBorderStyle}" Padding="12,12,12,10" MinHeight="86">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="TIME LEFT" Style="{StaticResource UppercaseSectionHeadStyle}"/>
+                            <TextBlock Text="{Binding EtaText}" FontSize="18" FontWeight="SemiBold"/>
+                            <TextBlock FontSize="11.5" Foreground="{ThemeResource Text3Brush}">
+                                <Run Text="started "/><Run Text="{Binding StartedAt}"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="0" Grid.Row="1" Style="{StaticResource CardBorderStyle}" Padding="12,12,12,10" MinHeight="86">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="CONNECTIONS" Style="{StaticResource UppercaseSectionHeadStyle}"/>
+                            <TextBlock FontSize="18" FontWeight="SemiBold">
+                                <Run Text="{Binding SegmentCount}"/><Run Text=" / 16" FontSize="12.5" Foreground="{ThemeResource Text3Brush}"/>
+                            </TextBlock>
+                            <TextBlock Text="multi-segment" FontSize="11.5" Foreground="{ThemeResource Text3Brush}"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="1" Grid.Row="1" Style="{StaticResource CardBorderStyle}" Padding="12,12,12,10" MinHeight="86">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="AVG SPEED" Style="{StaticResource UppercaseSectionHeadStyle}"/>
+                            <TextBlock Text="{Binding AvgSpeedText}" FontSize="18" FontWeight="SemiBold"/>
+                            <TextBlock FontSize="11.5" Foreground="{ThemeResource Text3Brush}">
+                                <Run Text="peak "/><Run Text="{Binding PeakSpeedText}"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Button Style="{StaticResource PrimaryAccentSmallButtonStyle}" HorizontalAlignment="Stretch"
+                            Visibility="{Binding PauseButtonVisibility}" Command="{Binding PauseCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconPause}" Width="13" Height="13" Stroke="White" StrokeThickness="1.7"/>
+                            <TextBlock Text="Pause"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource PrimaryAccentSmallButtonStyle}" HorizontalAlignment="Stretch"
+                            Visibility="{Binding ResumeButtonVisibility}" Command="{Binding ResumeCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconResume}" Width="13" Height="13" Stroke="White" StrokeThickness="1.7" Fill="White"/>
+                            <TextBlock Text="Resume"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource GhostButtonStyle}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconFolder}" Width="13" Height="13" StrokeThickness="1.4"/>
+                            <TextBlock Text="Open folder"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource GhostIconButtonStyle}">
+                        <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconPin}" Width="14" Height="14" StrokeThickness="1.4"/>
+                    </Button>
+                    <Button Style="{StaticResource GhostIconButtonStyle}">
+                        <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconMore}" Width="14" Height="14" StrokeThickness="1.6"/>
+                    </Button>
+                </StackPanel>
+
+                <StackPanel Spacing="8">
+                    <Grid>
+                        <TextBlock Text="SEGMENTS" Style="{StaticResource UppercaseSectionHeadStyle}"/>
+                        <TextBlock HorizontalAlignment="Right" FontSize="11.5" Foreground="{ThemeResource Text3Brush}">
+                            <Run Text="{Binding SegmentCount}"/><Run Text=" active"/>
+                        </TextBlock>
+                    </Grid>
+                    <controls:SegmentMapControl Values="{Binding SegmentProgress}"/>
+                </StackPanel>
+
+                <StackPanel Spacing="8">
+                    <Grid>
+                        <TextBlock Text="MIRRORS" Style="{StaticResource UppercaseSectionHeadStyle}"/>
+                        <TextBlock HorizontalAlignment="Right" FontSize="11.5" Foreground="{ThemeResource Text3Brush}">
+                            <Run Text="{Binding Mirrors.Count}"/><Run Text=" sources"/>
+                        </TextBlock>
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding Mirrors}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Padding="8,6">
+                                    <Ellipse Grid.Column="0" Width="8" Height="8" Fill="{ThemeResource AccentBrush}" VerticalAlignment="Center"
+                                             Opacity="{Binding Share, Converter={StaticResource ShareToOpacityConverter}}"/>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="{Binding Region}" FontSize="12.5" FontWeight="Medium"/>
+                                        <TextBlock Text="{Binding Host}" FontSize="11.5" Foreground="{ThemeResource Text3Brush}"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Text="{Binding Speed, Converter={StaticResource SpeedFormatConverter}}"
+                                               FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource Text2Brush}" VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <StackPanel Spacing="8">
+                    <TextBlock Text="DETAILS" Style="{StaticResource UppercaseSectionHeadStyle}"/>
+                    <StackPanel>
+                        <Grid Padding="0,7" BorderThickness="0,0,0,1" BorderBrush="{ThemeResource Stroke1Brush}" ColumnDefinitions="80,*">
+                            <TextBlock Grid.Column="0" Text="Save to" FontSize="12.5" Foreground="{ThemeResource Text3Brush}"/>
+                            <TextBlock Grid.Column="1" Text="{Binding SavePath}" FontSize="12.5" TextWrapping="Wrap"/>
+                        </Grid>
+                        <Grid Padding="0,7" BorderThickness="0,0,0,1" BorderBrush="{ThemeResource Stroke1Brush}" ColumnDefinitions="80,*">
+                            <TextBlock Grid.Column="0" Text="Size" FontSize="12.5" Foreground="{ThemeResource Text3Brush}"/>
+                            <TextBlock Grid.Column="1" Text="{Binding SizeText}" FontSize="12.5"/>
+                        </Grid>
+                        <Grid Padding="0,7" ColumnDefinitions="80,*">
+                            <TextBlock Grid.Column="0" Text="Source" FontSize="12.5" Foreground="{ThemeResource Text3Brush}"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Host}" FontSize="12.5" Foreground="{ThemeResource AccentBrush}" TextWrapping="Wrap"/>
+                        </Grid>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Border>
+</UserControl>

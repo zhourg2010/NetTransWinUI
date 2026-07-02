@@ -1,0 +1,42 @@
+<UserControl
+    x:Class="NetTrans.Views.Controls.PasteInfoBarControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Visibility="{x:Bind ViewModel.IsPasteBarVisible, Mode=OneWay}"
+    Margin="0,8,0,16">
+
+    <Border CornerRadius="{ThemeResource RadiusCard}" Padding="16,12" BorderThickness="1">
+        <Border.Background>
+            <SolidColorBrush Color="{ThemeResource AccentColor}" Opacity="0.10"/>
+        </Border.Background>
+        <Border.BorderBrush>
+            <SolidColorBrush Color="{ThemeResource AccentColor}" Opacity="0.30"/>
+        </Border.BorderBrush>
+
+        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+            <Border Grid.Column="0" Width="32" Height="32" CornerRadius="16" VerticalAlignment="Center">
+                <Border.Background>
+                    <SolidColorBrush Color="{ThemeResource AccentColor}" Opacity="0.25"/>
+                </Border.Background>
+                <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconLink}" Width="16" Height="16"
+                      StrokeThickness="1.4" Stroke="{ThemeResource AccentBrush}"/>
+            </Border>
+
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                <TextBlock Text="Detected a link in your clipboard" FontWeight="SemiBold" FontSize="13.5"/>
+                <TextBlock Text="{x:Bind ViewModel.PasteBarUrl, Mode=OneWay}" FontSize="12.5"
+                           Foreground="{ThemeResource Text2Brush}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Button Style="{StaticResource GhostButtonStyle}" Content="Dismiss" Command="{x:Bind ViewModel.DismissPasteBarCommand, Mode=OneWay}"/>
+                <Button Style="{StaticResource PrimaryAccentSmallButtonStyle}" Command="{x:Bind ViewModel.DownloadFromPasteBarCommand, Mode=OneWay}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconDownload}" Width="13" Height="13" Stroke="White" StrokeThickness="1.8"/>
+                        <TextBlock Text="Download"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

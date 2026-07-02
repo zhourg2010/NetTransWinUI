@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0-windows10.0.19041.0;net10.0-windows10.0.19041.0</TargetFrameworks>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>NetTrans</RootNamespace>
+    <!-- Drop an AppIcon.ico into Assets\ and uncomment to brand the exe/taskbar icon:
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+    -->
+    <OutputType>WinExe</OutputType>
+    <UseWinUI>true</UseWinUI>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Unpackaged (no MSIX) desktop app. Flip WindowsPackageType to "MSIX" and
+         add a Package.appxmanifest if you'd rather ship through MSIX/Store. -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>
+
+    <!-- .NET 8+ uses the portable RID graph: win-x64, not win10-x64. -->
+    <Platforms>x86;x64;arm64</Platforms>
+    <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
+
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>NetTrans</AssemblyName>
+    <Product>NetTrans</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.4948" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="CommunityToolkit.WinUI.Controls.SettingsControls" Version="8.2.251219" />
+    <PackageReference Include="WinUIEx" Version="2.9.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Manifest Include="$(ApplicationManifest)" />
+  </ItemGroup>
+
+</Project>

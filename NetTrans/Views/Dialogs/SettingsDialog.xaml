@@ -4,7 +4,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:conv="using:NetTrans.Converters"
     Style="{StaticResource AppContentDialogStyle}"
-    MinWidth="880" MaxWidth="880" MinHeight="640" MaxHeight="640">
+    MinWidth="880" MaxWidth="880" MinHeight="640" MaxHeight="640"
+    RequestedTheme="{x:Bind Shell.AppTheme, Mode=OneWay}">
 
     <Grid RowDefinitions="Auto,*,Auto">
 

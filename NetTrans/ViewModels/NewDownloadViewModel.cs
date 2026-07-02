@@ -82,7 +82,8 @@ public sealed partial class NewDownloadViewModel : ObservableObject
             SaveTo,
             Category,
             Connections,
-            speedLimit));
+            speedLimit,
+            StartOption));
 
         Started?.Invoke(this, EventArgs.Empty);
     }

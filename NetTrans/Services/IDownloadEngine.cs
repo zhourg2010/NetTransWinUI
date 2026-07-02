@@ -9,7 +9,8 @@ public sealed record NewDownloadRequest(
     string SaveTo,
     string Category,
     int Connections,
-    double? SpeedLimitBytesPerSecond);
+    double? SpeedLimitBytesPerSecond,
+    string StartOption = "now"); // "now" | "queue" | "schedule" | "manual"
 
 public interface IDownloadEngine
 {

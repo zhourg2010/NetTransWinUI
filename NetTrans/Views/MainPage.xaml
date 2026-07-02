@@ -3,7 +3,8 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:NetTrans.Views.Controls"
-    xmlns:conv="using:NetTrans.Converters">
+    xmlns:conv="using:NetTrans.Converters"
+    RequestedTheme="{x:Bind ViewModel.AppTheme, Mode=OneWay}">
 
     <Grid Background="{ThemeResource BgBaseBrush}">
         <Grid.RowDefinitions>

@@ -18,6 +18,10 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly ISettingsStore _settingsStore;
     private readonly AppSettings _settings;
 
+    /// <summary>The single loaded AppSettings/store, shared with SettingsViewModel so both never save independent stale snapshots over each other.</summary>
+    public AppSettings Settings => _settings;
+    public ISettingsStore SettingsStore => _settingsStore;
+
     public ObservableCollection<DownloadItemViewModel> FilteredActiveDownloads { get; } = new();
     public ObservableCollection<DownloadItemViewModel> FilteredCompletedDownloads { get; } = new();
 

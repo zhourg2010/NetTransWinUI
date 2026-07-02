@@ -20,17 +20,17 @@
             <Setter.Value>
                 <ControlTemplate TargetType="RadioButton">
                     <Border x:Name="Root" Background="Transparent" BorderThickness="1" BorderBrush="Transparent" CornerRadius="15">
-                        <ContentPresenter Content="{TemplateBinding Content}"
+                        <ContentPresenter x:Name="ContentHost" Content="{TemplateBinding Content}"
                                            Padding="{TemplateBinding Padding}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"
-                                           TextElement.Foreground="{TemplateBinding Foreground}"/>
+                                           Foreground="{TemplateBinding Foreground}"/>
                         <VisualStateManager.VisualStateGroups>
                             <VisualStateGroup x:Name="CommonStates">
                                 <VisualState x:Name="Normal"/>
                                 <VisualState x:Name="PointerOver">
                                     <VisualState.Setters>
                                         <Setter Target="Root.Background" Value="{ThemeResource BgHoverBrush}"/>
-                                        <Setter Target="Root.(TextElement.Foreground)" Value="{ThemeResource Text1Brush}"/>
+                                        <Setter Target="ContentHost.Foreground" Value="{ThemeResource Text1Brush}"/>
                                     </VisualState.Setters>
                                 </VisualState>
                                 <VisualState x:Name="Pressed"/>
@@ -41,8 +41,8 @@
                                     <VisualState.Setters>
                                         <Setter Target="Root.Background" Value="{ThemeResource BgLayerBrush}"/>
                                         <Setter Target="Root.BorderBrush" Value="{ThemeResource Stroke2Brush}"/>
-                                        <Setter Target="Root.(TextElement.Foreground)" Value="{ThemeResource Text1Brush}"/>
-                                        <Setter Target="Root.(TextElement.FontWeight)" Value="SemiBold"/>
+                                        <Setter Target="ContentHost.Foreground" Value="{ThemeResource Text1Brush}"/>
+                                        <Setter Target="ContentHost.FontWeight" Value="SemiBold"/>
                                     </VisualState.Setters>
                                 </VisualState>
                             </VisualStateGroup>

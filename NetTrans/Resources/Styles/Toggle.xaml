@@ -70,11 +70,11 @@
             <Setter.Value>
                 <ControlTemplate TargetType="RadioButton">
                     <Border x:Name="Root" Background="Transparent" CornerRadius="3">
-                        <ContentPresenter Content="{TemplateBinding Content}"
+                        <ContentPresenter x:Name="ContentHost" Content="{TemplateBinding Content}"
                                            Padding="{TemplateBinding Padding}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"
-                                           TextElement.Foreground="{TemplateBinding Foreground}"
-                                           TextElement.FontSize="{TemplateBinding FontSize}"/>
+                                           Foreground="{TemplateBinding Foreground}"
+                                           FontSize="{TemplateBinding FontSize}"/>
                         <VisualStateManager.VisualStateGroups>
                             <VisualStateGroup x:Name="CommonStates">
                                 <VisualState x:Name="Normal"/>
@@ -86,8 +86,8 @@
                                 <VisualState x:Name="Checked">
                                     <VisualState.Setters>
                                         <Setter Target="Root.Background" Value="{ThemeResource BgLayerBrush}"/>
-                                        <Setter Target="Root.(TextElement.Foreground)" Value="{ThemeResource Text1Brush}"/>
-                                        <Setter Target="Root.(TextElement.FontWeight)" Value="SemiBold"/>
+                                        <Setter Target="ContentHost.Foreground" Value="{ThemeResource Text1Brush}"/>
+                                        <Setter Target="ContentHost.FontWeight" Value="SemiBold"/>
                                     </VisualState.Setters>
                                 </VisualState>
                             </VisualStateGroup>

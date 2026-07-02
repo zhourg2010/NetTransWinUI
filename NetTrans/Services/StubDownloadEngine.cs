@@ -239,8 +239,13 @@ public sealed class StubDownloadEngine : IDownloadEngine, IDisposable
         _byId[item.Id] = vm;
         ActiveDownloads.Insert(0, vm);
 
-        item.Status = DownloadStatus.Downloading;
-        vm.ApplyTick(0, 0, DownloadStatus.Downloading, null);
+        // "now" starts immediately; "queue"/"schedule" wait as Queued (this stub has no real
+        // scheduler); "manual" ("Don't start") sits Paused so the user has to explicitly Resume it.
+        item.Status = request.StartOption == "now" ? DownloadStatus.Downloading
+            : request.StartOption == "manual" ? DownloadStatus.Paused
+            : DownloadStatus.Queued;
+        item.StartedAt = item.Status == DownloadStatus.Downloading ? "just now" : "queued";
+        vm.ApplyTick(item.Done, item.Speed, item.Status, null);
         return vm;
     }
 

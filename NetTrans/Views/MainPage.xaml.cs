@@ -51,7 +51,7 @@ public sealed partial class MainPage : UserControl
             try
             {
                 var vm = new NewDownloadViewModel(ViewModel.Engine, ViewModel.PrefillUrl);
-                var dialog = new NewDownloadDialog(vm) { XamlRoot = XamlRoot };
+                var dialog = new NewDownloadDialog(vm) { XamlRoot = XamlRoot, RequestedTheme = ViewModel.AppTheme };
                 await dialog.ShowAsync();
             }
             finally
@@ -66,7 +66,7 @@ public sealed partial class MainPage : UserControl
             _dialogShowing = true;
             try
             {
-                var settingsVm = new SettingsViewModel(new NetTrans.Services.JsonSettingsStore());
+                var settingsVm = new SettingsViewModel(ViewModel.Settings, ViewModel.SettingsStore);
                 var dialog = new SettingsDialog(ViewModel, settingsVm) { XamlRoot = XamlRoot };
                 await dialog.ShowAsync();
             }

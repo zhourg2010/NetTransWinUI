@@ -36,10 +36,15 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial bool ResumeInterruptedDownloads { get; set; }
 
-    public SettingsViewModel(ISettingsStore store)
+    /// <summary>
+    /// Takes the caller's already-loaded AppSettings/store (ShellViewModel's) rather than
+    /// loading its own copy, so a Settings-dialog edit and a shell-level edit (accent/theme/
+    /// throttle) in the same session can't silently overwrite each other on save.
+    /// </summary>
+    public SettingsViewModel(AppSettings settings, ISettingsStore store)
     {
         _store = store;
-        _settings = store.Load();
+        _settings = settings;
 
         DefaultSavePath = _settings.DefaultSavePath;
         MaxSimultaneousDownloads = _settings.MaxSimultaneousDownloads;

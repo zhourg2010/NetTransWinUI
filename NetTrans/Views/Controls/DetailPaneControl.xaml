@@ -13,6 +13,7 @@
     </UserControl.Resources>
 
     <Border Background="{ThemeResource BgAcrylicBrush}" BorderThickness="1,0,0,0" BorderBrush="{ThemeResource Stroke1Brush}">
+      <Grid>
 
         <!-- Empty state -->
         <StackPanel x:Name="EmptyState" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="8" Padding="24"
@@ -184,5 +185,6 @@
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>
+      </Grid>
     </Border>
 </UserControl>

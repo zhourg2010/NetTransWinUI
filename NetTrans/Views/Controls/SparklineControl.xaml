@@ -1,0 +1,14 @@
+<UserControl
+    x:Class="NetTrans.Views.Controls.SparklineControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Height="22">
+
+    <Viewbox Stretch="Fill">
+        <Grid Width="100" Height="36">
+            <Path x:Name="FillPath"/>
+            <Path x:Name="StrokePath" StrokeThickness="1.2"
+                  StrokeLineJoin="Round" Fill="Transparent"/>
+        </Grid>
+    </Viewbox>
+</UserControl>

@@ -1,0 +1,32 @@
+name: build
+
+on:
+  push:
+    branches:
+      - "claude/**"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tfm: [net8.0-windows10.0.19041.0, net10.0-windows10.0.19041.0]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Restore
+        run: dotnet restore NetTrans/NetTrans.csproj -r win-x64
+
+      - name: Build (${{ matrix.tfm }})
+        run: dotnet build NetTrans/NetTrans.csproj -c Release -f ${{ matrix.tfm }} -r win-x64 --no-restore

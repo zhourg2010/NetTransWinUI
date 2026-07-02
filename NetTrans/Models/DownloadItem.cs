@@ -21,6 +21,7 @@ public sealed class DownloadItem
     public DownloadStatus Status { get; set; }
     public string? ErrorMessage { get; set; }
     public string StartedAt { get; set; } = "";
+    public double DownloadElapsedSeconds { get; set; }
 
     // Completed/history-only
     public string? CompletedWhen { get; set; }

@@ -39,21 +39,41 @@ public sealed partial class MainPage : UserControl
         if (e.NewValue is ShellViewModel newVm) newVm.PropertyChanged += page.OnShellPropertyChanged;
     }
 
+    private bool _dialogShowing;
+
     private async void OnShellPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(ShellViewModel.NewDownloadDialogOpen) && ViewModel.NewDownloadDialogOpen)
         {
-            var vm = new NewDownloadViewModel(ViewModel.Engine, ViewModel.PrefillUrl);
-            var dialog = new NewDownloadDialog(vm) { XamlRoot = XamlRoot };
             ViewModel.NewDownloadDialogOpen = false;
-            await dialog.ShowAsync();
+            if (_dialogShowing) return;
+            _dialogShowing = true;
+            try
+            {
+                var vm = new NewDownloadViewModel(ViewModel.Engine, ViewModel.PrefillUrl);
+                var dialog = new NewDownloadDialog(vm) { XamlRoot = XamlRoot };
+                await dialog.ShowAsync();
+            }
+            finally
+            {
+                _dialogShowing = false;
+            }
         }
         else if (e.PropertyName == nameof(ShellViewModel.SettingsDialogOpen) && ViewModel.SettingsDialogOpen)
         {
-            var settingsVm = new SettingsViewModel(new NetTrans.Services.JsonSettingsStore());
-            var dialog = new SettingsDialog(ViewModel, settingsVm) { XamlRoot = XamlRoot };
             ViewModel.SettingsDialogOpen = false;
-            await dialog.ShowAsync();
+            if (_dialogShowing) return;
+            _dialogShowing = true;
+            try
+            {
+                var settingsVm = new SettingsViewModel(new NetTrans.Services.JsonSettingsStore());
+                var dialog = new SettingsDialog(ViewModel, settingsVm) { XamlRoot = XamlRoot };
+                await dialog.ShowAsync();
+            }
+            finally
+            {
+                _dialogShowing = false;
+            }
         }
     }
 

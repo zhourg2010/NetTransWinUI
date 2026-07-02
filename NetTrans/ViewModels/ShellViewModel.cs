@@ -1,12 +1,13 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
+using NetTrans.Converters;
 using NetTrans.Models;
 using NetTrans.Services;
-using Windows.UI;
 
 namespace NetTrans.ViewModels;
 
@@ -125,6 +126,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
         Engine.ActiveDownloads.CollectionChanged += (_, _) => { WireItemNotifications(); RefreshFilteredLists(); };
         Engine.CompletedDownloads.CollectionChanged += (_, _) => { WireItemNotifications(); RefreshFilteredLists(); };
+        Engine.Ticked += (_, _) => RefreshLiveStats();
         WireItemNotifications();
         RefreshFilteredLists();
         SelectedItem = Engine.ActiveDownloads.FirstOrDefault();
@@ -174,8 +176,13 @@ public sealed partial class ShellViewModel : ObservableObject
         FilteredActiveDownloads.Clear();
         foreach (var item in active) FilteredActiveDownloads.Add(item);
 
+        IEnumerable<DownloadItemViewModel> completed = Engine.CompletedDownloads;
+        if (!string.IsNullOrEmpty(q))
+        {
+            completed = completed.Where(d => d.Name.ToLowerInvariant().Contains(q) || d.Host.ToLowerInvariant().Contains(q));
+        }
         FilteredCompletedDownloads.Clear();
-        foreach (var item in Engine.CompletedDownloads) FilteredCompletedDownloads.Add(item);
+        foreach (var item in completed) FilteredCompletedDownloads.Add(item);
 
         OnPropertyChanged(nameof(TotalSpeedText));
         OnPropertyChanged(nameof(MonthlyTotalText));
@@ -187,21 +194,34 @@ public sealed partial class ShellViewModel : ObservableObject
         OnPropertyChanged(nameof(MonthlyTotalText));
     }
 
-    private readonly HashSet<DownloadItemViewModel> _wired = new();
+    private readonly Dictionary<DownloadItemViewModel, PropertyChangedEventHandler> _wired = new();
 
     private void WireItemNotifications()
     {
-        foreach (var vm in Engine.ActiveDownloads.Concat(Engine.CompletedDownloads))
+        var current = new HashSet<DownloadItemViewModel>(Engine.ActiveDownloads.Concat(Engine.CompletedDownloads));
+
+        foreach (var vm in current)
         {
-            if (_wired.Add(vm))
+            if (!_wired.ContainsKey(vm))
             {
-                vm.PropertyChanged += (_, e) =>
+                PropertyChangedEventHandler handler = (_, e) =>
                 {
                     if (e.PropertyName == nameof(DownloadItemViewModel.IsChecked)) RecomputePickedCount();
                     if (e.PropertyName == nameof(DownloadItemViewModel.Status)) OnPropertyChanged(nameof(PageSubtitle));
                 };
+                vm.PropertyChanged += handler;
+                _wired[vm] = handler;
             }
         }
+
+        // Evict + unsubscribe items no longer in either collection (e.g. removed via Engine.Remove)
+        // so removed DownloadItemViewModels aren't kept alive for the app's lifetime.
+        foreach (var stale in _wired.Keys.Where(vm => !current.Contains(vm)).ToList())
+        {
+            stale.PropertyChanged -= _wired[stale];
+            _wired.Remove(stale);
+        }
+
         RecomputePickedCount();
     }
 
@@ -287,19 +307,10 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private static void ApplyAccent(string hex)
     {
-        var color = ColorFromHex(hex);
+        var color = BindingHelpers.ColorFromHex(hex);
         var resources = Application.Current.Resources;
         resources["AccentColor"] = color;
         resources["AccentBrush"] = new SolidColorBrush(color);
         resources["AccentHoverBrush"] = new SolidColorBrush(color) { Opacity = 0.9 };
-    }
-
-    private static Color ColorFromHex(string hex)
-    {
-        hex = hex.TrimStart('#');
-        byte r = Convert.ToByte(hex[..2], 16);
-        byte g = Convert.ToByte(hex[2..4], 16);
-        byte b = Convert.ToByte(hex[4..6], 16);
-        return Color.FromArgb(255, r, g, b);
     }
 }

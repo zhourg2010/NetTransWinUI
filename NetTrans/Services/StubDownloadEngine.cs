@@ -29,6 +29,8 @@ public sealed class StubDownloadEngine : IDownloadEngine, IDisposable
     public double TotalSpeed { get; private set; }
     public long BytesTransferredThisMonth { get; private set; } = 412_000_000_000L;
 
+    public event EventHandler? Ticked;
+
     private static readonly MirrorSource[] SampleMirrors =
     [
         new() { Region = "Frankfurt, DE", Host = "fra1.cdn.akamai.net", Speed = 6_400_000, Share = 36 },
@@ -120,12 +122,17 @@ public sealed class StubDownloadEngine : IDownloadEngine, IDisposable
             long done = Math.Min(item.Size, item.Done + (long)(speed * 0.25));
             item.Done = done;
             item.Speed = speed;
+            item.DownloadElapsedSeconds += 0.25;
             total += speed;
 
-            for (int i = 0; i < item.SegmentProgress.Length; i++)
+            // Reassign (not mutate in place) so the SegmentMapControl DependencyProperty's
+            // reference-equality change check actually fires and repaints.
+            var segments = new double[item.SegmentProgress.Length];
+            for (int i = 0; i < segments.Length; i++)
             {
-                item.SegmentProgress[i] = Math.Clamp(item.SegmentProgress[i] + _rng.NextDouble() * 6, 0, 100);
+                segments[i] = Math.Clamp(item.SegmentProgress[i] + _rng.NextDouble() * 6, 0, 100);
             }
+            item.SegmentProgress = segments;
             item.SpeedHistory = AppendHistory(item.SpeedHistory, speed);
 
             if (done >= item.Size)
@@ -140,7 +147,7 @@ public sealed class StubDownloadEngine : IDownloadEngine, IDisposable
                 continue;
             }
 
-            if (!_erroredOne && item.Id == 3 && _elapsedSeconds >= 30)
+            if (!_erroredOne && item.DownloadElapsedSeconds >= 30)
             {
                 item.Status = DownloadStatus.Error;
                 item.ErrorMessage = "Connection timed out";
@@ -153,6 +160,7 @@ public sealed class StubDownloadEngine : IDownloadEngine, IDisposable
 
         TotalSpeed = total;
         BytesTransferredThisMonth += (long)(total * 0.25);
+        Ticked?.Invoke(this, EventArgs.Empty);
     }
 
     private static double[] AppendHistory(double[] history, double speed)

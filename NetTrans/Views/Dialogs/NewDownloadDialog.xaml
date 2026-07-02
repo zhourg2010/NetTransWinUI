@@ -81,11 +81,12 @@
                     <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="14" RowSpacing="12">
                         <StackPanel Grid.Column="0" Grid.Row="0" Spacing="6">
                             <TextBlock Style="{StaticResource FieldLabelStyle}" Text="Connections"/>
-                            <ComboBox Style="{StaticResource FieldComboBoxStyle}">
-                                <ComboBoxItem Content="4"/>
-                                <ComboBoxItem Content="8"/>
-                                <ComboBoxItem Content="16" IsSelected="True"/>
-                                <ComboBoxItem Content="32"/>
+                            <ComboBox Style="{StaticResource FieldComboBoxStyle}" SelectedValuePath="Tag"
+                                      SelectedValue="{x:Bind ViewModel.Connections, Mode=TwoWay}">
+                                <ComboBoxItem Content="4"><ComboBoxItem.Tag><x:Int32>4</x:Int32></ComboBoxItem.Tag></ComboBoxItem>
+                                <ComboBoxItem Content="8"><ComboBoxItem.Tag><x:Int32>8</x:Int32></ComboBoxItem.Tag></ComboBoxItem>
+                                <ComboBoxItem Content="16"><ComboBoxItem.Tag><x:Int32>16</x:Int32></ComboBoxItem.Tag></ComboBoxItem>
+                                <ComboBoxItem Content="32"><ComboBoxItem.Tag><x:Int32>32</x:Int32></ComboBoxItem.Tag></ComboBoxItem>
                             </ComboBox>
                         </StackPanel>
                         <StackPanel Grid.Column="1" Grid.Row="0" Spacing="6">
@@ -100,16 +101,18 @@
                         </StackPanel>
                         <StackPanel Grid.Column="0" Grid.Row="1" Spacing="6">
                             <TextBlock Style="{StaticResource FieldLabelStyle}" Text="Auto-extract"/>
-                            <ComboBox Style="{StaticResource FieldComboBoxStyle}">
-                                <ComboBoxItem Content="If archive" IsSelected="True"/>
+                            <ComboBox Style="{StaticResource FieldComboBoxStyle}" SelectedValuePath="Content"
+                                      SelectedValue="{x:Bind ViewModel.AutoExtract, Mode=TwoWay}">
+                                <ComboBoxItem Content="If archive"/>
                                 <ComboBoxItem Content="Never"/>
                                 <ComboBoxItem Content="Always"/>
                             </ComboBox>
                         </StackPanel>
                         <StackPanel Grid.Column="1" Grid.Row="1" Spacing="6">
                             <TextBlock Style="{StaticResource FieldLabelStyle}" Text="After download"/>
-                            <ComboBox Style="{StaticResource FieldComboBoxStyle}">
-                                <ComboBoxItem Content="Do nothing" IsSelected="True"/>
+                            <ComboBox Style="{StaticResource FieldComboBoxStyle}" SelectedValuePath="Content"
+                                      SelectedValue="{x:Bind ViewModel.AfterDownload, Mode=TwoWay}">
+                                <ComboBoxItem Content="Do nothing"/>
                                 <ComboBoxItem Content="Open file"/>
                                 <ComboBoxItem Content="Open folder"/>
                                 <ComboBoxItem Content="Verify checksum"/>

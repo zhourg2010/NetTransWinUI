@@ -40,7 +40,7 @@
                 <Button Style="{StaticResource IconButtonStyle}">
                     <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconFolder}" Width="14" Height="14" StrokeThickness="1.4"/>
                 </Button>
-                <Button Style="{StaticResource IconButtonStyle}" Command="{Binding RemoveCommand}">
+                <Button Style="{StaticResource IconButtonStyle}" AutomationProperties.Name="More">
                     <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconMore}" Width="14" Height="14" StrokeThickness="1.6"/>
                 </Button>
             </StackPanel>

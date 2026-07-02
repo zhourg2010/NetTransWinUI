@@ -20,6 +20,9 @@ public interface IDownloadEngine
     double TotalSpeed { get; }
     long BytesTransferredThisMonth { get; }
 
+    /// <summary>Raised once per engine tick so listeners can refresh live-only readouts (e.g. the command bar's total-speed display) without waiting for a collection change.</summary>
+    event EventHandler? Ticked;
+
     void Pause(int id);
     void Resume(int id);
     void Retry(int id);

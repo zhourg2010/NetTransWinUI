@@ -1,11 +1,9 @@
-using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Shapes;
+using NetTrans.Converters;
 using NetTrans.ViewModels;
-using Windows.UI;
 
 namespace NetTrans.Views.Dialogs;
 
@@ -22,7 +20,19 @@ public sealed partial class SettingsDialog : ContentDialog
         Bindings.Update();
 
         BuildSwatches();
-        Loaded += (_, _) => { };
+        InitializeAppearanceControls();
+    }
+
+    private void InitializeAppearanceControls()
+    {
+        (Shell.AppTheme switch
+        {
+            ElementTheme.Light => ThemeLightRadio,
+            ElementTheme.Dark => ThemeDarkRadio,
+            _ => ThemeAutoRadio,
+        }).IsChecked = true;
+
+        DensityToggle.IsChecked = Shell.Density == "compact";
     }
 
     private void BuildSwatches()
@@ -30,7 +40,7 @@ public sealed partial class SettingsDialog : ContentDialog
         SwatchesPanel.Children.Clear();
         foreach (var hex in ShellViewModel.AccentSwatches)
         {
-            var color = HexToColor(hex);
+            var color = BindingHelpers.ColorFromHex(hex);
             var button = new Button
             {
                 Width = 26,
@@ -83,13 +93,4 @@ public sealed partial class SettingsDialog : ContentDialog
     }
 
     private void OnCloseClick(object sender, RoutedEventArgs e) => Hide();
-
-    private static Color HexToColor(string hex)
-    {
-        hex = hex.TrimStart('#');
-        byte r = System.Convert.ToByte(hex[..2], 16);
-        byte g = System.Convert.ToByte(hex[2..4], 16);
-        byte b = System.Convert.ToByte(hex[4..6], 16);
-        return Color.FromArgb(255, r, g, b);
-    }
 }

@@ -9,6 +9,16 @@ namespace NetTrans.Converters;
 /// <summary>Static x:Bind function-binding helpers (e.g. {x:Bind conv:BindingHelpers.Visible(IsError)}).</summary>
 public static class BindingHelpers
 {
+    /// <summary>Parses "#RRGGBB" (a leading '#' is optional). Shared by ShellViewModel.ApplyAccent and SettingsDialog's swatch buttons.</summary>
+    public static Color ColorFromHex(string hex)
+    {
+        hex = hex.TrimStart('#');
+        byte r = Convert.ToByte(hex[..2], 16);
+        byte g = Convert.ToByte(hex[2..4], 16);
+        byte b = Convert.ToByte(hex[4..6], 16);
+        return Color.FromArgb(255, r, g, b);
+    }
+
     public static Visibility Visible(bool value) => value ? Visibility.Visible : Visibility.Collapsed;
     public static Visibility Collapsed(bool value) => value ? Visibility.Collapsed : Visibility.Visible;
     public static Visibility VisibleIfEqual(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase) ? Visibility.Visible : Visibility.Collapsed;

@@ -83,9 +83,9 @@
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" Background="{ThemeResource BgSubtleBrush}"
                                                 BorderThickness="1" BorderBrush="{ThemeResource Stroke2Brush}" CornerRadius="4" Padding="2">
-                                        <RadioButton Style="{StaticResource SegmentedButtonStyle}" GroupName="Theme" Content="Light" Click="OnThemeClick" Tag="light"/>
-                                        <RadioButton Style="{StaticResource SegmentedButtonStyle}" GroupName="Theme" Content="Dark" Click="OnThemeClick" Tag="dark"/>
-                                        <RadioButton Style="{StaticResource SegmentedButtonStyle}" GroupName="Theme" Content="System" Click="OnThemeClick" Tag="auto" IsChecked="True"/>
+                                        <RadioButton x:Name="ThemeLightRadio" Style="{StaticResource SegmentedButtonStyle}" GroupName="Theme" Content="Light" Click="OnThemeClick" Tag="light"/>
+                                        <RadioButton x:Name="ThemeDarkRadio" Style="{StaticResource SegmentedButtonStyle}" GroupName="Theme" Content="Dark" Click="OnThemeClick" Tag="dark"/>
+                                        <RadioButton x:Name="ThemeAutoRadio" Style="{StaticResource SegmentedButtonStyle}" GroupName="Theme" Content="System" Click="OnThemeClick" Tag="auto"/>
                                     </StackPanel>
                                 </Grid>
                                 <Grid Padding="18,16" BorderThickness="0,0,0,1" BorderBrush="{ThemeResource Stroke1Brush}" ColumnDefinitions="*,Auto">
@@ -100,7 +100,7 @@
                                         <TextBlock Text="Compact density" FontSize="13.5" FontWeight="SemiBold"/>
                                         <TextBlock Text="Show more downloads at once" FontSize="12" Foreground="{ThemeResource Text3Brush}" Margin="0,2,0,0"/>
                                     </StackPanel>
-                                    <ToggleButton Grid.Column="1" Style="{StaticResource PillToggleStyle}" Click="OnDensityClick"/>
+                                    <ToggleButton x:Name="DensityToggle" Grid.Column="1" Style="{StaticResource PillToggleStyle}" Click="OnDensityClick"/>
                                 </Grid>
                             </StackPanel>
                         </Border>

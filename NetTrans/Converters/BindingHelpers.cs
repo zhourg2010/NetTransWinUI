@@ -25,6 +25,7 @@ public static class BindingHelpers
     public static Visibility VisibleIfNotNull(object? value) => value is null ? Visibility.Collapsed : Visibility.Visible;
     public static Visibility VisibleIfNull(object? value) => value is null ? Visibility.Visible : Visibility.Collapsed;
     public static Visibility VisibleIfGreaterThanZero(int value) => value > 0 ? Visibility.Visible : Visibility.Collapsed;
+    public static Visibility VisibleIfZero(int value) => value == 0 ? Visibility.Visible : Visibility.Collapsed;
 
     public static bool Equal(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
     public static bool Not(bool value) => !value;

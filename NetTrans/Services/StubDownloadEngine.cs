@@ -64,8 +64,12 @@ public sealed class StubDownloadEngine : IDownloadEngine, IDisposable
             new() { Id = 5, Name = "research-corpus-2026-Q1.tar.zst", Host = "huggingface.co", Kind = FileKind.Zip, Category = "archives", Size = 48_700_000_000, Done = 47_900_000, Speed = 0, Status = DownloadStatus.Error, ErrorMessage = "Connection reset by peer", StartedAt = "09:42", SegmentCount = 16 },
         ];
 
+        // The queued sample doubles as the "scheduled for off-peak" demo item.
+        active[2].IsScheduled = true;
+
         foreach (var item in active)
         {
+            item.Url = $"https://{item.Host}/files/{Uri.EscapeDataString(item.Name)}";
             item.SegmentProgress = MakeInitialSegments(item);
             var vm = new DownloadItemViewModel(item, this);
             _byId[item.Id] = vm;
@@ -84,6 +88,7 @@ public sealed class StubDownloadEngine : IDownloadEngine, IDisposable
 
         foreach (var item in completed)
         {
+            item.Url = $"https://{item.Host}/files/{Uri.EscapeDataString(item.Name)}";
             CompletedDownloads.Add(new DownloadItemViewModel(item, this));
         }
     }
@@ -232,6 +237,8 @@ public sealed class StubDownloadEngine : IDownloadEngine, IDisposable
             Status = DownloadStatus.Queued,
             StartedAt = "queued",
             SegmentCount = request.Connections,
+            Url = request.Url,
+            IsScheduled = request.StartOption == "schedule",
         };
         item.SegmentProgress = new double[item.SegmentCount];
 

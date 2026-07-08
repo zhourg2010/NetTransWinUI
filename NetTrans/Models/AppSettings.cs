@@ -17,4 +17,20 @@ public sealed class AppSettings
     public bool NotifyOnCompletion { get; set; } = true;
     public bool LaunchAtSignIn { get; set; } = true;
     public bool ResumeInterruptedDownloads { get; set; } = true;
+
+    // Schedule (off-peak window)
+    public bool ScheduleEnabled { get; set; } = true;
+    public string OffPeakStart { get; set; } = "02:00";
+    public string OffPeakEnd { get; set; } = "06:00";
+
+    // Browser capture
+    public bool CaptureEdge { get; set; } = true;
+    public bool CaptureChrome { get; set; } = true;
+    public bool CaptureFirefox { get; set; }
+    public bool NotifyOnCapture { get; set; } = true;
+
+    // Advanced
+    public int MaxConnectionsPerServer { get; set; } = 16;
+    public bool PreallocateFiles { get; set; } = true;
+    public string UserAgent { get; set; } = "";
 }

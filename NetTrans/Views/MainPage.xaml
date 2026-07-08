@@ -64,9 +64,39 @@
                             </ItemsControl>
                         </StackPanel>
 
-                        <!-- Completed / History (same layout, different source) -->
+                        <!-- Completed: grouped Today / Earlier per the reference design -->
                         <StackPanel Visibility="{x:Bind conv:BindingHelpers.VisibleIfEqual(ViewModel.CurrentSection, 'completed'), Mode=OneWay}">
-                            <ItemsControl ItemsSource="{x:Bind ViewModel.FilteredCompletedDownloads, Mode=OneWay}" Margin="0,8,0,0">
+                            <Grid Padding="4,16,4,6" Visibility="{x:Bind conv:BindingHelpers.VisibleIfGreaterThanZero(ViewModel.CompletedToday.Count), Mode=OneWay}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconChevronDown}" Width="12" Height="12" StrokeThickness="1.6"/>
+                                    <TextBlock Text="Today" Style="{StaticResource SectionHeadTextStyle}"/>
+                                    <Border Style="{StaticResource CountBadgeStyle}">
+                                        <TextBlock Style="{StaticResource CountBadgeTextStyle}" Text="{x:Bind ViewModel.CompletedToday.Count, Mode=OneWay}"/>
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.CompletedToday, Mode=OneWay}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Spacing="4"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <controls:CompletedRowControl/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Grid Padding="4,16,4,6" Visibility="{x:Bind conv:BindingHelpers.VisibleIfGreaterThanZero(ViewModel.CompletedEarlier.Count), Mode=OneWay}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconChevronDown}" Width="12" Height="12" StrokeThickness="1.6"/>
+                                    <TextBlock Text="Earlier" Style="{StaticResource SectionHeadTextStyle}"/>
+                                    <Border Style="{StaticResource CountBadgeStyle}">
+                                        <TextBlock Style="{StaticResource CountBadgeTextStyle}" Text="{x:Bind ViewModel.CompletedEarlier.Count, Mode=OneWay}"/>
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.CompletedEarlier, Mode=OneWay}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <StackPanel Spacing="4"/>
@@ -95,17 +125,48 @@
                         </StackPanel>
 
                         <!-- Scheduled -->
-                        <StackPanel Visibility="{x:Bind conv:BindingHelpers.VisibleIfEqual(ViewModel.CurrentSection, 'scheduled'), Mode=OneWay}"
-                                    Padding="0,60" HorizontalAlignment="Center" Spacing="12">
-                            <Border Width="96" Height="96" CornerRadius="48" HorizontalAlignment="Center">
-                                <Border.Background>
-                                    <SolidColorBrush Color="{ThemeResource AccentColor}" Opacity="0.10"/>
-                                </Border.Background>
-                                <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconSchedule}" Width="56" Height="56" StrokeThickness="1.1" Stroke="{ThemeResource AccentBrush}"/>
+                        <StackPanel Visibility="{x:Bind conv:BindingHelpers.VisibleIfEqual(ViewModel.CurrentSection, 'scheduled'), Mode=OneWay}">
+                            <Border Style="{StaticResource CardBorderStyle}" Margin="0,8,0,14">
+                                <Grid Padding="18,16" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+                                    <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18" VerticalAlignment="Center">
+                                        <Border.Background>
+                                            <SolidColorBrush Color="{ThemeResource AccentColor}" Opacity="0.10"/>
+                                        </Border.Background>
+                                        <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconSchedule}" Width="18" Height="18" StrokeThickness="1.3" Stroke="{ThemeResource AccentBrush}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Off-peak window" FontSize="13.5" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{x:Bind ViewModel.OffPeakWindowText, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource Text3Brush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="2" Style="{StaticResource GhostButtonStyle}" Content="Manage schedule"
+                                            Command="{x:Bind ViewModel.ManageScheduleCommand, Mode=OneWay}" VerticalAlignment="Center"/>
+                                </Grid>
                             </Border>
-                            <TextBlock Style="{StaticResource EmptyTitleTextStyle}" Text="Three transfers scheduled"/>
-                            <TextBlock Style="{StaticResource EmptySubTextStyle}" Text="NetTrans will start them automatically when off-peak hours begin (02:00 – 06:00)."/>
-                            <Button Style="{StaticResource PrimaryAccentButtonStyle}" Content="Manage schedule" HorizontalAlignment="Center"/>
+
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.ScheduledDownloads, Mode=OneWay}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Spacing="4"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <controls:ActiveRowControl RowSelected="OnRowSelected"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <StackPanel Padding="0,40" HorizontalAlignment="Center" Spacing="12"
+                                        Visibility="{x:Bind conv:BindingHelpers.VisibleIfZero(ViewModel.ScheduledDownloads.Count), Mode=OneWay}">
+                                <Border Width="96" Height="96" CornerRadius="48" HorizontalAlignment="Center">
+                                    <Border.Background>
+                                        <SolidColorBrush Color="{ThemeResource AccentColor}" Opacity="0.10"/>
+                                    </Border.Background>
+                                    <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconSchedule}" Width="56" Height="56" StrokeThickness="1.1" Stroke="{ThemeResource AccentBrush}"/>
+                                </Border>
+                                <TextBlock Style="{StaticResource EmptyTitleTextStyle}" Text="Nothing scheduled"/>
+                                <TextBlock Style="{StaticResource EmptySubTextStyle}" Text="Pick &quot;Schedule for off-peak&quot; when adding a download and it will wait here for the window to open."/>
+                            </StackPanel>
                         </StackPanel>
 
                         <!-- Settings (inline page mirrors the dialog's Downloads/Browser-capture cards) -->

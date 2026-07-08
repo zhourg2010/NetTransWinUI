@@ -21,6 +21,24 @@ public sealed partial class SettingsDialog : ContentDialog
 
         BuildSwatches();
         InitializeAppearanceControls();
+        SelectInitialNavPage();
+
+        var version = typeof(SettingsDialog).Assembly.GetName().Version;
+        VersionText.Text = version is null ? "Version 1.0.0" : $"Version {version.ToString(3)}";
+    }
+
+    private void SelectInitialNavPage()
+    {
+        (Settings.CurrentPage switch
+        {
+            "downloads" => NavDownloads,
+            "network" => NavNetwork,
+            "schedule" => NavSchedule,
+            "browsers" => NavBrowsers,
+            "advanced" => NavAdvanced,
+            "about" => NavAbout,
+            _ => NavGeneral,
+        }).IsChecked = true;
     }
 
     private void InitializeAppearanceControls()

@@ -117,7 +117,7 @@
                             <TextBlock Text="Resume"/>
                         </StackPanel>
                     </Button>
-                    <Button Style="{StaticResource GhostButtonStyle}">
+                    <Button Style="{StaticResource GhostButtonStyle}" Command="{Binding OpenFolderCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconFolder}" Width="13" Height="13" StrokeThickness="1.4"/>
                             <TextBlock Text="Open folder"/>
@@ -179,7 +179,7 @@
                         </Grid>
                         <Grid Padding="0,7" ColumnDefinitions="80,*">
                             <TextBlock Grid.Column="0" Text="Source" FontSize="12.5" Foreground="{ThemeResource Text3Brush}"/>
-                            <TextBlock Grid.Column="1" Text="{Binding Host}" FontSize="12.5" Foreground="{ThemeResource AccentBrush}" TextWrapping="Wrap"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Url}" FontSize="12.5" Foreground="{ThemeResource AccentBrush}" TextWrapping="Wrap"/>
                         </Grid>
                     </StackPanel>
                 </StackPanel>

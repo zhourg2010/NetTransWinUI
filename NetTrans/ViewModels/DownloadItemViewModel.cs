@@ -26,6 +26,7 @@ public sealed partial class DownloadItemViewModel : ObservableObject
     public string StartedAt => Model.StartedAt;
     public string? CompletedWhen => Model.CompletedWhen;
     public string? Duration => Model.Duration;
+    public string Url => Model.Url;
 
     [ObservableProperty]
     private long _done;
@@ -138,4 +139,26 @@ public sealed partial class DownloadItemViewModel : ObservableObject
 
     [RelayCommand]
     private void ToggleChecked() => IsChecked = !IsChecked;
+
+    [RelayCommand]
+    private void CopyUrl()
+    {
+        if (string.IsNullOrEmpty(Model.Url)) return;
+        var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
+        package.SetText(Model.Url);
+        Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+    }
+
+    [RelayCommand]
+    private async Task OpenFolder()
+    {
+        try
+        {
+            await Windows.System.Launcher.LaunchFolderPathAsync(Model.SavePath);
+        }
+        catch (Exception)
+        {
+            // Save path may not exist yet (stub engine never writes files) — opening nothing beats crashing.
+        }
+    }
 }

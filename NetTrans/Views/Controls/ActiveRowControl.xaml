@@ -78,10 +78,18 @@
                 <Button Style="{StaticResource IconButtonStyle}" Visibility="{Binding ResumeButtonVisibility}" Command="{Binding ResumeCommand}">
                     <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconResume}" Width="14" Height="14" StrokeThickness="1.6" Fill="{ThemeResource Text2Brush}"/>
                 </Button>
-                <Button Style="{StaticResource IconButtonStyle}">
+                <Button Style="{StaticResource IconButtonStyle}" Command="{Binding OpenFolderCommand}" AutomationProperties.Name="Open folder">
                     <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconFolder}" Width="14" Height="14" StrokeThickness="1.4"/>
                 </Button>
-                <Button Style="{StaticResource IconButtonStyle}">
+                <Button Style="{StaticResource IconButtonStyle}" AutomationProperties.Name="More">
+                    <Button.Flyout>
+                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                            <MenuFlyoutItem Text="Copy URL" Command="{Binding CopyUrlCommand}"/>
+                            <MenuFlyoutItem Text="Open folder" Command="{Binding OpenFolderCommand}"/>
+                            <MenuFlyoutSeparator/>
+                            <MenuFlyoutItem Text="Remove" Command="{Binding RemoveCommand}"/>
+                        </MenuFlyout>
+                    </Button.Flyout>
                     <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconMore}" Width="14" Height="14" StrokeThickness="1.6"/>
                 </Button>
             </StackPanel>

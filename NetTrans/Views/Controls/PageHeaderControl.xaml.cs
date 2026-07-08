@@ -27,4 +27,12 @@ public sealed partial class PageHeaderControl : UserControl
             ViewModel.StatusFilter = filter;
         }
     }
+
+    private void OnSortClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string order } && ViewModel is not null)
+        {
+            ViewModel.SortOrder = order;
+        }
+    }
 }

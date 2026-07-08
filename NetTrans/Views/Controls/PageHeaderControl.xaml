@@ -45,9 +45,17 @@
 
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
                 <Button Style="{StaticResource GhostButtonStyle}">
+                    <Button.Flyout>
+                        <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                            <MenuFlyoutItem Text="Newest" Click="OnSortClick" Tag="newest"/>
+                            <MenuFlyoutItem Text="Name" Click="OnSortClick" Tag="name"/>
+                            <MenuFlyoutItem Text="Size" Click="OnSortClick" Tag="size"/>
+                            <MenuFlyoutItem Text="Progress" Click="OnSortClick" Tag="progress"/>
+                        </MenuFlyout>
+                    </Button.Flyout>
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconSort}" Width="14" Height="14" StrokeThickness="1.4"/>
-                        <TextBlock Text="Newest"/>
+                        <TextBlock Text="{x:Bind ViewModel.SortOrderLabel, Mode=OneWay}"/>
                         <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconChevronDown}" Width="12" Height="12" StrokeThickness="1.4"/>
                     </StackPanel>
                 </Button>

@@ -66,9 +66,13 @@ public sealed partial class MainPage : UserControl
             _dialogShowing = true;
             try
             {
-                var settingsVm = new SettingsViewModel(ViewModel.Settings, ViewModel.SettingsStore);
+                var settingsVm = new SettingsViewModel(ViewModel.Settings, ViewModel.SettingsStore)
+                {
+                    CurrentPage = ViewModel.SettingsInitialPage,
+                };
                 var dialog = new SettingsDialog(ViewModel, settingsVm) { XamlRoot = XamlRoot };
                 await dialog.ShowAsync();
+                ViewModel.NotifySettingsChanged();
             }
             finally
             {

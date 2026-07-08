@@ -15,6 +15,8 @@ public sealed class DownloadItem
     public required string Category { get; init; }
     public string SavePath { get; init; } = @"C:\Users\you\Downloads";
     public int SegmentCount { get; init; } = 8;
+    public string Url { get; set; } = "";
+    public bool IsScheduled { get; set; }
 
     public long Done { get; set; }
     public double Speed { get; set; }

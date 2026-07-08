@@ -24,6 +24,9 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public ObservableCollection<DownloadItemViewModel> FilteredActiveDownloads { get; } = new();
     public ObservableCollection<DownloadItemViewModel> FilteredCompletedDownloads { get; } = new();
+    public ObservableCollection<DownloadItemViewModel> CompletedToday { get; } = new();
+    public ObservableCollection<DownloadItemViewModel> CompletedEarlier { get; } = new();
+    public ObservableCollection<DownloadItemViewModel> ScheduledDownloads { get; } = new();
 
     [ObservableProperty]
     private string _currentSection = "active";
@@ -33,6 +36,12 @@ public sealed partial class ShellViewModel : ObservableObject
 
     [ObservableProperty]
     private string _statusFilter = "all"; // all | downloading | queued | paused | issues
+
+    [ObservableProperty]
+    private string _categoryFilter = ""; // "" = all | apps | video | music | docs | archives
+
+    [ObservableProperty]
+    private string _sortOrder = "newest"; // newest | name | size | progress
 
     [ObservableProperty]
     private DownloadItemViewModel? _selectedItem;
@@ -70,6 +79,19 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty]
     private string _prefillUrl = "";
 
+    [ObservableProperty]
+    private string _settingsInitialPage = "general";
+
+    public string SortOrderLabel => SortOrder switch
+    {
+        "name" => "Name",
+        "size" => "Size",
+        "progress" => "Progress",
+        _ => "Newest",
+    };
+
+    public string OffPeakWindowText => $"Scheduled transfers start automatically between {_settings.OffPeakStart} and {_settings.OffPeakEnd}";
+
     public string TotalSpeedText => FormatHelpers.Speed(Engine.TotalSpeed);
     public string MonthlyTotalText => FormatHelpers.Bytes(Engine.BytesTransferredThisMonth);
 
@@ -87,7 +109,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         "active" => BuildActiveSubtitle(),
         "completed" => $"{Engine.CompletedDownloads.Count} items · {MonthlyTotalText} this month",
-        "scheduled" => "Next: Tonight at 02:00",
+        "scheduled" => $"{ScheduledDownloads.Count} scheduled · off-peak {_settings.OffPeakStart}–{_settings.OffPeakEnd}",
         "history" => "All transfers from the last 90 days",
         "settings" => "Preferences for NetTrans",
         _ => "",
@@ -148,6 +170,13 @@ public sealed partial class ShellViewModel : ObservableObject
 
     partial void OnSearchQueryChanged(string value) => RefreshFilteredLists();
     partial void OnStatusFilterChanged(string value) => RefreshFilteredLists();
+    partial void OnCategoryFilterChanged(string value) => RefreshFilteredLists();
+
+    partial void OnSortOrderChanged(string value)
+    {
+        OnPropertyChanged(nameof(SortOrderLabel));
+        RefreshFilteredLists();
+    }
 
     partial void OnCurrentSectionChanged(string value)
     {
@@ -168,6 +197,10 @@ public sealed partial class ShellViewModel : ObservableObject
         {
             active = active.Where(d => d.Name.ToLowerInvariant().Contains(q) || d.Host.ToLowerInvariant().Contains(q));
         }
+        if (!string.IsNullOrEmpty(CategoryFilter))
+        {
+            active = active.Where(d => d.Category == CategoryFilter);
+        }
         active = StatusFilter switch
         {
             "downloading" => active.Where(d => d.IsDownloading),
@@ -176,6 +209,7 @@ public sealed partial class ShellViewModel : ObservableObject
             "issues" => active.Where(d => d.IsError),
             _ => active,
         };
+        active = ApplySort(active);
 
         FilteredActiveDownloads.Clear();
         foreach (var item in active) FilteredActiveDownloads.Add(item);
@@ -185,17 +219,50 @@ public sealed partial class ShellViewModel : ObservableObject
         {
             completed = completed.Where(d => d.Name.ToLowerInvariant().Contains(q) || d.Host.ToLowerInvariant().Contains(q));
         }
+        if (!string.IsNullOrEmpty(CategoryFilter))
+        {
+            completed = completed.Where(d => d.Category == CategoryFilter);
+        }
+        completed = ApplySort(completed);
+
         FilteredCompletedDownloads.Clear();
-        foreach (var item in completed) FilteredCompletedDownloads.Add(item);
+        CompletedToday.Clear();
+        CompletedEarlier.Clear();
+        foreach (var item in completed)
+        {
+            FilteredCompletedDownloads.Add(item);
+            var when = item.CompletedWhen ?? "";
+            if (when.StartsWith("Today") || when == "Just now") CompletedToday.Add(item);
+            else CompletedEarlier.Add(item);
+        }
+
+        ScheduledDownloads.Clear();
+        foreach (var item in Engine.ActiveDownloads.Where(d => d.Model.IsScheduled)) ScheduledDownloads.Add(item);
 
         OnPropertyChanged(nameof(TotalSpeedText));
         OnPropertyChanged(nameof(MonthlyTotalText));
+        OnPropertyChanged(nameof(PageSubtitle));
     }
+
+    private IEnumerable<DownloadItemViewModel> ApplySort(IEnumerable<DownloadItemViewModel> items) => SortOrder switch
+    {
+        "name" => items.OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase),
+        "size" => items.OrderByDescending(d => d.Size),
+        "progress" => items.OrderByDescending(d => d.Percent),
+        _ => items,
+    };
 
     public void RefreshLiveStats()
     {
         OnPropertyChanged(nameof(TotalSpeedText));
         OnPropertyChanged(nameof(MonthlyTotalText));
+    }
+
+    /// <summary>Called after the Settings dialog closes so texts derived from AppSettings (off-peak window etc.) pick up edits.</summary>
+    public void NotifySettingsChanged()
+    {
+        OnPropertyChanged(nameof(OffPeakWindowText));
+        OnPropertyChanged(nameof(PageSubtitle));
     }
 
     private readonly Dictionary<DownloadItemViewModel, PropertyChangedEventHandler> _wired = new();
@@ -259,7 +326,18 @@ public sealed partial class ShellViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void OpenSettings() => SettingsDialogOpen = true;
+    private void OpenSettings()
+    {
+        SettingsInitialPage = "general";
+        SettingsDialogOpen = true;
+    }
+
+    [RelayCommand]
+    private void ManageSchedule()
+    {
+        SettingsInitialPage = "schedule";
+        SettingsDialogOpen = true;
+    }
 
     [RelayCommand]
     private void PauseAll() => Engine.PauseAll();

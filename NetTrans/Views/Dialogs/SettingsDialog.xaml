@@ -24,43 +24,43 @@
         <Grid Grid.Row="1" ColumnDefinitions="200,*">
             <StackPanel Grid.Column="0" Background="{ThemeResource BgSubtleBrush}" Padding="6,10" Spacing="2"
                         BorderThickness="0,0,1,0" BorderBrush="{ThemeResource Stroke1Brush}">
-                <RadioButton Style="{StaticResource RailNavItemStyle}" GroupName="SettingsNav" IsChecked="True" Click="OnNavClick" Tag="general">
+                <RadioButton x:Name="NavGeneral" Style="{StaticResource RailNavItemStyle}" GroupName="SettingsNav" Click="OnNavClick" Tag="general">
                     <Grid ColumnDefinitions="Auto,*">
                         <Path Grid.Column="0" Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconSettings}" Width="15" Height="15" Margin="0,0,10,0"/>
                         <TextBlock Grid.Column="1" Text="General" FontSize="13" VerticalAlignment="Center"/>
                     </Grid>
                 </RadioButton>
-                <RadioButton Style="{StaticResource RailNavItemStyle}" GroupName="SettingsNav" Click="OnNavClick" Tag="downloads">
+                <RadioButton x:Name="NavDownloads" Style="{StaticResource RailNavItemStyle}" GroupName="SettingsNav" Click="OnNavClick" Tag="downloads">
                     <Grid ColumnDefinitions="Auto,*">
                         <Path Grid.Column="0" Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconDownload}" Width="15" Height="15" Margin="0,0,10,0"/>
                         <TextBlock Grid.Column="1" Text="Downloads" FontSize="13" VerticalAlignment="Center"/>
                     </Grid>
                 </RadioButton>
-                <RadioButton Style="{StaticResource RailNavItemStyle}" GroupName="SettingsNav" Click="OnNavClick" Tag="network">
+                <RadioButton x:Name="NavNetwork" Style="{StaticResource RailNavItemStyle}" GroupName="SettingsNav" Click="OnNavClick" Tag="network">
                     <Grid ColumnDefinitions="Auto,*">
                         <Path Grid.Column="0" Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconGlobe}" Width="15" Height="15" Margin="0,0,10,0"/>
                         <TextBlock Grid.Column="1" Text="Network" FontSize="13" VerticalAlignment="Center"/>
                     </Grid>
                 </RadioButton>
-                <RadioButton Style="{StaticResource RailNavItemStyle}" GroupName="SettingsNav" Click="OnNavClick" Tag="schedule">
+                <RadioButton x:Name="NavSchedule" Style="{StaticResource RailNavItemStyle}" GroupName="SettingsNav" Click="OnNavClick" Tag="schedule">
                     <Grid ColumnDefinitions="Auto,*">
                         <Path Grid.Column="0" Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconSchedule}" Width="15" Height="15" Margin="0,0,10,0"/>
                         <TextBlock Grid.Column="1" Text="Schedule" FontSize="13" VerticalAlignment="Center"/>
                     </Grid>
                 </RadioButton>
-                <RadioButton Style="{StaticResource RailNavItemStyle}" GroupName="SettingsNav" Click="OnNavClick" Tag="browsers">
+                <RadioButton x:Name="NavBrowsers" Style="{StaticResource RailNavItemStyle}" GroupName="SettingsNav" Click="OnNavClick" Tag="browsers">
                     <Grid ColumnDefinitions="Auto,*">
                         <Path Grid.Column="0" Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconApp}" Width="15" Height="15" Margin="0,0,10,0"/>
                         <TextBlock Grid.Column="1" Text="Browser capture" FontSize="13" VerticalAlignment="Center"/>
                     </Grid>
                 </RadioButton>
-                <RadioButton Style="{StaticResource RailNavItemStyle}" GroupName="SettingsNav" Click="OnNavClick" Tag="advanced">
+                <RadioButton x:Name="NavAdvanced" Style="{StaticResource RailNavItemStyle}" GroupName="SettingsNav" Click="OnNavClick" Tag="advanced">
                     <Grid ColumnDefinitions="Auto,*">
                         <Path Grid.Column="0" Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconApp}" Width="15" Height="15" Margin="0,0,10,0"/>
                         <TextBlock Grid.Column="1" Text="Advanced" FontSize="13" VerticalAlignment="Center"/>
                     </Grid>
                 </RadioButton>
-                <RadioButton Style="{StaticResource RailNavItemStyle}" GroupName="SettingsNav" Click="OnNavClick" Tag="about">
+                <RadioButton x:Name="NavAbout" Style="{StaticResource RailNavItemStyle}" GroupName="SettingsNav" Click="OnNavClick" Tag="about">
                     <Grid ColumnDefinitions="Auto,*">
                         <Path Grid.Column="0" Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconWarning}" Width="15" Height="15" Margin="0,0,10,0"/>
                         <TextBlock Grid.Column="1" Text="About" FontSize="13" VerticalAlignment="Center"/>
@@ -245,34 +245,170 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- Placeholder pages -->
-                    <StackPanel Visibility="{x:Bind conv:BindingHelpers.VisibleIfEqual(Settings.CurrentPage, 'schedule'), Mode=OneWay}" Padding="0,40" HorizontalAlignment="Center" Spacing="12">
-                        <Border Width="96" Height="96" CornerRadius="48" Background="{ThemeResource BgSubtleBrush}" HorizontalAlignment="Center">
-                            <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconSchedule}" Width="42" Height="42" StrokeThickness="1.1" Stroke="{ThemeResource Text3Brush}"/>
+                    <!-- Schedule -->
+                    <StackPanel Visibility="{x:Bind conv:BindingHelpers.VisibleIfEqual(Settings.CurrentPage, 'schedule'), Mode=OneWay}">
+                        <TextBlock Style="{StaticResource ModalPageHeadTextStyle}" Text="OFF-PEAK WINDOW"/>
+                        <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,14">
+                            <StackPanel>
+                                <Grid Padding="18,16" BorderThickness="0,0,0,1" BorderBrush="{ThemeResource Stroke1Brush}" ColumnDefinitions="*,Auto">
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Enable off-peak scheduling" FontSize="13.5" FontWeight="SemiBold"/>
+                                        <TextBlock Text="Downloads marked &quot;Schedule for off-peak&quot; start automatically inside the window" FontSize="12" Foreground="{ThemeResource Text3Brush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <ToggleButton Grid.Column="1" Style="{StaticResource PillToggleStyle}" IsChecked="{x:Bind Settings.ScheduleEnabled, Mode=TwoWay}"/>
+                                </Grid>
+                                <Grid Padding="18,16" BorderThickness="0,0,0,1" BorderBrush="{ThemeResource Stroke1Brush}" ColumnDefinitions="*,Auto">
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Window opens" FontSize="13.5" FontWeight="SemiBold"/>
+                                        <TextBlock Text="Scheduled transfers begin at this time" FontSize="12" Foreground="{ThemeResource Text3Brush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <ComboBox Grid.Column="1" Style="{StaticResource FieldComboBoxStyle}" Width="110" SelectedValuePath="Content"
+                                              SelectedValue="{x:Bind Settings.OffPeakStart, Mode=TwoWay}">
+                                        <ComboBoxItem Content="22:00"/>
+                                        <ComboBoxItem Content="23:00"/>
+                                        <ComboBoxItem Content="00:00"/>
+                                        <ComboBoxItem Content="01:00"/>
+                                        <ComboBoxItem Content="02:00"/>
+                                        <ComboBoxItem Content="03:00"/>
+                                    </ComboBox>
+                                </Grid>
+                                <Grid Padding="18,16" ColumnDefinitions="*,Auto">
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Window closes" FontSize="13.5" FontWeight="SemiBold"/>
+                                        <TextBlock Text="Running scheduled transfers pause again after this time" FontSize="12" Foreground="{ThemeResource Text3Brush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <ComboBox Grid.Column="1" Style="{StaticResource FieldComboBoxStyle}" Width="110" SelectedValuePath="Content"
+                                              SelectedValue="{x:Bind Settings.OffPeakEnd, Mode=TwoWay}">
+                                        <ComboBoxItem Content="05:00"/>
+                                        <ComboBoxItem Content="06:00"/>
+                                        <ComboBoxItem Content="07:00"/>
+                                        <ComboBoxItem Content="08:00"/>
+                                        <ComboBoxItem Content="09:00"/>
+                                    </ComboBox>
+                                </Grid>
+                            </StackPanel>
                         </Border>
-                        <TextBlock Style="{StaticResource EmptyTitleTextStyle}" Text="Schedule"/>
-                        <TextBlock Style="{StaticResource EmptySubTextStyle}" Text="More options live here. Pick another section to continue."/>
+                        <Border Style="{StaticResource CardBorderStyle}">
+                            <Grid Padding="18,16" ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                <Path Grid.Column="0" Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconSchedule}" Width="16" Height="16" StrokeThickness="1.4" Stroke="{ThemeResource Text3Brush}" VerticalAlignment="Top" Margin="0,2,0,0"/>
+                                <TextBlock Grid.Column="1" FontSize="12.5" Foreground="{ThemeResource Text2Brush}" TextWrapping="Wrap"
+                                           Text="Queue a download for off-peak from the New Download dialog: set Start to &quot;Schedule for off-peak&quot;. It waits on the Scheduled page until the window opens."/>
+                            </Grid>
+                        </Border>
                     </StackPanel>
-                    <StackPanel Visibility="{x:Bind conv:BindingHelpers.VisibleIfEqual(Settings.CurrentPage, 'browsers'), Mode=OneWay}" Padding="0,40" HorizontalAlignment="Center" Spacing="12">
-                        <Border Width="96" Height="96" CornerRadius="48" Background="{ThemeResource BgSubtleBrush}" HorizontalAlignment="Center">
-                            <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconApp}" Width="42" Height="42" StrokeThickness="1.1" Stroke="{ThemeResource Text3Brush}"/>
+
+                    <!-- Browser capture -->
+                    <StackPanel Visibility="{x:Bind conv:BindingHelpers.VisibleIfEqual(Settings.CurrentPage, 'browsers'), Mode=OneWay}">
+                        <TextBlock Style="{StaticResource ModalPageHeadTextStyle}" Text="CAPTURE DOWNLOADS FROM"/>
+                        <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,14">
+                            <StackPanel>
+                                <Grid Padding="18,16" BorderThickness="0,0,0,1" BorderBrush="{ThemeResource Stroke1Brush}" ColumnDefinitions="*,Auto">
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Microsoft Edge" FontSize="13.5" FontWeight="SemiBold"/>
+                                        <TextBlock Text="Intercept downloads started in Edge" FontSize="12" Foreground="{ThemeResource Text3Brush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <ToggleButton Grid.Column="1" Style="{StaticResource PillToggleStyle}" IsChecked="{x:Bind Settings.CaptureEdge, Mode=TwoWay}"/>
+                                </Grid>
+                                <Grid Padding="18,16" BorderThickness="0,0,0,1" BorderBrush="{ThemeResource Stroke1Brush}" ColumnDefinitions="*,Auto">
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Google Chrome" FontSize="13.5" FontWeight="SemiBold"/>
+                                        <TextBlock Text="Intercept downloads started in Chrome" FontSize="12" Foreground="{ThemeResource Text3Brush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <ToggleButton Grid.Column="1" Style="{StaticResource PillToggleStyle}" IsChecked="{x:Bind Settings.CaptureChrome, Mode=TwoWay}"/>
+                                </Grid>
+                                <Grid Padding="18,16" ColumnDefinitions="*,Auto">
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Mozilla Firefox" FontSize="13.5" FontWeight="SemiBold"/>
+                                        <TextBlock Text="Intercept downloads started in Firefox" FontSize="12" Foreground="{ThemeResource Text3Brush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <ToggleButton Grid.Column="1" Style="{StaticResource PillToggleStyle}" IsChecked="{x:Bind Settings.CaptureFirefox, Mode=TwoWay}"/>
+                                </Grid>
+                            </StackPanel>
                         </Border>
-                        <TextBlock Style="{StaticResource EmptyTitleTextStyle}" Text="Browser capture"/>
-                        <TextBlock Style="{StaticResource EmptySubTextStyle}" Text="More options live here. Pick another section to continue."/>
+                        <TextBlock Style="{StaticResource ModalPageHeadTextStyle}" Text="BEHAVIOR"/>
+                        <Border Style="{StaticResource CardBorderStyle}">
+                            <Grid Padding="18,16" ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Show a notification when a download is captured" FontSize="13.5" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Lets you send it back to the browser if you didn't want NetTrans to take it" FontSize="12" Foreground="{ThemeResource Text3Brush}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <ToggleButton Grid.Column="1" Style="{StaticResource PillToggleStyle}" IsChecked="{x:Bind Settings.NotifyOnCapture, Mode=TwoWay}"/>
+                            </Grid>
+                        </Border>
                     </StackPanel>
-                    <StackPanel Visibility="{x:Bind conv:BindingHelpers.VisibleIfEqual(Settings.CurrentPage, 'advanced'), Mode=OneWay}" Padding="0,40" HorizontalAlignment="Center" Spacing="12">
-                        <Border Width="96" Height="96" CornerRadius="48" Background="{ThemeResource BgSubtleBrush}" HorizontalAlignment="Center">
-                            <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconApp}" Width="42" Height="42" StrokeThickness="1.1" Stroke="{ThemeResource Text3Brush}"/>
+
+                    <!-- Advanced -->
+                    <StackPanel Visibility="{x:Bind conv:BindingHelpers.VisibleIfEqual(Settings.CurrentPage, 'advanced'), Mode=OneWay}">
+                        <TextBlock Style="{StaticResource ModalPageHeadTextStyle}" Text="TRANSFER ENGINE"/>
+                        <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,14">
+                            <StackPanel>
+                                <Grid Padding="18,16" BorderThickness="0,0,0,1" BorderBrush="{ThemeResource Stroke1Brush}" ColumnDefinitions="*,Auto">
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Max connections per server" FontSize="13.5" FontWeight="SemiBold"/>
+                                        <TextBlock Text="Higher values can be faster but some servers throttle aggressive clients" FontSize="12" Foreground="{ThemeResource Text3Brush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <ComboBox Grid.Column="1" Style="{StaticResource FieldComboBoxStyle}" Width="90"
+                                              SelectedValue="{x:Bind Settings.MaxConnectionsPerServer, Mode=TwoWay}">
+                                        <x:Int32>8</x:Int32>
+                                        <x:Int32>16</x:Int32>
+                                        <x:Int32>32</x:Int32>
+                                    </ComboBox>
+                                </Grid>
+                                <Grid Padding="18,16" ColumnDefinitions="*,Auto">
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Pre-allocate files on disk" FontSize="13.5" FontWeight="SemiBold"/>
+                                        <TextBlock Text="Reserves the full file size up front to reduce fragmentation" FontSize="12" Foreground="{ThemeResource Text3Brush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <ToggleButton Grid.Column="1" Style="{StaticResource PillToggleStyle}" IsChecked="{x:Bind Settings.PreallocateFiles, Mode=TwoWay}"/>
+                                </Grid>
+                            </StackPanel>
                         </Border>
-                        <TextBlock Style="{StaticResource EmptyTitleTextStyle}" Text="Advanced"/>
-                        <TextBlock Style="{StaticResource EmptySubTextStyle}" Text="More options live here. Pick another section to continue."/>
+                        <TextBlock Style="{StaticResource ModalPageHeadTextStyle}" Text="IDENTIFICATION"/>
+                        <Border Style="{StaticResource CardBorderStyle}">
+                            <Grid Padding="18,16" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="Custom user agent" FontSize="13.5" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Leave empty to use the default" FontSize="12" Foreground="{ThemeResource Text3Brush}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <TextBox Grid.Column="1" Style="{StaticResource FieldTextBoxStyle}" Width="240"
+                                         PlaceholderText="Mozilla/5.0 …"
+                                         Text="{x:Bind Settings.UserAgent, Mode=TwoWay}"/>
+                            </Grid>
+                        </Border>
                     </StackPanel>
-                    <StackPanel Visibility="{x:Bind conv:BindingHelpers.VisibleIfEqual(Settings.CurrentPage, 'about'), Mode=OneWay}" Padding="0,40" HorizontalAlignment="Center" Spacing="12">
-                        <Border Width="96" Height="96" CornerRadius="48" Background="{ThemeResource BgSubtleBrush}" HorizontalAlignment="Center">
-                            <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconWarning}" Width="42" Height="42" StrokeThickness="1.1" Stroke="{ThemeResource Text3Brush}"/>
+
+                    <!-- About -->
+                    <StackPanel Visibility="{x:Bind conv:BindingHelpers.VisibleIfEqual(Settings.CurrentPage, 'about'), Mode=OneWay}">
+                        <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,14">
+                            <Grid Padding="18,20" ColumnDefinitions="Auto,*" ColumnSpacing="16">
+                                <Border Grid.Column="0" Width="56" Height="56" CornerRadius="14" VerticalAlignment="Center">
+                                    <Border.Background>
+                                        <SolidColorBrush Color="{ThemeResource AccentColor}" Opacity="0.12"/>
+                                    </Border.Background>
+                                    <Path Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconDownload}" Width="28" Height="28" StrokeThickness="1.4" Stroke="{ThemeResource AccentBrush}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="NetTrans" FontSize="18" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="VersionText" Text="Version 1.0.0" FontSize="12.5" Foreground="{ThemeResource Text3Brush}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </Grid>
                         </Border>
-                        <TextBlock Style="{StaticResource EmptyTitleTextStyle}" Text="About"/>
-                        <TextBlock Style="{StaticResource EmptySubTextStyle}" Text="NetTrans — built with WinUI 3 and the Windows App SDK."/>
+                        <Border Style="{StaticResource CardBorderStyle}">
+                            <StackPanel>
+                                <Grid Padding="18,14" BorderThickness="0,0,0,1" BorderBrush="{ThemeResource Stroke1Brush}" ColumnDefinitions="140,*">
+                                    <TextBlock Grid.Column="0" Text="Framework" FontSize="12.5" Foreground="{ThemeResource Text3Brush}"/>
+                                    <TextBlock Grid.Column="1" Text="WinUI 3 · Windows App SDK" FontSize="12.5"/>
+                                </Grid>
+                                <Grid Padding="18,14" BorderThickness="0,0,0,1" BorderBrush="{ThemeResource Stroke1Brush}" ColumnDefinitions="140,*">
+                                    <TextBlock Grid.Column="0" Text="Targets" FontSize="12.5" Foreground="{ThemeResource Text3Brush}"/>
+                                    <TextBlock Grid.Column="1" Text=".NET 8 · .NET 10 (x86 / x64 / ARM64)" FontSize="12.5"/>
+                                </Grid>
+                                <Grid Padding="18,14" ColumnDefinitions="140,*">
+                                    <TextBlock Grid.Column="0" Text="Design" FontSize="12.5" Foreground="{ThemeResource Text3Brush}"/>
+                                    <TextBlock Grid.Column="1" Text="Fluent / Windows 11 · from a Claude Design handoff" FontSize="12.5"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>

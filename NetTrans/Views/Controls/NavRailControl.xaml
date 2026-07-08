@@ -75,35 +75,35 @@
         <StackPanel Grid.Row="3" Margin="6,0">
             <TextBlock Style="{StaticResource NavHeadingTextStyle}" Text="CATEGORIES"/>
             <StackPanel Spacing="2">
-                <RadioButton Style="{StaticResource RailNavItemStyle}" GroupName="NavCategory">
+                <RadioButton x:Name="CatApps" Style="{StaticResource RailNavItemStyle}" GroupName="NavCategory" Click="OnCategoryClick" Tag="apps">
                     <Grid ColumnDefinitions="Auto,*,Auto">
                         <Path Grid.Column="0" Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconApp}" Width="16" Height="16" Margin="0,0,12,0"/>
                         <TextBlock Grid.Column="1" Text="Apps &amp; installers" FontSize="14" VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="2" Text="12.4 GB" FontSize="11" Foreground="{ThemeResource Text3Brush}" VerticalAlignment="Center"/>
                     </Grid>
                 </RadioButton>
-                <RadioButton Style="{StaticResource RailNavItemStyle}" GroupName="NavCategory">
+                <RadioButton x:Name="CatVideo" Style="{StaticResource RailNavItemStyle}" GroupName="NavCategory" Click="OnCategoryClick" Tag="video">
                     <Grid ColumnDefinitions="Auto,*,Auto">
                         <Path Grid.Column="0" Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconVideo}" Width="16" Height="16" Margin="0,0,12,0"/>
                         <TextBlock Grid.Column="1" Text="Video" FontSize="14" VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="2" Text="84.1 GB" FontSize="11" Foreground="{ThemeResource Text3Brush}" VerticalAlignment="Center"/>
                     </Grid>
                 </RadioButton>
-                <RadioButton Style="{StaticResource RailNavItemStyle}" GroupName="NavCategory">
+                <RadioButton x:Name="CatMusic" Style="{StaticResource RailNavItemStyle}" GroupName="NavCategory" Click="OnCategoryClick" Tag="music">
                     <Grid ColumnDefinitions="Auto,*,Auto">
                         <Path Grid.Column="0" Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconMusic}" Width="16" Height="16" Margin="0,0,12,0"/>
                         <TextBlock Grid.Column="1" Text="Music" FontSize="14" VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="2" Text="6.2 GB" FontSize="11" Foreground="{ThemeResource Text3Brush}" VerticalAlignment="Center"/>
                     </Grid>
                 </RadioButton>
-                <RadioButton Style="{StaticResource RailNavItemStyle}" GroupName="NavCategory">
+                <RadioButton x:Name="CatDocs" Style="{StaticResource RailNavItemStyle}" GroupName="NavCategory" Click="OnCategoryClick" Tag="docs">
                     <Grid ColumnDefinitions="Auto,*,Auto">
                         <Path Grid.Column="0" Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconDoc}" Width="16" Height="16" Margin="0,0,12,0"/>
                         <TextBlock Grid.Column="1" Text="Documents" FontSize="14" VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="2" Text="1.1 GB" FontSize="11" Foreground="{ThemeResource Text3Brush}" VerticalAlignment="Center"/>
                     </Grid>
                 </RadioButton>
-                <RadioButton Style="{StaticResource RailNavItemStyle}" GroupName="NavCategory">
+                <RadioButton x:Name="CatArchives" Style="{StaticResource RailNavItemStyle}" GroupName="NavCategory" Click="OnCategoryClick" Tag="archives">
                     <Grid ColumnDefinitions="Auto,*,Auto">
                         <Path Grid.Column="0" Style="{StaticResource StrokeIconStyle}" Data="{StaticResource IconArchive}" Width="16" Height="16" Margin="0,0,12,0"/>
                         <TextBlock Grid.Column="1" Text="Archives" FontSize="14" VerticalAlignment="Center"/>

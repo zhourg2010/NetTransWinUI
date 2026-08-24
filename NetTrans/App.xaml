@@ -8,13 +8,11 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="ms-appx:///Resources/Tokens.xaml"/>
                 <ResourceDictionary Source="ms-appx:///Resources/Icons.xaml"/>
-                <ResourceDictionary Source="ms-appx:///Resources/Styles/Buttons.xaml"/>
-                <ResourceDictionary Source="ms-appx:///Resources/Styles/NavItem.xaml"/>
-                <ResourceDictionary Source="ms-appx:///Resources/Styles/Row.xaml"/>
-                <ResourceDictionary Source="ms-appx:///Resources/Styles/Toggle.xaml"/>
-                <ResourceDictionary Source="ms-appx:///Resources/Styles/TextBox.xaml"/>
-                <ResourceDictionary Source="ms-appx:///Resources/Styles/Modal.xaml"/>
+                <ResourceDictionary Source="ms-appx:///Resources/Styles/Shadows.xaml"/>
                 <ResourceDictionary Source="ms-appx:///Resources/Styles/Text.xaml"/>
+                <ResourceDictionary Source="ms-appx:///Resources/Styles/Surfaces.xaml"/>
+                <ResourceDictionary Source="ms-appx:///Resources/Styles/Buttons.xaml"/>
+                <ResourceDictionary Source="ms-appx:///Resources/Styles/Inputs.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

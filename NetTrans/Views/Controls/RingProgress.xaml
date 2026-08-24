@@ -1,0 +1,41 @@
+<UserControl
+    x:Class="NetTrans.Views.Controls.RingProgress"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- `.ring`: a 98px ring (r=34, 7px stroke) with the percentage inside. -->
+    <Grid>
+        <Viewbox Width="{x:Bind Diameter, Mode=OneWay}" Height="{x:Bind Diameter, Mode=OneWay}">
+            <Canvas Width="80" Height="80">
+                <Ellipse
+                    Canvas.Left="6"
+                    Canvas.Top="6"
+                    Width="68"
+                    Height="68"
+                    Stroke="{ThemeResource RingTrackBrush}"
+                    StrokeThickness="7"/>
+                <Ellipse
+                    x:Name="Arc"
+                    Canvas.Left="6"
+                    Canvas.Top="6"
+                    Width="68"
+                    Height="68"
+                    StrokeThickness="7"
+                    StrokeDashCap="Round"
+                    RenderTransformOrigin="0.5,0.5">
+                    <Ellipse.RenderTransform>
+                        <RotateTransform Angle="-90"/>
+                    </Ellipse.RenderTransform>
+                </Ellipse>
+            </Canvas>
+        </Viewbox>
+
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <TextBlock x:Name="PercentText" Style="{StaticResource RingPercentTextStyle}"/>
+                <TextBlock Style="{StaticResource RingPercentTextStyle}" FontSize="13" Text="%"/>
+            </StackPanel>
+            <TextBlock x:Name="SubText" Margin="0,2,0,0" Style="{StaticResource RingSubTextStyle}"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

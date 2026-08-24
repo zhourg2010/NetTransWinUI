@@ -1,0 +1,75 @@
+<UserControl
+    x:Class="NetTrans.Views.Sheets.BatchSheet"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:NetTrans.Views.Controls">
+
+    <controls:SheetHost
+        x:Name="Host"
+        Title="批量下载"
+        RightLabel="添加"
+        IsRightEnabled="False"
+        Cancelled="OnCancelled"
+        Confirmed="OnConfirmed">
+
+        <Grid>
+            <!-- stage: form -->
+            <StackPanel x:Name="FormStage">
+                <Border Style="{StaticResource CardStyle}">
+                    <controls:FormRow Label="" ShowSeparator="False">
+                        <TextBox x:Name="PageBox" Width="420" Style="{StaticResource FormTextBoxLeftStyle}"
+                                 Text="https://docs.internal/handbook/"/>
+                    </controls:FormRow>
+                </Border>
+
+                <TextBlock Margin="4,6,4,0" Style="{StaticResource NoteTextStyle}" Text="抓取该页面上的所有可下载资源。"/>
+
+                <Border Margin="0,14,0,0" Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <controls:FormRow Label="抓取深度" ShowSeparator="False">
+                            <ComboBox Style="{StaticResource FormSelectStyle}" SelectedIndex="1">
+                                <x:String>仅本页</x:String>
+                                <x:String>1 层</x:String>
+                                <x:String>2 层</x:String>
+                                <x:String>3 层</x:String>
+                            </ComboBox>
+                        </controls:FormRow>
+
+                        <controls:FormRow Label="仅限本站">
+                            <controls:IosSwitch IsOn="True"/>
+                        </controls:FormRow>
+
+                        <controls:FormRow Label="后缀筛选">
+                            <TextBox Width="180" Style="{StaticResource FormTextBoxStyle}" Text="pdf; zip; png"/>
+                        </controls:FormRow>
+
+                        <controls:FormRow Label="最小文件">
+                            <ComboBox Style="{StaticResource FormSelectStyle}" SelectedIndex="0">
+                                <x:String>不限</x:String>
+                                <x:String>100 KB</x:String>
+                                <x:String>1 MB</x:String>
+                                <x:String>10 MB</x:String>
+                            </ComboBox>
+                        </controls:FormRow>
+                    </StackPanel>
+                </Border>
+
+                <Button x:Name="ScanButton" Margin="0,16,0,0" Style="{StaticResource BigButtonStyle}"
+                        Content="开始抓取" Click="OnScanClick"/>
+            </StackPanel>
+
+            <!-- stage: scanning -->
+            <TextBlock x:Name="ScanStage" Visibility="Collapsed" Margin="0,48" HorizontalAlignment="Center"
+                       Style="{StaticResource NoteTextStyle}" Text="正在抓取页面资源…"/>
+
+            <!-- stage: results -->
+            <StackPanel x:Name="ListStage" Visibility="Collapsed">
+                <TextBlock x:Name="FoundHeader" Margin="4,0,4,6" Style="{StaticResource GroupHeaderTextStyle}"/>
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel x:Name="FoundList"/>
+                </Border>
+                <Button Margin="0,8,0,0" Style="{StaticResource BigPlainButtonStyle}" Content="全选" Click="OnSelectAllClick"/>
+            </StackPanel>
+        </Grid>
+    </controls:SheetHost>
+</UserControl>

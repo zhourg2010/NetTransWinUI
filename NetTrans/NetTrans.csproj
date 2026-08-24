@@ -31,8 +31,9 @@
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.2.0" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.4948" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-    <PackageReference Include="CommunityToolkit.WinUI.Controls.SettingsControls" Version="8.2.251219" />
-    <PackageReference Include="WinUIEx" Version="2.9.1" />
+    <!-- AttachedCardShadow: the only way to reproduce the handoff's blurred
+         box-shadows (segmented thumb, popovers, sheet, toast, island). -->
+    <PackageReference Include="CommunityToolkit.WinUI.Media" Version="8.2.251219" />
   </ItemGroup>
 
   <ItemGroup>

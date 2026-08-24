@@ -1,0 +1,25 @@
+<UserControl
+    x:Class="NetTrans.Views.Controls.PopoverControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="using:CommunityToolkit.WinUI">
+
+    <!-- `.ctx`: a blurred 13px-radius card of full-width rows. -->
+    <Grid x:Name="Layer" Background="Transparent" Tapped="OnScrimTapped">
+        <Border
+            x:Name="Card"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Top"
+            Width="232"
+            Background="{ThemeResource PopoverBrush}"
+            CornerRadius="{StaticResource RadiusPopover}"
+            ui:Effects.Shadow="{StaticResource PopoverShadow}"
+            RenderTransformOrigin="0.5,0.1"
+            Tapped="OnCardTapped">
+            <Border.RenderTransform>
+                <ScaleTransform x:Name="CardScale"/>
+            </Border.RenderTransform>
+            <StackPanel x:Name="Items"/>
+        </Border>
+    </Grid>
+</UserControl>

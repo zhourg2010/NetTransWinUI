@@ -1,0 +1,70 @@
+<UserControl
+    x:Class="NetTrans.Views.Controls.SheetHost"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="using:CommunityToolkit.WinUI">
+
+    <!-- `.scrim` + `.sheet`: an iOS half sheet inside the frame. -->
+    <Grid x:Name="Scrim" Background="{ThemeResource ScrimBrush}" Opacity="0" Tapped="OnScrimTapped">
+        <Border
+            x:Name="Sheet"
+            VerticalAlignment="Bottom"
+            MaxHeight="598"
+            Background="{ThemeResource GroupBrush}"
+            CornerRadius="{StaticResource RadiusSheet}"
+            ui:Effects.Shadow="{StaticResource SheetShadow}"
+            Tapped="OnSheetTapped">
+
+            <Border.RenderTransform>
+                <TranslateTransform x:Name="SheetOffset"/>
+            </Border.RenderTransform>
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- .grab -->
+                <Border
+                    Grid.Row="0"
+                    Width="36"
+                    Height="5"
+                    Margin="0,7,0,0"
+                    HorizontalAlignment="Center"
+                    CornerRadius="3"
+                    Background="{ThemeResource Label3Brush}"/>
+
+                <!-- .shead -->
+                <Grid Grid.Row="1" Padding="16,9,16,10">
+                    <Button
+                        x:Name="LeftButton"
+                        HorizontalAlignment="Left"
+                        Style="{StaticResource NavButtonStyle}"
+                        Content="{x:Bind LeftLabel, Mode=OneWay}"
+                        Click="OnLeftClick"/>
+
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource SheetTitleTextStyle}"
+                        Text="{x:Bind Title, Mode=OneWay}"/>
+
+                    <Button
+                        x:Name="RightButton"
+                        HorizontalAlignment="Right"
+                        Style="{StaticResource NavButtonStrongStyle}"
+                        Content="{x:Bind RightLabel, Mode=OneWay}"
+                        IsEnabled="{x:Bind IsRightEnabled, Mode=OneWay}"
+                        Click="OnRightClick"/>
+                </Grid>
+
+                <!-- .sbody -->
+                <ScrollViewer Grid.Row="2" Padding="16,0,16,18" VerticalScrollBarVisibility="Auto" HorizontalScrollMode="Disabled">
+                    <ContentPresenter Content="{x:Bind Body, Mode=OneWay}"/>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

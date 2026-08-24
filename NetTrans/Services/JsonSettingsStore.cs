@@ -9,11 +9,39 @@ public sealed class JsonSettingsStore : ISettingsStore
 
     private readonly string _filePath;
 
+    /// <summary>
+    /// Portable by default: the 设置 sheet promises settings land next to the
+    /// executable and nothing is written to the registry. If that directory is
+    /// read-only (Program Files, a mounted image), fall back to LocalAppData
+    /// rather than losing every change.
+    /// </summary>
     public JsonSettingsStore()
     {
+        var beside = Path.Combine(AppContext.BaseDirectory, "NetTrans.settings.json");
+        if (IsWritable(AppContext.BaseDirectory))
+        {
+            _filePath = beside;
+            return;
+        }
+
         var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NetTrans");
         Directory.CreateDirectory(dir);
         _filePath = Path.Combine(dir, "settings.json");
+    }
+
+    private static bool IsWritable(string directory)
+    {
+        try
+        {
+            var probe = Path.Combine(directory, ".nettrans-write-probe");
+            File.WriteAllText(probe, "");
+            File.Delete(probe);
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
     }
 
     public AppSettings Load()

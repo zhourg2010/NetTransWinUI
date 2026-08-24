@@ -1,0 +1,38 @@
+<UserControl
+    x:Class="NetTrans.Views.Sheets.SniffSheet"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:NetTrans.Views.Controls">
+
+    <controls:SheetHost
+        x:Name="Host"
+        Title="视频嗅探"
+        RightLabel="下载"
+        IsRightEnabled="False"
+        Cancelled="OnCancelled"
+        Confirmed="OnConfirmed">
+
+        <StackPanel>
+            <Border Style="{StaticResource CardStyle}">
+                <controls:FormRow Label="" ShowSeparator="False">
+                    <TextBox x:Name="PageBox" Width="420" Style="{StaticResource FormTextBoxLeftStyle}"
+                             PlaceholderText="粘贴网页地址" Text="https://video-host.net/watch/8841"
+                             TextChanged="OnPageChanged"/>
+                </controls:FormRow>
+            </Border>
+
+            <TextBlock Margin="4,6,4,0" Style="{StaticResource NoteTextStyle}"
+                       Text="便携版不注入浏览器，改为粘贴网页地址后探测。"/>
+
+            <Button x:Name="ProbeButton" Margin="0,16,0,0" Style="{StaticResource BigButtonStyle}"
+                    Content="探测视频" Click="OnProbeClick"/>
+
+            <StackPanel x:Name="Results" Visibility="Collapsed">
+                <TextBlock x:Name="FoundHeader" Margin="4,16,4,6" Style="{StaticResource GroupHeaderTextStyle}"/>
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel x:Name="FoundList"/>
+                </Border>
+            </StackPanel>
+        </StackPanel>
+    </controls:SheetHost>
+</UserControl>

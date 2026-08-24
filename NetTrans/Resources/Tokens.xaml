@@ -3,95 +3,164 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!--
-        Mirrors the CSS custom properties in the design handoff's styles.css 1:1.
-        Color/opacity/theme-dependent tokens live in ThemeDictionaries so they
-        swap automatically with ActualTheme. AccentBrush lives outside the theme
-        dictionaries because it is a single user-chosen value shared by both
-        themes (same as the `accent` CSS variable being set inline on .app in the web prototype).
+        Mirrors the CSS custom properties in the FlashGet Mini v2 handoff
+        (design_handoff_flashget_mini_v2/mini-ios2.css) 1:1.
+
+        The handoff only specifies a light palette; the Dark dictionary below is
+        the iOS system-dark counterpart of each token (same role, Apple's dark
+        values) so the app can follow the Windows theme without inventing new
+        semantics. Every rgba() from the CSS is written here as #AARRGGBB rather
+        than Color + Opacity so the alpha composites exactly once.
     -->
 
     <ResourceDictionary.ThemeDictionaries>
 
         <ResourceDictionary x:Key="Light">
-            <Color x:Key="BgMicaColor">#F3F3F3</Color>
-            <SolidColorBrush x:Key="BgBaseBrush" Color="#F9F9F9"/>
-            <SolidColorBrush x:Key="BgLayerBrush" Color="#FFFFFF"/>
-            <SolidColorBrush x:Key="BgLayer2Brush" Color="#FAFAFA"/>
-            <SolidColorBrush x:Key="BgAcrylicBrush" Color="#FCFCFC" Opacity="0.78"/>
-            <SolidColorBrush x:Key="BgSubtleBrush" Color="#F5F5F5"/>
-            <SolidColorBrush x:Key="BgHoverBrush" Color="#000000" Opacity="0.037"/>
-            <SolidColorBrush x:Key="BgPressBrush" Color="#000000" Opacity="0.06"/>
-            <SolidColorBrush x:Key="BgSelectedBrush" Color="#000000" Opacity="0.05"/>
+            <!-- accents -->
+            <Color x:Key="BlueColor">#007AFF</Color>
+            <SolidColorBrush x:Key="BlueBrush" Color="#007AFF"/>
+            <SolidColorBrush x:Key="GreenBrush" Color="#34C759"/>
+            <SolidColorBrush x:Key="RedBrush" Color="#FF3B30"/>
+            <SolidColorBrush x:Key="OrangeBrush" Color="#FF9500"/>
+            <SolidColorBrush x:Key="GrayBrush" Color="#8E8E93"/>
 
-            <SolidColorBrush x:Key="Text1Brush" Color="#1A1A1A"/>
-            <SolidColorBrush x:Key="Text2Brush" Color="#1A1A1A" Opacity="0.72"/>
-            <SolidColorBrush x:Key="Text3Brush" Color="#1A1A1A" Opacity="0.50"/>
-            <SolidColorBrush x:Key="Text4Brush" Color="#1A1A1A" Opacity="0.36"/>
+            <!-- label / separator / fill -->
+            <SolidColorBrush x:Key="LabelBrush" Color="#000000"/>
+            <SolidColorBrush x:Key="Label2Brush" Color="#993C3C43"/>
+            <SolidColorBrush x:Key="Label3Brush" Color="#4D3C3C43"/>
+            <SolidColorBrush x:Key="SepBrush" Color="#2E3C3C43"/>
+            <SolidColorBrush x:Key="FillBrush" Color="#1F787880"/>
+            <SolidColorBrush x:Key="Fill2Brush" Color="#33787880"/>
 
-            <SolidColorBrush x:Key="Stroke1Brush" Color="#000000" Opacity="0.0578"/>
-            <SolidColorBrush x:Key="Stroke2Brush" Color="#000000" Opacity="0.0924"/>
-            <SolidColorBrush x:Key="Stroke3Brush" Color="#000000" Opacity="0.16"/>
-            <SolidColorBrush x:Key="StrokeCardBrush" Color="#000000" Opacity="0.06"/>
+            <!-- surfaces -->
+            <SolidColorBrush x:Key="GroupBrush" Color="#F2F2F7"/>
+            <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="NavBrush" Color="#D1F9F9F9"/>
+            <SolidColorBrush x:Key="BarBrush" Color="#DBF9F9F9"/>
+            <SolidColorBrush x:Key="PopoverBrush" Color="#D1FAFAFA"/>
+            <SolidColorBrush x:Key="BannerBrush" Color="#E0FAFAFA"/>
+            <SolidColorBrush x:Key="ToastBrush" Color="#E61E1E20"/>
+            <SolidColorBrush x:Key="IslandBrush" Color="#000000"/>
+            <SolidColorBrush x:Key="ScrimBrush" Color="#52000000"/>
 
-            <SolidColorBrush x:Key="OkBrush" Color="#0F7B0F"/>
-            <SolidColorBrush x:Key="WarnBrush" Color="#9D5D00"/>
-            <SolidColorBrush x:Key="ErrBrush" Color="#C42B1C"/>
+            <!-- interaction -->
+            <SolidColorBrush x:Key="RowHoverBrush" Color="#06000000"/>
+            <SolidColorBrush x:Key="RowSelectedBrush" Color="#17007AFF"/>
+            <SolidColorBrush x:Key="PopoverHoverBrush" Color="#0F000000"/>
+            <SolidColorBrush x:Key="PopoverSepBrush" Color="#383C3C43"/>
+            <SolidColorBrush x:Key="BlueWash06Brush" Color="#0F007AFF"/>
+            <SolidColorBrush x:Key="BlueWash09Brush" Color="#17007AFF"/>
+            <SolidColorBrush x:Key="BlueWash10Brush" Color="#1A007AFF"/>
+            <SolidColorBrush x:Key="BlueWash12Brush" Color="#1F007AFF"/>
+            <SolidColorBrush x:Key="BlueWash14Brush" Color="#24007AFF"/>
+            <SolidColorBrush x:Key="BlueWash20Brush" Color="#33007AFF"/>
+            <SolidColorBrush x:Key="RingTrackBrush" Color="#2E787880"/>
 
-            <SolidColorBrush x:Key="ModalScrimBrush" Color="#000000" Opacity="0.32"/>
+            <!-- traffic-light dots -->
+            <SolidColorBrush x:Key="DotRedBrush" Color="#FF5F57"/>
+            <SolidColorBrush x:Key="DotYellowBrush" Color="#FEBC2E"/>
+            <SolidColorBrush x:Key="DotGreenBrush" Color="#28C840"/>
+
+            <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="SegThumbBrush" Color="#FFFFFF"/>
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="Dark">
-            <Color x:Key="BgMicaColor">#202020</Color>
-            <SolidColorBrush x:Key="BgBaseBrush" Color="#1C1C1C"/>
-            <SolidColorBrush x:Key="BgLayerBrush" Color="#2B2B2B"/>
-            <SolidColorBrush x:Key="BgLayer2Brush" Color="#262626"/>
-            <SolidColorBrush x:Key="BgAcrylicBrush" Color="#282828" Opacity="0.78"/>
-            <SolidColorBrush x:Key="BgSubtleBrush" Color="#242424"/>
-            <SolidColorBrush x:Key="BgHoverBrush" Color="#FFFFFF" Opacity="0.05"/>
-            <SolidColorBrush x:Key="BgPressBrush" Color="#FFFFFF" Opacity="0.07"/>
-            <SolidColorBrush x:Key="BgSelectedBrush" Color="#FFFFFF" Opacity="0.08"/>
+            <Color x:Key="BlueColor">#0A84FF</Color>
+            <SolidColorBrush x:Key="BlueBrush" Color="#0A84FF"/>
+            <SolidColorBrush x:Key="GreenBrush" Color="#30D158"/>
+            <SolidColorBrush x:Key="RedBrush" Color="#FF453A"/>
+            <SolidColorBrush x:Key="OrangeBrush" Color="#FF9F0A"/>
+            <SolidColorBrush x:Key="GrayBrush" Color="#8E8E93"/>
 
-            <SolidColorBrush x:Key="Text1Brush" Color="#FFFFFF"/>
-            <SolidColorBrush x:Key="Text2Brush" Color="#FFFFFF" Opacity="0.78"/>
-            <SolidColorBrush x:Key="Text3Brush" Color="#FFFFFF" Opacity="0.55"/>
-            <SolidColorBrush x:Key="Text4Brush" Color="#FFFFFF" Opacity="0.36"/>
+            <SolidColorBrush x:Key="LabelBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="Label2Brush" Color="#99EBEBF5"/>
+            <SolidColorBrush x:Key="Label3Brush" Color="#4DEBEBF5"/>
+            <SolidColorBrush x:Key="SepBrush" Color="#A6545458"/>
+            <SolidColorBrush x:Key="FillBrush" Color="#3D787880"/>
+            <SolidColorBrush x:Key="Fill2Brush" Color="#5C787880"/>
 
-            <SolidColorBrush x:Key="Stroke1Brush" Color="#FFFFFF" Opacity="0.07"/>
-            <SolidColorBrush x:Key="Stroke2Brush" Color="#FFFFFF" Opacity="0.10"/>
-            <SolidColorBrush x:Key="Stroke3Brush" Color="#FFFFFF" Opacity="0.18"/>
-            <SolidColorBrush x:Key="StrokeCardBrush" Color="#FFFFFF" Opacity="0.08"/>
+            <SolidColorBrush x:Key="GroupBrush" Color="#000000"/>
+            <SolidColorBrush x:Key="CardBrush" Color="#1C1C1E"/>
+            <SolidColorBrush x:Key="NavBrush" Color="#D11E1E1E"/>
+            <SolidColorBrush x:Key="BarBrush" Color="#DB1E1E1E"/>
+            <SolidColorBrush x:Key="PopoverBrush" Color="#D128282A"/>
+            <SolidColorBrush x:Key="BannerBrush" Color="#E028282A"/>
+            <SolidColorBrush x:Key="ToastBrush" Color="#E61E1E20"/>
+            <SolidColorBrush x:Key="IslandBrush" Color="#000000"/>
+            <SolidColorBrush x:Key="ScrimBrush" Color="#8C000000"/>
 
-            <SolidColorBrush x:Key="OkBrush" Color="#6CCB5F"/>
-            <SolidColorBrush x:Key="WarnBrush" Color="#FCE100"/>
-            <SolidColorBrush x:Key="ErrBrush" Color="#FF99A4"/>
+            <SolidColorBrush x:Key="RowHoverBrush" Color="#0DFFFFFF"/>
+            <SolidColorBrush x:Key="RowSelectedBrush" Color="#290A84FF"/>
+            <SolidColorBrush x:Key="PopoverHoverBrush" Color="#14FFFFFF"/>
+            <SolidColorBrush x:Key="PopoverSepBrush" Color="#A6545458"/>
+            <SolidColorBrush x:Key="BlueWash06Brush" Color="#140A84FF"/>
+            <SolidColorBrush x:Key="BlueWash09Brush" Color="#1F0A84FF"/>
+            <SolidColorBrush x:Key="BlueWash10Brush" Color="#240A84FF"/>
+            <SolidColorBrush x:Key="BlueWash12Brush" Color="#290A84FF"/>
+            <SolidColorBrush x:Key="BlueWash14Brush" Color="#330A84FF"/>
+            <SolidColorBrush x:Key="BlueWash20Brush" Color="#470A84FF"/>
+            <SolidColorBrush x:Key="RingTrackBrush" Color="#47787880"/>
 
-            <SolidColorBrush x:Key="ModalScrimBrush" Color="#000000" Opacity="0.55"/>
+            <SolidColorBrush x:Key="DotRedBrush" Color="#FF5F57"/>
+            <SolidColorBrush x:Key="DotYellowBrush" Color="#FEBC2E"/>
+            <SolidColorBrush x:Key="DotGreenBrush" Color="#28C840"/>
+
+            <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="SegThumbBrush" Color="#3A3A3C"/>
         </ResourceDictionary>
 
     </ResourceDictionary.ThemeDictionaries>
 
-    <!-- Accent: single value shared across themes, overwritten at runtime by
-         SettingsViewModel (App.Current.Resources["AccentBrush"] = ...). -->
-    <Color x:Key="AccentColor">#0067C0</Color>
-    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
-    <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource AccentColor}" Opacity="0.9"/>
-    <SolidColorBrush x:Key="AccentForegroundBrush" Color="White"/>
 
-    <!-- Sizes -->
-    <x:Double x:Key="TitleBarHeight">32</x:Double>
-    <x:Double x:Key="MenuBarHeight">28</x:Double>
-    <x:Double x:Key="CommandBarHeight">44</x:Double>
-    <x:Double x:Key="NavRailWidth">260</x:Double>
-    <x:Double x:Key="DetailPaneWidth">360</x:Double>
+    <!-- geometry -->
+    <x:Double x:Key="WindowWidth">536</x:Double>
+    <x:Double x:Key="WindowHeight">680</x:Double>
+    <x:Double x:Key="NavHeight">44</x:Double>
+    <x:Double x:Key="BarHeight">49</x:Double>
+    <x:Double x:Key="SnapThreshold">18</x:Double>
+    <x:Double x:Key="IslandOffset">66</x:Double>
+    <x:Double x:Key="HairlineThickness">0.5</x:Double>
 
-    <CornerRadius x:Key="RadiusCard">8</CornerRadius>
-    <CornerRadius x:Key="RadiusControl">4</CornerRadius>
-    <CornerRadius x:Key="RadiusRow">6</CornerRadius>
+    <CornerRadius x:Key="RadiusWindow">16</CornerRadius>
+    <CornerRadius x:Key="RadiusCard">10</CornerRadius>
+    <CornerRadius x:Key="RadiusSheet">14,14,0,0</CornerRadius>
+    <CornerRadius x:Key="RadiusSeg">9</CornerRadius>
+    <CornerRadius x:Key="RadiusSegThumb">7</CornerRadius>
+    <CornerRadius x:Key="RadiusTile">9</CornerRadius>
+    <CornerRadius x:Key="RadiusTileDense">6</CornerRadius>
+    <CornerRadius x:Key="RadiusPopover">13</CornerRadius>
+    <CornerRadius x:Key="RadiusNotice">12</CornerRadius>
+    <CornerRadius x:Key="RadiusIconButton">10</CornerRadius>
+    <CornerRadius x:Key="RadiusToolButton">8</CornerRadius>
     <CornerRadius x:Key="RadiusPill">999</CornerRadius>
+    <CornerRadius x:Key="RadiusIsland">22</CornerRadius>
 
-    <!-- Typography -->
-    <FontFamily x:Key="UiFontFamily">Segoe UI Variable Text, Segoe UI</FontFamily>
-    <FontFamily x:Key="DisplayFontFamily">Segoe UI Variable Display, Segoe UI</FontFamily>
-    <FontFamily x:Key="MonoFontFamily">Cascadia Code, Consolas</FontFamily>
+    <!-- typography: Windows has no SF Pro; the handoff's own fallback chain is
+         Inter Tight then system-ui, and Segoe UI Variable is the closest
+         system face, so it leads here. -->
+    <FontFamily x:Key="UiFontFamily">Segoe UI Variable Text, Inter Tight, Segoe UI</FontFamily>
+    <FontFamily x:Key="DisplayFontFamily">Segoe UI Variable Display, Inter Tight, Segoe UI</FontFamily>
+
+    <x:Double x:Key="Size105">10.5</x:Double>
+    <x:Double x:Key="Size115">11.5</x:Double>
+    <x:Double x:Key="Size12">12</x:Double>
+    <x:Double x:Key="Size125">12.5</x:Double>
+    <x:Double x:Key="Size13">13</x:Double>
+    <x:Double x:Key="Size135">13.5</x:Double>
+    <x:Double x:Key="Size145">14.5</x:Double>
+    <x:Double x:Key="Size15">15</x:Double>
+    <x:Double x:Key="Size17">17</x:Double>
+    <x:Double x:Key="Size27">27</x:Double>
+    <x:Double x:Key="Size44">44</x:Double>
+
+    <!-- motion: every duration in the handoff; easing is CubicBezier(.32,.72,0,1) -->
+    <Duration x:Key="DurHover">0:0:0.12</Duration>
+    <Duration x:Key="DurSwipe">0:0:0.18</Duration>
+    <Duration x:Key="DurFade">0:0:0.22</Duration>
+    <Duration x:Key="DurSnap">0:0:0.24</Duration>
+    <Duration x:Key="DurSeg">0:0:0.26</Duration>
+    <Duration x:Key="DurSheet">0:0:0.34</Duration>
+    <Duration x:Key="DurRing">0:0:0.6</Duration>
 
 </ResourceDictionary>

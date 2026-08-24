@@ -20,6 +20,7 @@ public sealed class StubDownloadEngine : IDownloadEngine
     private const double Mb = 1024 * 1024;
     private const double Kb = 1024;
 
+
     private readonly DispatcherTimer _timer;
     private readonly Random _random = new();
     private readonly double[] _speedHistory = new double[IslandSamples];
@@ -58,10 +59,10 @@ public sealed class StubDownloadEngine : IDownloadEngine
             if (!task.IsRunning) continue;
             var model = task.Model;
 
-            model.Speed = Math.Max(60 * Kb, model.Speed * (0.93 + _random.NextDouble() * 0.15));
-            model.Done = (long)Math.Min(model.Size, model.Done + model.Speed * TickSeconds);
+            model.Speed = ProgressSimulator.NextSpeed(model.Speed, _random.NextDouble());
+            model.Done = ProgressSimulator.Advance(model.Done, model.Size, model.Speed, TickSeconds);
             model.PeakSpeed = Math.Max(model.PeakSpeed, model.Speed);
-            model.SpeedHistory = Push(model.SpeedHistory, model.Speed, SessionSamples);
+            model.SpeedHistory = ProgressSimulator.Push(model.SpeedHistory, model.Speed, SessionSamples);
 
             if (model.Done >= model.Size)
             {
@@ -223,42 +224,13 @@ public sealed class StubDownloadEngine : IDownloadEngine
         return -1;
     }
 
-    // ── the handoff's mkBlocks / mkConns ──────────────────────────────────
-    private int[] MakeBlocks(double fraction)
-    {
-        var blocks = new int[BlockCount];
-        for (int i = 0; i < BlockCount; i++)
-        {
-            double at = i / (double)BlockCount;
-            blocks[i] = at < fraction ? 1
-                : _random.NextDouble() < 0.05 && at < fraction + 0.12 ? 2
-                : 0;
-        }
+    // The handoff's mkBlocks / mkConns, with the randomness injected so the
+    // rules can be exercised deterministically in NetTrans.Core.Tests.
+    private int[] MakeBlocks(double fraction) =>
+        ProgressSimulator.MakeBlocks(fraction, BlockCount, _random.NextDouble);
 
-        return blocks;
-    }
-
-    private double[] MakeConnections(int count, double speed)
-    {
-        if (count <= 0) return System.Array.Empty<double>();
-
-        var values = new double[count];
-        for (int i = 0; i < count; i++)
-        {
-            values[i] = speed > 0 ? speed / count * (0.55 + _random.NextDouble() * 0.9) : 0;
-        }
-
-        return values;
-    }
-
-    private static double[] Push(double[] history, double value, int cap)
-    {
-        if (history.Length < cap) return history.Append(value).ToArray();
-        var next = new double[cap];
-        System.Array.Copy(history, 1, next, 0, cap - 1);
-        next[^1] = value;
-        return next;
-    }
+    private double[] MakeConnections(int count, double speed) =>
+        ProgressSimulator.MakeConnections(count, speed, _random.NextDouble);
 
     private static string Stamp() => DateTime.Now.ToString("HH:mm");
 

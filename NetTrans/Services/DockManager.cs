@@ -1,6 +1,7 @@
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using NetTrans.Interop;
+using NetTrans.Models;
 using NetTrans.Shell;
 using Windows.Graphics;
 
@@ -15,7 +16,6 @@ namespace NetTrans.Services;
 /// </summary>
 public sealed class DockManager : IDisposable
 {
-    private const double SnapThresholdDips = 18;
     private const int SettleMilliseconds = 240;
 
     private readonly WindowChrome _main;
@@ -129,57 +129,33 @@ public sealed class DockManager : IDisposable
         RaiseDockChanged();
     }
 
-    /// <summary>Nearest dock edge within the 18px threshold, measured corner-to-corner like the handoff's `nearest()`.</summary>
+    /// <summary>Nearest dock edge within the 18px threshold; the maths lives in DockGeometry so it can be tested.</summary>
     private DockSide? Nearest(RectInt32 proposed)
     {
-        int threshold = (int)Math.Round(SnapThresholdDips * _side.Scale);
-        DockSide? best = null;
-        int bestDistance = int.MaxValue;
-
-        foreach (DockSide side in Enum.GetValues<DockSide>())
-        {
-            var p = DockPosition(side);
-            int dx = Math.Abs(proposed.X - p.X);
-            int dy = Math.Abs(proposed.Y - p.Y);
-            if (dx > threshold || dy > threshold) continue;
-            if (dx + dy >= bestDistance) continue;
-            best = side;
-            bestDistance = dx + dy;
-        }
-
-        return best;
+        int threshold = (int)Math.Round(DockGeometry.SnapThresholdDips * _side.Scale);
+        return DockGeometry.Nearest(ToFrame(proposed), ToFrame(_main.BoundsPx), threshold);
     }
 
     private PointInt32 DockPosition(DockSide side)
     {
-        var m = _main.BoundsPx;
-        var s = _side.BoundsPx;
-        return side switch
-        {
-            DockSide.Right => new PointInt32(m.X + m.Width, m.Y),
-            DockSide.Left => new PointInt32(m.X - s.Width, m.Y),
-            DockSide.Bottom => new PointInt32(m.X, m.Y + m.Height),
-            _ => new PointInt32(m.X, m.Y - s.Height),
-        };
+        var position = DockGeometry.DockPosition(side, ToFrame(_main.BoundsPx), ToFrame(_side.BoundsPx));
+        return new PointInt32(position.X, position.Y);
     }
 
     /// <summary>The `.snapline` rect: 3px thick, inset 8px from the shared edge's ends.</summary>
     private RectInt32 GuideRect(DockSide side)
     {
-        var m = _main.BoundsPx;
         double scale = _main.Scale;
-        int thickness = Math.Max(1, (int)Math.Round(3 * scale));
-        int inset = (int)Math.Round(8 * scale);
-        int half = thickness / 2;
+        var guide = DockGeometry.GuideRect(
+            side,
+            ToFrame(_main.BoundsPx),
+            thickness: Math.Max(1, (int)Math.Round(3 * scale)),
+            inset: (int)Math.Round(8 * scale));
 
-        return side switch
-        {
-            DockSide.Right => new RectInt32(m.X + m.Width - half, m.Y + inset, thickness, m.Height - inset * 2),
-            DockSide.Left => new RectInt32(m.X - half, m.Y + inset, thickness, m.Height - inset * 2),
-            DockSide.Bottom => new RectInt32(m.X + inset, m.Y + m.Height - half, m.Width - inset * 2, thickness),
-            _ => new RectInt32(m.X + inset, m.Y - half, m.Width - inset * 2, thickness),
-        };
+        return new RectInt32(guide.X, guide.Y, guide.Width, guide.Height);
     }
+
+    private static FrameRect ToFrame(RectInt32 rect) => new(rect.X, rect.Y, rect.Width, rect.Height);
 
     /// <summary>Eases the inspector to <paramref name="target"/> over .24s on the shared bezier.</summary>
     private void AnimateSideTo(PointInt32 target)

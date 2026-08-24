@@ -1,17 +1,9 @@
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using NetTrans.Models;
 using Windows.Graphics;
 
 namespace NetTrans.Interop;
-
-/// <summary>Which edge of the main window a frame is bonded to (the handoff's `dock`).</summary>
-public enum DockSide
-{
-    Right,
-    Left,
-    Bottom,
-    Top,
-}
 
 /// <summary>
 /// One borderless 16px-rounded frame. Wraps the Win32 work WinUI does not

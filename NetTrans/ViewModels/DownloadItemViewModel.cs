@@ -99,42 +99,22 @@ public sealed partial class DownloadItemViewModel : ObservableObject
     public bool HasNewerVersion => Model.NewerVersion is not null;
     public bool IsHighPriority => Priority == TaskPriority.High;
 
-    /// <summary>STATE_CN in the handoff.</summary>
-    public string StatusText => Status switch
-    {
-        DownloadStatus.Downloading => "下载中",
-        DownloadStatus.Paused => "已暂停",
-        DownloadStatus.Completed => "已完成",
-        DownloadStatus.Error => "出错",
-        _ => "排队中",
-    };
+    // Every derived string below comes from TaskPresenter, which lives in
+    // NetTrans.Core and is checked against values generated from the handoff's
+    // own source -- see NetTrans.Core.Tests.
+    public string StatusText => TaskPresenter.StatusText(Status);
 
-    public double Percent => Size <= 0 ? 0 : Math.Clamp(Done / (double)Size * 100.0, 0, 100);
-    public double Fraction => Size <= 0 ? 0 : Math.Clamp(Done / (double)Size, 0, 1);
+    public double Percent => TaskPresenter.Percent(Done, Size);
+    public double Fraction => TaskPresenter.Fraction(Done, Size);
 
     // ── derived: row ──────────────────────────────────────────────────────
-    public string SubText => Status switch
-    {
-        DownloadStatus.Completed => Checksum is { Length: > 0 } c
-            ? $"{FormatHelpers.Bytes(Size)} · {c}"
-            : FormatHelpers.Bytes(Size),
-        DownloadStatus.Error => $"{ErrorMessage} · 已重试 {Retries} 次",
-        DownloadStatus.Queued => "排队中，等待空闲通道",
-        DownloadStatus.Paused => $"已暂停 · {FormatHelpers.Bytes(Done)} / {FormatHelpers.Bytes(Size)}",
-        _ => $"{FormatHelpers.Speed(Speed)} · {FormatHelpers.Eta(Size - Done, Speed)}",
-    };
+    public string SubText => TaskPresenter.SubText(Model);
 
     /// <summary>The row's trailing readout: 完成 badge, 失败, an em dash while queued, or the percentage.</summary>
-    public string TrailingText => Status switch
-    {
-        DownloadStatus.Completed => "完成",
-        DownloadStatus.Error => "失败",
-        DownloadStatus.Queued => "—",
-        _ => $"{Percent:0}%",
-    };
+    public string TrailingText => TaskPresenter.TrailingText(Model);
 
     /// <summary>The progress track is hidden for finished and not-yet-started tasks.</summary>
-    public bool ShowProgress => Status is not (DownloadStatus.Completed or DownloadStatus.Queued);
+    public bool ShowProgress => TaskPresenter.ShowProgress(Status);
 
     /// <summary>Paused rows draw the fill in --gray instead of --blue.</summary>
     public Brush ProgressBrush => Resource(IsPaused ? "GrayBrush" : "BlueBrush");
@@ -153,12 +133,7 @@ public sealed partial class DownloadItemViewModel : ObservableObject
     });
 
     /// <summary>The hover action's label: 暂停 while running, 重试 after a failure, otherwise 继续.</summary>
-    public string ToggleLabel => Status switch
-    {
-        DownloadStatus.Downloading => "暂停",
-        DownloadStatus.Error => "重试",
-        _ => "继续",
-    };
+    public string ToggleLabel => TaskPresenter.ToggleLabel(Status);
 
     public Geometry ToggleGlyph => Glyph(IsRunning ? "IconPauseFill" : "IconPlayFill");
 
@@ -172,13 +147,11 @@ public sealed partial class DownloadItemViewModel : ObservableObject
     });
 
     /// <summary>Ring centre subtitle: live speed, falling back to the state name when stalled.</summary>
-    public string RingSubtitle => FormatHelpers.Speed(Speed) is { Length: > 0 } s ? s : StatusText;
+    public string RingSubtitle => TaskPresenter.RingSubtitle(Model);
 
-    public string RingCaption =>
-        $"{FormatHelpers.Bytes(Done)} / {FormatHelpers.Bytes(Size)} · " +
-        (IsDone ? "已完成" : FormatHelpers.Eta(Size - Done, Speed));
+    public string RingCaption => TaskPresenter.RingCaption(Model);
 
-    public string PercentText => $"{Percent:0}";
+    public string PercentText => TaskPresenter.PercentText(Done, Size);
     public string ConnectionsText => Connections > 0 ? Connections.ToString() : "—";
     public string SpeedText => FormatHelpers.SpeedOrDash(Speed);
     public string ChecksumText => Checksum is { Length: > 0 } c ? c : "未启用";
@@ -193,8 +166,8 @@ public sealed partial class DownloadItemViewModel : ObservableObject
         : FormatHelpers.SpeedOrDash(SpeedHistory.Average());
     public string PeakSpeedText => FormatHelpers.SpeedOrDash(Math.Max(Model.PeakSpeed, Speed));
 
-    public string NewVersionSubtitle => Model.NewerVersion is { } n
-        ? $"{n.Version} · {FormatHelpers.Bytes(n.Size)} · 发布于 {n.Published}"
+    public string NewVersionSubtitle => Model.NewerVersion is { } newer
+        ? TaskPresenter.NewVersionSubtitle(newer)
         : "";
 
     /// <summary>Called by the engine after it mutates the model, to refresh every derived readout at once.</summary>
@@ -213,12 +186,29 @@ public sealed partial class DownloadItemViewModel : ObservableObject
         OnPropertyChanged(nameof(PeakSpeedText));
     }
 
-    partial void OnDoneChanged(long value) => RaiseDerived();
-    partial void OnSpeedChanged(double value) => RaiseDerived();
-    partial void OnConnectionsChanged(int value) => RaiseDerived();
+    // TaskPresenter derives everything from the model, so a view-model write has
+    // to reach the model before the derived readouts are raised.
+    partial void OnDoneChanged(long value)
+    {
+        Model.Done = value;
+        RaiseDerived();
+    }
+
+    partial void OnSpeedChanged(double value)
+    {
+        Model.Speed = value;
+        RaiseDerived();
+    }
+
+    partial void OnConnectionsChanged(int value)
+    {
+        Model.Connections = value;
+        RaiseDerived();
+    }
 
     partial void OnStatusChanged(DownloadStatus value)
     {
+        Model.Status = value;
         RaiseDerived();
         OnPropertyChanged(nameof(IsDone));
         OnPropertyChanged(nameof(IsRunning));

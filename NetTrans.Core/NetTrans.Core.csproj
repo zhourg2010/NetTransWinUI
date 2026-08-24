@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Every part of NetTrans that has no dependency on WinUI or on Windows:
+    the task model, the design's formatting rules, list querying, the docking
+    geometry and the progress simulation.
+
+    It targets plain net8.0 on purpose. The shell can only be built and run on
+    Windows, but this half can be built and unit-tested anywhere, which is what
+    NetTrans.Core.Tests does.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>NetTrans</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+</Project>

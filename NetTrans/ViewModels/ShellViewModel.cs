@@ -16,9 +16,6 @@ namespace NetTrans.ViewModels;
 /// </summary>
 public sealed partial class ShellViewModel : ObservableObject
 {
-    /// <summary>FOLD in the handoff: rows past the fifth collapse behind 展开更多.</summary>
-    private const int FoldLimit = 5;
-
     private readonly IClipboardWatcher _clipboardWatcher;
     private readonly ISettingsStore _settingsStore;
     private readonly DispatcherTimer _toastTimer = new() { Interval = TimeSpan.FromMilliseconds(1700) };
@@ -89,8 +86,8 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty] private string _pendingUrl = "https://";
 
     // ── derived header readouts ───────────────────────────────────────────
-    public int ActiveCount => Scoped().Count(t => !t.IsDone);
-    public int DoneCount => Scoped().Count(t => t.IsDone);
+    public int ActiveCount => TaskQuery.ActiveCount(Engine.Tasks, t => t.Model, Category);
+    public int DoneCount => TaskQuery.DoneCount(Engine.Tasks, t => t.Model, Category);
     public int SelectionCount => SelectedIds.Count;
     public bool IsRunning => Engine.IsRunning;
     public bool HasCategoryFilter => Category != "all";
@@ -285,18 +282,18 @@ public sealed partial class ShellViewModel : ObservableObject
     }
 
     // ── plumbing ──────────────────────────────────────────────────────────
-    private IEnumerable<DownloadItemViewModel> Scoped() =>
-        Engine.Tasks.Where(t => Category == "all" || t.Category == Category);
-
     private void Rebuild()
     {
-        var target = Ordered().ToList();
+        // The whole pipeline -- category, tab, search, sort, fold -- lives in
+        // TaskQuery so it can be checked against the prototype's own output.
+        var target = TaskQuery.Apply(Engine.Tasks, t => t.Model, Tab, Category, Query, SortKey, SortDirection);
+        var fold = TaskQuery.Fold(target.Count, IsListExpanded);
 
-        CanFold = target.Count > FoldLimit;
-        HiddenCount = Math.Max(0, target.Count - FoldLimit);
+        CanFold = fold.CanFold;
+        HiddenCount = fold.Hidden;
         IsEmpty = target.Count == 0;
 
-        var shown = CanFold && !IsListExpanded ? target.Take(FoldLimit).ToList() : target;
+        var shown = target.Take(fold.Shown).ToList();
 
         // Sync in place so rows keep their hover/animation state across ticks.
         for (int i = 0; i < shown.Count; i++)
@@ -321,32 +318,6 @@ public sealed partial class ShellViewModel : ObservableObject
         }
 
         return -1;
-    }
-
-    private IEnumerable<DownloadItemViewModel> Ordered()
-    {
-        var scoped = Scoped();
-        var tabbed = Tab switch
-        {
-            "active" => scoped.Where(t => !t.IsDone),
-            "done" => scoped.Where(t => t.IsDone),
-            _ => scoped,
-        };
-
-        var searched = Query.Length == 0
-            ? tabbed
-            : tabbed.Where(t => t.Name.Contains(Query, StringComparison.OrdinalIgnoreCase));
-
-        IOrderedEnumerable<DownloadItemViewModel> sorted = SortKey switch
-        {
-            "name" => searched.OrderBy(t => t.Name, StringComparer.CurrentCulture),
-            "size" => searched.OrderBy(t => t.Size),
-            "progress" => searched.OrderBy(t => t.Fraction),
-            "speed" => searched.OrderBy(t => t.Speed),
-            _ => searched.OrderBy(t => Engine.Tasks.IndexOf(t)),
-        };
-
-        return SortDirection == "desc" ? sorted.Reverse() : sorted;
     }
 
     private void SyncSelection()

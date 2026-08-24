@@ -1,0 +1,1273 @@
+{
+  "bytes": [
+    {
+      "mb": 0,
+      "bytes": 0,
+      "expected": "0 MB"
+    },
+    {
+      "mb": 1,
+      "bytes": 1048576,
+      "expected": "1 MB"
+    },
+    {
+      "mb": 14,
+      "bytes": 14680064,
+      "expected": "14 MB"
+    },
+    {
+      "mb": 62,
+      "bytes": 65011712,
+      "expected": "62 MB"
+    },
+    {
+      "mb": 86,
+      "bytes": 90177536,
+      "expected": "86 MB"
+    },
+    {
+      "mb": 412,
+      "bytes": 432013312,
+      "expected": "412 MB"
+    },
+    {
+      "mb": 740,
+      "bytes": 775946240,
+      "expected": "740 MB"
+    },
+    {
+      "mb": 1023,
+      "bytes": 1072693248,
+      "expected": "1023 MB"
+    },
+    {
+      "mb": 1024,
+      "bytes": 1073741824,
+      "expected": "1.00 GB"
+    },
+    {
+      "mb": 1180,
+      "bytes": 1237319680,
+      "expected": "1.15 GB"
+    },
+    {
+      "mb": 3210,
+      "bytes": 3365928960,
+      "expected": "3.13 GB"
+    },
+    {
+      "mb": 5940,
+      "bytes": 6228541440,
+      "expected": "5.80 GB"
+    },
+    {
+      "mb": 6042,
+      "bytes": 6335496192,
+      "expected": "5.90 GB"
+    },
+    {
+      "mb": 10240,
+      "bytes": 10737418240,
+      "expected": "10.00 GB"
+    }
+  ],
+  "speeds": [
+    {
+      "kbs": 0,
+      "bytesPerSecond": 0,
+      "expected": ""
+    },
+    {
+      "kbs": 1,
+      "bytesPerSecond": 1024,
+      "expected": "1 KB/s"
+    },
+    {
+      "kbs": 60,
+      "bytesPerSecond": 61440,
+      "expected": "60 KB/s"
+    },
+    {
+      "kbs": 214,
+      "bytesPerSecond": 219136,
+      "expected": "214 KB/s"
+    },
+    {
+      "kbs": 500,
+      "bytesPerSecond": 512000,
+      "expected": "500 KB/s"
+    },
+    {
+      "kbs": 742,
+      "bytesPerSecond": 759808,
+      "expected": "742 KB/s"
+    },
+    {
+      "kbs": 1023,
+      "bytesPerSecond": 1047552,
+      "expected": "1023 KB/s"
+    },
+    {
+      "kbs": 1024,
+      "bytesPerSecond": 1048576,
+      "expected": "1.0 MB/s"
+    },
+    {
+      "kbs": 1180,
+      "bytesPerSecond": 1208320,
+      "expected": "1.2 MB/s"
+    },
+    {
+      "kbs": 2048,
+      "bytesPerSecond": 2097152,
+      "expected": "2.0 MB/s"
+    },
+    {
+      "kbs": 4096,
+      "bytesPerSecond": 4194304,
+      "expected": "4.0 MB/s"
+    }
+  ],
+  "etas": [
+    {
+      "seconds": 0,
+      "expected": "计算中"
+    },
+    {
+      "seconds": 1,
+      "expected": "剩余 1 秒"
+    },
+    {
+      "seconds": 30,
+      "expected": "剩余 30 秒"
+    },
+    {
+      "seconds": 59,
+      "expected": "剩余 59 秒"
+    },
+    {
+      "seconds": 60,
+      "expected": "剩余 1 分 0 秒"
+    },
+    {
+      "seconds": 61,
+      "expected": "剩余 1 分 1 秒"
+    },
+    {
+      "seconds": 90,
+      "expected": "剩余 1 分 30 秒"
+    },
+    {
+      "seconds": 599,
+      "expected": "剩余 9 分 59 秒"
+    },
+    {
+      "seconds": 3600,
+      "expected": "剩余 60 分 0 秒"
+    },
+    {
+      "seconds": 5940,
+      "expected": "剩余 99 分 0 秒"
+    },
+    {
+      "seconds": 5941,
+      "expected": "计算中"
+    },
+    {
+      "seconds": 99999,
+      "expected": "计算中"
+    }
+  ],
+  "etaFromTask": [
+    {
+      "id": 1,
+      "remainingBytes": 2304770048,
+      "bytesPerSecond": 1208320,
+      "expected": "剩余 31 分 47 秒"
+    },
+    {
+      "id": 3,
+      "remainingBytes": 727711744,
+      "bytesPerSecond": 759808,
+      "expected": "剩余 15 分 58 秒"
+    },
+    {
+      "id": 5,
+      "remainingBytes": 68157440,
+      "bytesPerSecond": 219136,
+      "expected": "剩余 5 分 11 秒"
+    },
+    {
+      "id": 4,
+      "remainingBytes": 2208301056,
+      "bytesPerSecond": 0,
+      "expected": "计算中"
+    },
+    {
+      "id": 7,
+      "remainingBytes": 675282944,
+      "bytesPerSecond": 0,
+      "expected": "计算中"
+    },
+    {
+      "id": 8,
+      "remainingBytes": 65011712,
+      "bytesPerSecond": 0,
+      "expected": "计算中"
+    },
+    {
+      "id": 2,
+      "remainingBytes": 0,
+      "bytesPerSecond": 0,
+      "expected": "计算中"
+    },
+    {
+      "id": 6,
+      "remainingBytes": 0,
+      "bytesPerSecond": 0,
+      "expected": "计算中"
+    }
+  ],
+  "stateNames": [
+    {
+      "state": "run",
+      "expected": "下载中"
+    },
+    {
+      "state": "paused",
+      "expected": "已暂停"
+    },
+    {
+      "state": "done",
+      "expected": "已完成"
+    },
+    {
+      "state": "error",
+      "expected": "出错"
+    },
+    {
+      "state": "queued",
+      "expected": "排队中"
+    }
+  ],
+  "rows": [
+    {
+      "id": 1,
+      "name": "ubuntu-24.04.2-desktop.iso",
+      "state": "run",
+      "sizeBytes": 6228541440,
+      "doneBytes": 3923771392,
+      "speedBytesPerSecond": 1208320,
+      "checksum": "SHA-256 待校验",
+      "err": null,
+      "retries": 0,
+      "subText": "1.2 MB/s · 剩余 31 分 47 秒",
+      "trailingText": "63%",
+      "percent": 62.996632996633
+    },
+    {
+      "id": 3,
+      "name": "4k-timelapse-reel.mp4",
+      "state": "run",
+      "sizeBytes": 1237319680,
+      "doneBytes": 509607936,
+      "speedBytesPerSecond": 759808,
+      "checksum": null,
+      "err": null,
+      "retries": 0,
+      "subText": "742 KB/s · 剩余 15 分 58 秒",
+      "trailingText": "41%",
+      "percent": 41.186440677966104
+    },
+    {
+      "id": 5,
+      "name": "source-sans-pack.zip",
+      "state": "run",
+      "sizeBytes": 90177536,
+      "doneBytes": 22020096,
+      "speedBytesPerSecond": 219136,
+      "checksum": null,
+      "err": null,
+      "retries": 0,
+      "subText": "214 KB/s · 剩余 5 分 11 秒",
+      "trailingText": "24%",
+      "percent": 24.418604651162788
+    },
+    {
+      "id": 4,
+      "name": "arch-linux-2026.08.torrent",
+      "state": "paused",
+      "sizeBytes": 3365928960,
+      "doneBytes": 1157627904,
+      "speedBytesPerSecond": 0,
+      "checksum": null,
+      "err": null,
+      "retries": 0,
+      "subText": "已暂停 · 1.08 GB / 3.13 GB",
+      "trailingText": "34%",
+      "percent": 34.39252336448598
+    },
+    {
+      "id": 7,
+      "name": "logic-samples-vol3.flac",
+      "state": "error",
+      "sizeBytes": 775946240,
+      "doneBytes": 100663296,
+      "speedBytesPerSecond": 0,
+      "checksum": null,
+      "err": "连接被服务器重置",
+      "retries": 2,
+      "subText": "连接被服务器重置 · 已重试 2 次",
+      "trailingText": "失败",
+      "percent": 12.972972972972974
+    },
+    {
+      "id": 8,
+      "name": "design-system-handoff.pdf",
+      "state": "queued",
+      "sizeBytes": 65011712,
+      "doneBytes": 0,
+      "speedBytesPerSecond": 0,
+      "checksum": null,
+      "err": null,
+      "retries": 0,
+      "subText": "排队中，等待空闲通道",
+      "trailingText": "—",
+      "percent": 0
+    },
+    {
+      "id": 2,
+      "name": "blender-4.2-portable.7z",
+      "state": "done",
+      "sizeBytes": 432013312,
+      "doneBytes": 432013312,
+      "speedBytesPerSecond": 0,
+      "checksum": "SHA-256 已校验",
+      "err": null,
+      "retries": 0,
+      "subText": "412 MB · SHA-256 已校验",
+      "trailingText": "完成",
+      "percent": 100
+    },
+    {
+      "id": 6,
+      "name": "quarterly-report-q2.pdf",
+      "state": "done",
+      "sizeBytes": 14680064,
+      "doneBytes": 14680064,
+      "speedBytesPerSecond": 0,
+      "checksum": null,
+      "err": null,
+      "retries": 0,
+      "subText": "14 MB",
+      "trailingText": "完成",
+      "percent": 100
+    }
+  ],
+  "ringCaptions": [
+    {
+      "id": 1,
+      "expected": "3.65 GB / 5.80 GB · 剩余 31 分 47 秒"
+    },
+    {
+      "id": 3,
+      "expected": "486 MB / 1.15 GB · 剩余 15 分 58 秒"
+    },
+    {
+      "id": 5,
+      "expected": "21 MB / 86 MB · 剩余 5 分 11 秒"
+    },
+    {
+      "id": 4,
+      "expected": "1.08 GB / 3.13 GB · 计算中"
+    },
+    {
+      "id": 7,
+      "expected": "96 MB / 740 MB · 计算中"
+    },
+    {
+      "id": 8,
+      "expected": "0 MB / 62 MB · 计算中"
+    },
+    {
+      "id": 2,
+      "expected": "412 MB / 412 MB · 已完成"
+    },
+    {
+      "id": 6,
+      "expected": "14 MB / 14 MB · 已完成"
+    }
+  ],
+  "sorting": [
+    {
+      "sortKey": "added",
+      "sortDirection": "asc",
+      "ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ]
+    },
+    {
+      "sortKey": "added",
+      "sortDirection": "desc",
+      "ids": [
+        8,
+        7,
+        6,
+        5,
+        4,
+        3,
+        2,
+        1
+      ]
+    },
+    {
+      "sortKey": "name",
+      "sortDirection": "asc",
+      "ids": [
+        3,
+        4,
+        2,
+        8,
+        7,
+        6,
+        5,
+        1
+      ]
+    },
+    {
+      "sortKey": "name",
+      "sortDirection": "desc",
+      "ids": [
+        1,
+        5,
+        6,
+        7,
+        8,
+        2,
+        4,
+        3
+      ]
+    },
+    {
+      "sortKey": "size",
+      "sortDirection": "asc",
+      "ids": [
+        6,
+        8,
+        5,
+        2,
+        7,
+        3,
+        4,
+        1
+      ]
+    },
+    {
+      "sortKey": "size",
+      "sortDirection": "desc",
+      "ids": [
+        1,
+        4,
+        3,
+        7,
+        2,
+        5,
+        8,
+        6
+      ]
+    },
+    {
+      "sortKey": "progress",
+      "sortDirection": "asc",
+      "ids": [
+        8,
+        7,
+        5,
+        4,
+        3,
+        1,
+        2,
+        6
+      ]
+    },
+    {
+      "sortKey": "progress",
+      "sortDirection": "desc",
+      "ids": [
+        2,
+        6,
+        1,
+        3,
+        4,
+        5,
+        7,
+        8
+      ]
+    },
+    {
+      "sortKey": "speed",
+      "sortDirection": "asc",
+      "ids": [
+        4,
+        7,
+        8,
+        2,
+        6,
+        5,
+        3,
+        1
+      ]
+    },
+    {
+      "sortKey": "speed",
+      "sortDirection": "desc",
+      "ids": [
+        1,
+        3,
+        5,
+        4,
+        7,
+        8,
+        2,
+        6
+      ]
+    }
+  ],
+  "filtering": [
+    {
+      "tab": "all",
+      "category": "all",
+      "activeCount": 6,
+      "doneCount": 2,
+      "ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ]
+    },
+    {
+      "tab": "all",
+      "category": "soft",
+      "activeCount": 1,
+      "doneCount": 1,
+      "ids": [
+        1,
+        2
+      ]
+    },
+    {
+      "tab": "all",
+      "category": "video",
+      "activeCount": 1,
+      "doneCount": 0,
+      "ids": [
+        3
+      ]
+    },
+    {
+      "tab": "all",
+      "category": "doc",
+      "activeCount": 2,
+      "doneCount": 1,
+      "ids": [
+        5,
+        6,
+        8
+      ]
+    },
+    {
+      "tab": "all",
+      "category": "music",
+      "activeCount": 1,
+      "doneCount": 0,
+      "ids": [
+        7
+      ]
+    },
+    {
+      "tab": "all",
+      "category": "bt",
+      "activeCount": 1,
+      "doneCount": 0,
+      "ids": [
+        4
+      ]
+    },
+    {
+      "tab": "active",
+      "category": "all",
+      "activeCount": 6,
+      "doneCount": 2,
+      "ids": [
+        1,
+        3,
+        4,
+        5,
+        7,
+        8
+      ]
+    },
+    {
+      "tab": "active",
+      "category": "soft",
+      "activeCount": 1,
+      "doneCount": 1,
+      "ids": [
+        1
+      ]
+    },
+    {
+      "tab": "active",
+      "category": "video",
+      "activeCount": 1,
+      "doneCount": 0,
+      "ids": [
+        3
+      ]
+    },
+    {
+      "tab": "active",
+      "category": "doc",
+      "activeCount": 2,
+      "doneCount": 1,
+      "ids": [
+        5,
+        8
+      ]
+    },
+    {
+      "tab": "active",
+      "category": "music",
+      "activeCount": 1,
+      "doneCount": 0,
+      "ids": [
+        7
+      ]
+    },
+    {
+      "tab": "active",
+      "category": "bt",
+      "activeCount": 1,
+      "doneCount": 0,
+      "ids": [
+        4
+      ]
+    },
+    {
+      "tab": "done",
+      "category": "all",
+      "activeCount": 6,
+      "doneCount": 2,
+      "ids": [
+        2,
+        6
+      ]
+    },
+    {
+      "tab": "done",
+      "category": "soft",
+      "activeCount": 1,
+      "doneCount": 1,
+      "ids": [
+        2
+      ]
+    },
+    {
+      "tab": "done",
+      "category": "video",
+      "activeCount": 1,
+      "doneCount": 0,
+      "ids": []
+    },
+    {
+      "tab": "done",
+      "category": "doc",
+      "activeCount": 2,
+      "doneCount": 1,
+      "ids": [
+        6
+      ]
+    },
+    {
+      "tab": "done",
+      "category": "music",
+      "activeCount": 1,
+      "doneCount": 0,
+      "ids": []
+    },
+    {
+      "tab": "done",
+      "category": "bt",
+      "activeCount": 1,
+      "doneCount": 0,
+      "ids": []
+    }
+  ],
+  "searching": [
+    {
+      "query": "",
+      "ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ]
+    },
+    {
+      "query": "ubuntu",
+      "ids": [
+        1
+      ]
+    },
+    {
+      "query": "PDF",
+      "ids": [
+        6,
+        8
+      ]
+    },
+    {
+      "query": "zip",
+      "ids": [
+        5
+      ]
+    },
+    {
+      "query": "nothing-matches",
+      "ids": []
+    }
+  ],
+  "folding": [
+    {
+      "total": 0,
+      "expanded": true,
+      "shown": 0,
+      "hidden": 0,
+      "canFold": false
+    },
+    {
+      "total": 0,
+      "expanded": false,
+      "shown": 0,
+      "hidden": 0,
+      "canFold": false
+    },
+    {
+      "total": 1,
+      "expanded": true,
+      "shown": 1,
+      "hidden": 0,
+      "canFold": false
+    },
+    {
+      "total": 1,
+      "expanded": false,
+      "shown": 1,
+      "hidden": 0,
+      "canFold": false
+    },
+    {
+      "total": 5,
+      "expanded": true,
+      "shown": 5,
+      "hidden": 0,
+      "canFold": false
+    },
+    {
+      "total": 5,
+      "expanded": false,
+      "shown": 5,
+      "hidden": 0,
+      "canFold": false
+    },
+    {
+      "total": 6,
+      "expanded": true,
+      "shown": 6,
+      "hidden": 0,
+      "canFold": true
+    },
+    {
+      "total": 6,
+      "expanded": false,
+      "shown": 5,
+      "hidden": 1,
+      "canFold": true
+    },
+    {
+      "total": 8,
+      "expanded": true,
+      "shown": 8,
+      "hidden": 0,
+      "canFold": true
+    },
+    {
+      "total": 8,
+      "expanded": false,
+      "shown": 5,
+      "hidden": 3,
+      "canFold": true
+    },
+    {
+      "total": 12,
+      "expanded": true,
+      "shown": 12,
+      "hidden": 0,
+      "canFold": true
+    },
+    {
+      "total": 12,
+      "expanded": false,
+      "shown": 5,
+      "hidden": 7,
+      "canFold": true
+    }
+  ],
+  "dockPositions": [
+    {
+      "side": "right",
+      "x": 636,
+      "y": 200
+    },
+    {
+      "side": "left",
+      "x": -436,
+      "y": 200
+    },
+    {
+      "side": "bottom",
+      "x": 100,
+      "y": 880
+    },
+    {
+      "side": "top",
+      "x": 100,
+      "y": -480
+    }
+  ],
+  "nearest": [
+    {
+      "offsetX": 0,
+      "offsetY": 0,
+      "fromRight": "right",
+      "fromLeft": "left",
+      "fromBottom": "bottom",
+      "fromTop": "top"
+    },
+    {
+      "offsetX": 18,
+      "offsetY": 0,
+      "fromRight": "right",
+      "fromLeft": "left",
+      "fromBottom": "bottom",
+      "fromTop": "top"
+    },
+    {
+      "offsetX": 19,
+      "offsetY": 0,
+      "fromRight": null,
+      "fromLeft": null,
+      "fromBottom": null,
+      "fromTop": null
+    },
+    {
+      "offsetX": 0,
+      "offsetY": 18,
+      "fromRight": "right",
+      "fromLeft": "left",
+      "fromBottom": "bottom",
+      "fromTop": "top"
+    },
+    {
+      "offsetX": 0,
+      "offsetY": 19,
+      "fromRight": null,
+      "fromLeft": null,
+      "fromBottom": null,
+      "fromTop": null
+    },
+    {
+      "offsetX": 18,
+      "offsetY": 18,
+      "fromRight": "right",
+      "fromLeft": "left",
+      "fromBottom": "bottom",
+      "fromTop": "top"
+    },
+    {
+      "offsetX": 10,
+      "offsetY": 10,
+      "fromRight": "right",
+      "fromLeft": "left",
+      "fromBottom": "bottom",
+      "fromTop": "top"
+    },
+    {
+      "offsetX": -18,
+      "offsetY": -18,
+      "fromRight": "right",
+      "fromLeft": "left",
+      "fromBottom": "bottom",
+      "fromTop": "top"
+    },
+    {
+      "offsetX": -19,
+      "offsetY": 0,
+      "fromRight": null,
+      "fromLeft": null,
+      "fromBottom": null,
+      "fromTop": null
+    },
+    {
+      "offsetX": 40,
+      "offsetY": 0,
+      "fromRight": null,
+      "fromLeft": null,
+      "fromBottom": null,
+      "fromTop": null
+    }
+  ],
+  "speedCurve": [
+    {
+      "speedBytesPerSecond": 307200,
+      "random": 0,
+      "expected": 285696
+    },
+    {
+      "speedBytesPerSecond": 307200,
+      "random": 1,
+      "expected": 331776
+    },
+    {
+      "speedBytesPerSecond": 61440,
+      "random": 0,
+      "expected": 61440
+    },
+    {
+      "speedBytesPerSecond": 1024000,
+      "random": 0.5,
+      "expected": 1029120.0000000001
+    }
+  ],
+  "seed": [
+    {
+      "id": 1,
+      "name": "ubuntu-24.04.2-desktop.iso",
+      "host": "releases.ubuntu.com",
+      "kind": "Disc",
+      "category": "soft",
+      "tint": "#ff9500",
+      "sizeBytes": 6228541440,
+      "doneBytes": 3923771392,
+      "speedBytesPerSecond": 1208320,
+      "status": "Downloading",
+      "connections": 8,
+      "checksum": "SHA-256 待校验",
+      "error": null,
+      "retries": 0,
+      "priority": "High",
+      "peers": null,
+      "seeds": null,
+      "ratio": null,
+      "uploadBytesPerSecond": 0,
+      "newerVersion": {
+        "version": "ubuntu-24.04.3-desktop.iso",
+        "sizeBytes": 6335496192,
+        "published": "2 天前"
+      }
+    },
+    {
+      "id": 3,
+      "name": "4k-timelapse-reel.mp4",
+      "host": "cdn.video-host.net",
+      "kind": "Film",
+      "category": "video",
+      "tint": "#af52de",
+      "sizeBytes": 1237319680,
+      "doneBytes": 509607936,
+      "speedBytesPerSecond": 759808,
+      "status": "Downloading",
+      "connections": 6,
+      "checksum": null,
+      "error": null,
+      "retries": 0,
+      "priority": "Normal",
+      "peers": null,
+      "seeds": null,
+      "ratio": null,
+      "uploadBytesPerSecond": 0,
+      "newerVersion": null
+    },
+    {
+      "id": 5,
+      "name": "source-sans-pack.zip",
+      "host": "fonts.mirror.dev",
+      "kind": "Zip",
+      "category": "doc",
+      "tint": "#5856d6",
+      "sizeBytes": 90177536,
+      "doneBytes": 22020096,
+      "speedBytesPerSecond": 219136,
+      "status": "Downloading",
+      "connections": 4,
+      "checksum": null,
+      "error": null,
+      "retries": 0,
+      "priority": "Normal",
+      "peers": null,
+      "seeds": null,
+      "ratio": null,
+      "uploadBytesPerSecond": 0,
+      "newerVersion": null
+    },
+    {
+      "id": 4,
+      "name": "arch-linux-2026.08.torrent",
+      "host": "12 个节点",
+      "kind": "Disc",
+      "category": "bt",
+      "tint": "#8e8e93",
+      "sizeBytes": 3365928960,
+      "doneBytes": 1157627904,
+      "speedBytesPerSecond": 0,
+      "status": "Paused",
+      "connections": 0,
+      "checksum": null,
+      "error": null,
+      "retries": 0,
+      "priority": "Normal",
+      "peers": 12,
+      "seeds": 4,
+      "ratio": 0.42,
+      "uploadBytesPerSecond": 88064,
+      "newerVersion": null
+    },
+    {
+      "id": 7,
+      "name": "logic-samples-vol3.flac",
+      "host": "cdn.audio-lib.net",
+      "kind": "Music",
+      "category": "music",
+      "tint": "#ff2d55",
+      "sizeBytes": 775946240,
+      "doneBytes": 100663296,
+      "speedBytesPerSecond": 0,
+      "status": "Error",
+      "connections": 0,
+      "checksum": null,
+      "error": "连接被服务器重置",
+      "retries": 2,
+      "priority": "Normal",
+      "peers": null,
+      "seeds": null,
+      "ratio": null,
+      "uploadBytesPerSecond": 0,
+      "newerVersion": null
+    },
+    {
+      "id": 8,
+      "name": "design-system-handoff.pdf",
+      "host": "docs.internal",
+      "kind": "Doc",
+      "category": "doc",
+      "tint": "#0a84ff",
+      "sizeBytes": 65011712,
+      "doneBytes": 0,
+      "speedBytesPerSecond": 0,
+      "status": "Queued",
+      "connections": 0,
+      "checksum": null,
+      "error": null,
+      "retries": 0,
+      "priority": "Normal",
+      "peers": null,
+      "seeds": null,
+      "ratio": null,
+      "uploadBytesPerSecond": 0,
+      "newerVersion": null
+    },
+    {
+      "id": 2,
+      "name": "blender-4.2-portable.7z",
+      "host": "mirror.blender.org",
+      "kind": "Zip",
+      "category": "soft",
+      "tint": "#34c759",
+      "sizeBytes": 432013312,
+      "doneBytes": 432013312,
+      "speedBytesPerSecond": 0,
+      "status": "Completed",
+      "connections": 0,
+      "checksum": "SHA-256 已校验",
+      "error": null,
+      "retries": 0,
+      "priority": "Normal",
+      "peers": null,
+      "seeds": null,
+      "ratio": null,
+      "uploadBytesPerSecond": 0,
+      "newerVersion": {
+        "version": "blender-4.2.1-portable.7z",
+        "sizeBytes": 438304768,
+        "published": "今天 08:12"
+      }
+    },
+    {
+      "id": 6,
+      "name": "quarterly-report-q2.pdf",
+      "host": "docs.internal",
+      "kind": "Doc",
+      "category": "doc",
+      "tint": "#ff3b30",
+      "sizeBytes": 14680064,
+      "doneBytes": 14680064,
+      "speedBytesPerSecond": 0,
+      "status": "Completed",
+      "connections": 0,
+      "checksum": null,
+      "error": null,
+      "retries": 0,
+      "priority": "Normal",
+      "peers": null,
+      "seeds": null,
+      "ratio": null,
+      "uploadBytesPerSecond": 0,
+      "newerVersion": null
+    }
+  ],
+  "midpoints": {
+    "bytes": [
+      {
+        "mb": 0.5,
+        "bytes": 524288,
+        "expected": "1 MB"
+      },
+      {
+        "mb": 1.5,
+        "bytes": 1572864,
+        "expected": "2 MB"
+      },
+      {
+        "mb": 2.5,
+        "bytes": 2621440,
+        "expected": "3 MB"
+      },
+      {
+        "mb": 62.5,
+        "bytes": 65536000,
+        "expected": "63 MB"
+      },
+      {
+        "mb": 1023.5,
+        "bytes": 1073217536,
+        "expected": "1024 MB"
+      }
+    ],
+    "speeds": [
+      {
+        "kbs": 0.5,
+        "bytesPerSecond": 512,
+        "expected": "1 KB/s"
+      },
+      {
+        "kbs": 1.5,
+        "bytesPerSecond": 1536,
+        "expected": "2 KB/s"
+      },
+      {
+        "kbs": 2.5,
+        "bytesPerSecond": 2560,
+        "expected": "3 KB/s"
+      },
+      {
+        "kbs": 1023.5,
+        "bytesPerSecond": 1048064,
+        "expected": "1024 KB/s"
+      }
+    ],
+    "percents": [
+      {
+        "percent": 0.5,
+        "expected": "1"
+      },
+      {
+        "percent": 1.5,
+        "expected": "2"
+      },
+      {
+        "percent": 2.5,
+        "expected": "3"
+      },
+      {
+        "percent": 49.5,
+        "expected": "50"
+      },
+      {
+        "percent": 99.5,
+        "expected": "100"
+      }
+    ]
+  },
+  "easing": [
+    {
+      "t": 0,
+      "expected": 0
+    },
+    {
+      "t": 0.05,
+      "expected": 0.1219233502027496
+    },
+    {
+      "t": 0.1,
+      "expected": 0.2698206988072846
+    },
+    {
+      "t": 0.25,
+      "expected": 0.7791312484017138
+    },
+    {
+      "t": 0.4,
+      "expected": 0.9184100772611717
+    },
+    {
+      "t": 0.5,
+      "expected": 0.9548094094936647
+    },
+    {
+      "t": 0.6,
+      "expected": 0.9757782291394789
+    },
+    {
+      "t": 0.75,
+      "expected": 0.9923487138958259
+    },
+    {
+      "t": 0.9,
+      "expected": 0.9989692025655429
+    },
+    {
+      "t": 0.95,
+      "expected": 0.999755102531356
+    },
+    {
+      "t": 1,
+      "expected": 1
+    }
+  ]
+}

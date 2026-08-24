@@ -8,6 +8,15 @@ with a Dynamic-Island-like speed capsule floating above them.
 Targets `net8.0-windows10.0.19041.0` and `net10.0-windows10.0.19041.0` side by
 side, unpackaged (no MSIX required to run).
 
+The solution is split so that the half of the app with no dependency on WinUI
+can be built and tested anywhere:
+
+| Project | Target | Runs on |
+| --- | --- | --- |
+| `NetTrans` | `net8.0/net10.0-windows10.0.19041.0` | Windows only — the WinUI shell |
+| `NetTrans.Core` | `net8.0` | anywhere — model, formatting, list, docking and progress rules |
+| `NetTrans.Core.Tests` | `net8.0` | anywhere — xunit tests over `NetTrans.Core` |
+
 ## What the design asks for, and where it lives
 
 | Design piece | Implementation |
@@ -33,6 +42,20 @@ side, unpackaged (no MSIX required to run).
 ## Project layout
 
 ```
+NetTrans.Core/              No WinUI, no Windows — buildable and testable anywhere
+  Models/                   DownloadItem, DownloadStatus, FileKind, TaskPriority,
+                            NewVersionInfo, LogEntry, AppSettings, DockSide
+  Services/
+    FormatHelpers.cs        mb() / spd() / eta() from the handoff
+    TaskPresenter.cs        Every string the design derives from a task
+    TaskQuery.cs            Category, tab, search, sort and the five-row fold
+    DockGeometry.cs         Dock positions, the 18px threshold, the guide rect
+    ProgressSimulator.cs    The stub engine's arithmetic, randomness injected
+    Easing.cs               cubic-bezier(.32,.72,0,1)
+
+NetTrans.Core.Tests/        xunit over NetTrans.Core; see "Testing" below
+  Golden/golden.json        Expectations generated from the handoff's own source
+
 NetTrans/
   App.xaml(.cs)             Entry point; builds ShellHost
   Shell/
@@ -49,10 +72,8 @@ NetTrans/
                             ConnectionList, SheetHost, PopoverControl, IslandControl
     Sheets/                 Add / Batch / Torrent / Sniff / Settings
   ViewModels/               ShellViewModel, DownloadItemViewModel
-  Models/                   DownloadItem, DownloadStatus, FileKind, TaskPriority,
-                            NewVersionInfo, LogEntry, AppSettings
-  Services/                 IDownloadEngine/StubDownloadEngine, DockManager, Easing,
-                            FormatHelpers, ThemeBrushes, clipboard + settings stores
+  Services/                 IDownloadEngine/StubDownloadEngine, DockManager,
+                            ThemeBrushes, clipboard + settings stores
   Resources/                Tokens.xaml (iOS tokens as ThemeDictionaries), Icons.xaml,
                             Styles/ (Text, Surfaces, Buttons, Inputs, Shadows)
   Converters/               BindingHelpers (x:Bind function bindings)
@@ -68,11 +89,50 @@ tooling on the command line).
 dotnet build -f net8.0-windows10.0.19041.0 -r win-x64
 ```
 
+`NetTrans.Core` and its tests need none of that and build with a bare .NET 8
+SDK on any OS.
+
 This rewrite, like the original scaffold, was authored without access to a
-Windows toolchain, so **give it a first build pass on Windows before relying on
-it**. Expect typo-level XAML/C# fixes rather than architectural ones. The two
-places most worth checking first are the `CommunityToolkit.WinUI.Media` shadow
-API in `Resources/Styles/Shadows.xaml` and the Win32 interop in `Interop/`.
+Windows toolchain, so **give the shell a first build pass on Windows before
+relying on it**. Expect typo-level XAML/C# fixes rather than architectural
+ones. The two places most worth checking first are the
+`CommunityToolkit.WinUI.Media` shadow API in `Resources/Styles/Shadows.xaml`
+and the Win32 interop in `Interop/`.
+
+## Testing
+
+```sh
+dotnet test NetTrans.Core.Tests
+```
+
+Runs on Linux, macOS or Windows — it never touches WinUI.
+
+The expectations are not hand-written. `tools/golden/generate-golden.mjs` pulls
+`mb()`, `spd()`, `eta()`, `STATE_CN`, `SEED` and the `SORT` map **out of the
+design handoff's own source** with regexes, evaluates them under Node, and
+writes the results to `NetTrans.Core.Tests/Golden/golden.json`. The tests assert
+against that file, so a disagreement with the prototype fails the build instead
+of both sides being wrong in the same way. See `tools/golden/README.md` for how
+to regenerate it.
+
+Writing them this way immediately caught three bugs in the first pass of the
+rewrite:
+
+- **Mid-point rounding.** JavaScript's `Math.round` and `toFixed` round halves
+  away from zero; .NET's `Math.Round` rounds them to even. 62.5 MB rendered as
+  "62 MB" instead of the design's "63 MB".
+- **Descending sort.** The prototype negates its comparator rather than
+  reversing the sorted list, and `Array.prototype.sort` is stable, so tied rows
+  keep their original order in *both* directions. Sorting ascending and
+  reversing put the five stalled tasks in the wrong order.
+- **加入时间 order.** `SORT.added` is `a.id - b.id` — creation order, not queue
+  position. The implementation was sorting by queue index, so 移到队首 appeared
+  to reorder the list when the design says it does not.
+
+What is *not* covered: anything that needs a window. `WindowChrome`,
+`DockManager`'s timers, `ShellHost` and every XAML view are exercised only by
+running the app. `DockGeometry` extracts the part of the docking behaviour that
+is pure arithmetic, which is the part most likely to be subtly wrong.
 
 ## Deliberate departures from the handoff
 

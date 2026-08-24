@@ -2,6 +2,7 @@ using System.ComponentModel;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using NetTrans.Interop;
+using NetTrans.Models;
 using NetTrans.Services;
 using NetTrans.ViewModels;
 using NetTrans.Views;
@@ -199,18 +200,9 @@ public sealed class ShellHost : IDisposable
 
         // Bonded frames square off the two corners along the shared edge.
         _mainChrome.ApplyCorners(_viewModel.ShowInspector ? dock : null);
-        _inspectorChrome.ApplyCorners(_viewModel.ShowInspector ? Opposite(dock) : null);
+        _inspectorChrome.ApplyCorners(_viewModel.ShowInspector ? DockGeometry.Opposite(dock) : null);
         _inspectorShell.SetDocked(dock is not null);
     }
-
-    private static DockSide? Opposite(DockSide? side) => side switch
-    {
-        DockSide.Right => DockSide.Left,
-        DockSide.Left => DockSide.Right,
-        DockSide.Bottom => DockSide.Top,
-        DockSide.Top => DockSide.Bottom,
-        _ => null,
-    };
 
     // ── shell toggles ─────────────────────────────────────────────────────
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -314,8 +306,7 @@ public sealed class ShellHost : IDisposable
     }
 
     private static bool Contains(RectInt32 rect, NativeMethods.POINT point) =>
-        point.X >= rect.X && point.X < rect.X + rect.Width &&
-        point.Y >= rect.Y && point.Y < rect.Y + rect.Height;
+        new FrameRect(rect.X, rect.Y, rect.Width, rect.Height).Contains(point.X, point.Y);
 
     private void SlideOut()
     {

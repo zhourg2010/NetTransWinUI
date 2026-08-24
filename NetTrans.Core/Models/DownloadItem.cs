@@ -46,7 +46,16 @@ public sealed class DownloadItem
 
     public int Retries { get; set; }
     public string AddedAt { get; set; } = "";
+    /// <summary>The 校验 row's state text ("SHA-256 待校验" / "SHA-256 已校验").</summary>
     public string? Checksum { get; set; }
+
+    /// <summary>The hash actually computed, once 校验 SHA-256 has run.</summary>
+    public string? Sha256 { get; set; }
+
+    /// <summary>Validators recorded when the transfer probed, so a later 新版本 check has something to compare against.</summary>
+    public string? SourceETag { get; set; }
+
+    public string? SourceLastModified { get; set; }
 
     /// <summary>BT-only fields; null on plain HTTP tasks, which switches the inspector's row from 节点/种子 to 校验.</summary>
     public int? Peers { get; set; }

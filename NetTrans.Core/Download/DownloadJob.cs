@@ -153,6 +153,12 @@ public sealed class DownloadJob
         Item.ErrorMessage = null;
 
         var info = await _transport.ProbeAsync(url, cancellationToken).ConfigureAwait(false);
+
+        // Kept so a later 新版本 check has something to compare against.
+        Item.SourceETag = info.ETag;
+        Item.SourceLastModified = info.LastModified;
+        Item.Checksum ??= FileHash.Pending;
+
         Item.Log.Add(new LogEntry(Stamp(), $"已连接 {url.Host}"));
         Item.Log.Add(new LogEntry(Stamp(), info.CanSplit ? "服务器支持断点续传" : "服务器不支持断点续传，将单线程下载"));
 

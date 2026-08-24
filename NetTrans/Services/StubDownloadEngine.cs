@@ -70,7 +70,7 @@ public sealed class StubDownloadEngine : IDownloadEngine
                 model.Speed = 0;
                 model.Status = DownloadStatus.Completed;
                 model.Connections = 0;
-                model.Checksum = "SHA-256 已校验";
+                model.Checksum = NetTrans.Download.FileHash.Verified;
                 model.ConnectionSpeeds = System.Array.Empty<double>();
                 model.Blocks = Enumerable.Repeat(1, BlockCount).ToArray();
                 model.Log.Add(new LogEntry(Stamp(), "下载完成"));

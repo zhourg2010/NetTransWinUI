@@ -63,12 +63,17 @@ public class VersionCheckTests
         Assert.Equal(1, probe.Probes);
     }
 
-    [Fact]
-    public async Task A_task_without_a_usable_url_is_skipped()
+    [Theory]
+    [InlineData("magnet:?xt=urn:btih:9f2c1a")]   // a valid absolute URI, but not one HEAD can answer
+    [InlineData("ftp://example.test/file.bin")]
+    [InlineData("file:///C:/downloads/file.bin")]
+    [InlineData("not a url at all")]
+    [InlineData("")]
+    public async Task A_task_without_a_usable_url_is_skipped(string url)
     {
         var probe = new ScriptedProbe(Info());
         var item = Item();
-        item.Url = "magnet:?xt=urn:btih:9f2c1a";
+        item.Url = url;
 
         Assert.Null(await VersionCheck.CheckAsync(item, probe));
         Assert.Equal(0, probe.Probes);

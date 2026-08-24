@@ -22,7 +22,11 @@ public static class VersionCheck
         IHttpTransport transport,
         CancellationToken cancellationToken = default)
     {
+        // Only http(s) has anything to answer here. A magnet link parses as a
+        // perfectly valid absolute URI, so parsing alone is not the question --
+        // the question is whether a HEAD request means anything against it.
         if (!Uri.TryCreate(item.Url, UriKind.Absolute, out var url)) return null;
+        if (url.Scheme != Uri.UriSchemeHttp && url.Scheme != Uri.UriSchemeHttps) return null;
 
         RemoteFileInfo info;
         try

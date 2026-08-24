@@ -212,14 +212,18 @@ public sealed class DownloadEngine : IAsyncDisposable
 
         while (true)
         {
-            DownloadItem? next;
+            DownloadItem next;
+            Running running;
 
             lock (_gate)
             {
                 if (_running.Count >= _maxConcurrent) return;
 
-                next = _items
-                    .Where(item => item.Status == DownloadStatus.Queued)
+                var candidate = _items
+                    // A task that is still winding down holds its slot: it can
+                    // be re-queued while its old job is finishing, and starting
+                    // a second job for it would leave two writers on one file.
+                    .Where(item => item.Status == DownloadStatus.Queued && !_running.ContainsKey(item.Id))
                     .OrderBy(item => item.Priority switch
                     {
                         TaskPriority.High => 0,
@@ -229,19 +233,25 @@ public sealed class DownloadEngine : IAsyncDisposable
                     .ThenBy(item => _items.IndexOf(item))
                     .FirstOrDefault();
 
-                if (next is null) return;
+                if (candidate is null) return;
+                next = candidate;
 
                 var job = new DownloadJob(next, _transport, _sinks, _clock, _options, _resume, _globalLimit)
                 {
                     SpeedLimit = SpeedLimits.Parse(next.SpeedLimit),
                 };
 
-                var running = new Running(job);
+                running = new Running(job);
                 _running[next.Id] = running;
-                running.Start(this);
+
+                // Marked Downloading before the job can run, not after: a short
+                // transfer can otherwise finish and set Completed while we are
+                // still on our way to this line, and we would overwrite it.
+                next.Status = DownloadStatus.Downloading;
             }
 
-            SetStatus(next, DownloadStatus.Downloading);
+            StatusChanged?.Invoke(this, next);
+            running.Start(this);
         }
     }
 
@@ -256,15 +266,21 @@ public sealed class DownloadEngine : IAsyncDisposable
         }
         catch (Exception exception)
         {
+            // The message only; the status is set below with everything else,
+            // so the change still reaches StatusChanged.
             item.ErrorMessage = DownloadJob.Describe(exception);
-            item.Status = DownloadStatus.Error;
             outcome = JobOutcome.Failed;
         }
 
         bool stillQueued;
         lock (_gate)
         {
-            _running.Remove(item.Id);
+            // Only our own registration, never a successor's.
+            if (_running.TryGetValue(item.Id, out var current) && ReferenceEquals(current, running))
+            {
+                _running.Remove(item.Id);
+            }
+
             stillQueued = _items.Any(existing => existing.Id == item.Id);
         }
 
@@ -288,7 +304,9 @@ public sealed class DownloadEngine : IAsyncDisposable
                 break;
 
             default:
-                SetStatus(item, DownloadStatus.Paused);
+                // Re-queued while this job was stopping: the user's newer
+                // intent wins, and the Pump below acts on it.
+                if (item.Status == DownloadStatus.Downloading) SetStatus(item, DownloadStatus.Paused);
                 break;
         }
 
@@ -328,15 +346,32 @@ public sealed class DownloadEngine : IAsyncDisposable
     {
         private readonly CancellationTokenSource _cancellation = new();
 
+        // Completes only when the transfer has actually finished, and exists
+        // from construction: a task is registered as running slightly before
+        // it is started, and a dispose landing in that gap still has to wait
+        // for it rather than seeing an already-finished placeholder.
+        private readonly TaskCompletionSource _completion =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
         public Running(DownloadJob job) => Job = job;
 
         public DownloadJob Job { get; }
 
-        public Task Completion { get; private set; } = Task.CompletedTask;
+        public Task Completion => _completion.Task;
 
         public CancellationToken Token => _cancellation.Token;
 
-        public void Start(DownloadEngine engine) => Completion = Task.Run(() => engine.RunAsync(this));
+        public void Start(DownloadEngine engine) => _ = Task.Run(async () =>
+        {
+            try
+            {
+                await engine.RunAsync(this).ConfigureAwait(false);
+            }
+            finally
+            {
+                _completion.TrySetResult();
+            }
+        });
 
         public void Cancel()
         {

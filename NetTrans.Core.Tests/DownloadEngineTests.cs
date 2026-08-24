@@ -247,6 +247,40 @@ public class DownloadEngineTests : IAsyncLifetime
         Assert.Equal(4 * 1024 * 1024, _engine.GlobalSpeedLimit);
     }
 
+    [Fact]
+    public async Task Short_transfers_keep_the_status_they_finish_with()
+    {
+        // Nothing gates these, so each one can finish before the queue has got
+        // as far as marking it 下载中. That marking must not land on top of the
+        // result and strand a finished task as 下载中 forever.
+        _engine = Engine(maxConcurrent: 4);
+
+        var items = Enumerable.Range(1, 24).Select(id => Item(id)).ToArray();
+        foreach (var item in items) _engine.Add(item);
+
+        await Until(() => items.All(i => i.Status == DownloadStatus.Completed));
+    }
+
+    [Fact]
+    public async Task Resuming_while_a_task_is_still_stopping_still_starts_it()
+    {
+        var gate = new TaskCompletionSource();
+        _transport.BeforeOpen = () => gate.Task;
+        _engine = Engine();
+
+        var item = Item(1);
+        _engine.Add(item);
+        await Until(() => item.Status == DownloadStatus.Downloading);
+
+        // 继续 pressed before the paused transfer has finished unwinding: the
+        // newer intent has to survive the older job's tidy-up.
+        _engine.Pause(item.Id);
+        _engine.Resume(item.Id);
+        gate.SetResult();
+
+        await Until(() => item.Status == DownloadStatus.Completed);
+    }
+
     private DownloadEngine Engine(int maxConcurrent = 4, int retries = 0) => new(
         _transport,
         _sinks,

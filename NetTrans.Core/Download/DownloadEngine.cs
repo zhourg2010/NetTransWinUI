@@ -117,13 +117,19 @@ public sealed class DownloadEngine : IAsyncDisposable
         Pump();
     }
 
-    /// <summary>The row's 暂停 / 继续 / 重试, which is the same button in three states.</summary>
+    /// <summary>
+    /// The row's 暂停 / 继续 / 重试, which is the same button in three states.
+    ///
+    /// A queued task counts as running here: it is going to start on its own,
+    /// so the action the user has is to stand it down. The prototype starts it
+    /// instead, but it has no concurrency limit, so "queued" never lasts there.
+    /// </summary>
     public void Toggle(int id)
     {
         var item = Find(id);
         if (item is null || item.Status == DownloadStatus.Completed) return;
 
-        if (item.Status == DownloadStatus.Downloading) Pause(id);
+        if (item.Status is DownloadStatus.Downloading or DownloadStatus.Queued) Pause(id);
         else Resume(id);
     }
 

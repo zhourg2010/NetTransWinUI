@@ -32,9 +32,11 @@ public class ThrottleTests
         meter.Record(9000, Start);
         meter.Record(1000, Start + TimeSpan.FromSeconds(4));
 
-        // The 9000 is older than the window, so only the recent sample counts.
-        Assert.Equal(1000, meter.Total - 9000);
-        Assert.True(meter.BytesPerSecond(Start + TimeSpan.FromSeconds(4)) < 9000);
+        // The 9000 is older than the window, so only the recent sample counts,
+        // spread across the full three-second window rather than across the
+        // vanishing gap between the surviving samples.
+        Assert.Equal(10000, meter.Total);
+        Assert.Equal(1000 / 3.0, meter.BytesPerSecond(Start + TimeSpan.FromSeconds(4)), precision: 3);
     }
 
     [Fact]

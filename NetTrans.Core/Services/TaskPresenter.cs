@@ -70,10 +70,18 @@ public static class TaskPresenter
     public static string NewVersionSubtitle(NewVersionInfo version) =>
         $"{version.Version} · {FormatHelpers.Bytes(version.Size)} · 发布于 {version.Published}";
 
-    /// <summary>The hover action's label: 暂停 while running, 重试 after a failure, otherwise 继续.</summary>
+    /// <summary>
+    /// The hover action's label: 暂停 while running or queued, 重试 after a
+    /// failure, otherwise 继续.
+    ///
+    /// The prototype labels a queued task 继续, but it has no concurrency limit
+    /// so nothing stays queued there. Here a queued task is waiting for a slot
+    /// and will start by itself, so the action on offer is to stand it down --
+    /// labelling it 继续 would leave a button that does nothing.
+    /// </summary>
     public static string ToggleLabel(DownloadStatus status) => status switch
     {
-        DownloadStatus.Downloading => "暂停",
+        DownloadStatus.Downloading or DownloadStatus.Queued => "暂停",
         DownloadStatus.Error => "重试",
         _ => "继续",
     };

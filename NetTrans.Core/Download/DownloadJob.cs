@@ -24,8 +24,9 @@ public sealed class DownloadJob
     private readonly List<SpeedMeter> _connectionMeters = new();
     private readonly object _gate = new();
 
+    private readonly object _pauseGate = new();
     private CancellationTokenSource? _cancellation;
-    private volatile bool _pauseRequested;
+    private bool _pauseRequested;
     private DateTimeOffset _lastMapRefresh;
 
     public DownloadJob(
@@ -73,18 +74,39 @@ public sealed class DownloadJob
         }
     }
 
-    /// <summary>Asks the transfer to stop at the next read boundary and keep its progress.</summary>
+    /// <summary>
+    /// Asks the transfer to stop at the next read boundary and keep its
+    /// progress. Safe to call before <see cref="RunAsync"/> has got as far as
+    /// creating its cancellation source -- the request is held and honoured
+    /// when it does.
+    /// </summary>
     public void Pause()
     {
-        _pauseRequested = true;
-        _cancellation?.Cancel();
+        CancellationTokenSource? cancellation;
+
+        lock (_pauseGate)
+        {
+            _pauseRequested = true;
+            cancellation = _cancellation;
+        }
+
+        cancellation?.Cancel();
     }
 
     public async Task<JobOutcome> RunAsync(CancellationToken cancellationToken)
     {
-        _pauseRequested = false;
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        _cancellation = linked;
+
+        bool alreadyPaused;
+        lock (_pauseGate)
+        {
+            _cancellation = linked;
+            alreadyPaused = _pauseRequested;
+        }
+
+        // Paused between being queued and getting here: honour it now rather
+        // than running to completion and ignoring the request.
+        if (alreadyPaused) linked.Cancel();
 
         try
         {
@@ -97,7 +119,10 @@ public sealed class DownloadJob
             Item.Connections = 0;
             _meter.Reset();
 
-            if (!_pauseRequested) return JobOutcome.Failed;
+            bool paused;
+            lock (_pauseGate) paused = _pauseRequested;
+
+            if (!paused) return JobOutcome.Failed;
 
             Item.Status = DownloadStatus.Paused;
             Item.Log.Add(new LogEntry(Stamp(), "已暂停"));
@@ -116,7 +141,7 @@ public sealed class DownloadJob
         }
         finally
         {
-            _cancellation = null;
+            lock (_pauseGate) _cancellation = null;
         }
     }
 
@@ -161,7 +186,7 @@ public sealed class DownloadJob
         Item.Log.Add(new LogEntry(Stamp(), $"已建立 {pending.Count} 个连接"));
 
         var limit = new TokenBucket(SpeedLimit, _clock.UtcNow);
-        using var persistence = new PeriodicPersister(this, _options.ResumeInterval, _clock);
+        using var persistence = _resume is null ? null : new PeriodicPersister(this, _options.ResumeInterval);
 
         var transfers = pending
             .Select((segment, index) => FetchAsync(url, segment, index, sink, limit, info, cancellationToken))
@@ -369,7 +394,12 @@ public sealed class DownloadJob
     {
         private readonly CancellationTokenSource _stop = new();
 
-        public PeriodicPersister(DownloadJob job, TimeSpan interval, IClock clock)
+        /// <summary>
+        /// Deliberately on the real clock rather than the injected one: this is
+        /// housekeeping, not transfer logic, and a fake clock that returns from
+        /// every delay immediately would turn it into a busy loop.
+        /// </summary>
+        public PeriodicPersister(DownloadJob job, TimeSpan interval)
         {
             _ = Task.Run(async () =>
             {
@@ -377,7 +407,7 @@ public sealed class DownloadJob
                 {
                     while (!_stop.IsCancellationRequested)
                     {
-                        await clock.DelayAsync(interval, _stop.Token).ConfigureAwait(false);
+                        await Task.Delay(interval, _stop.Token).ConfigureAwait(false);
                         await job.PersistAsync(_stop.Token).ConfigureAwait(false);
                     }
                 }

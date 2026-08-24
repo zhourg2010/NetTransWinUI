@@ -105,7 +105,10 @@ public class TaskPresenterTests
         Assert.Equal("暂停", TaskPresenter.ToggleLabel(DownloadStatus.Downloading));
         Assert.Equal("重试", TaskPresenter.ToggleLabel(DownloadStatus.Error));
         Assert.Equal("继续", TaskPresenter.ToggleLabel(DownloadStatus.Paused));
-        Assert.Equal("继续", TaskPresenter.ToggleLabel(DownloadStatus.Queued));
+
+        // Departs from the prototype: a queued task is waiting for a slot and
+        // will start on its own, so the action on offer is to stand it down.
+        Assert.Equal("暂停", TaskPresenter.ToggleLabel(DownloadStatus.Queued));
     }
 
     [Fact]

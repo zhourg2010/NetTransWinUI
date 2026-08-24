@@ -281,6 +281,29 @@ public class DownloadEngineTests : IAsyncLifetime
         await Until(() => item.Status == DownloadStatus.Completed);
     }
 
+    [Fact]
+    public async Task Pausing_again_cancels_a_resume_that_has_not_taken_effect()
+    {
+        var gate = new TaskCompletionSource();
+        _transport.BeforeOpen = () => gate.Task;
+        _engine = Engine();
+
+        var item = Item(1);
+        _engine.Add(item);
+        await Until(() => item.Status == DownloadStatus.Downloading);
+
+        _engine.Pause(item.Id);
+        _engine.Resume(item.Id);
+        _engine.Pause(item.Id);
+        gate.SetResult();
+
+        await Until(() => item.Status == DownloadStatus.Paused);
+
+        // And it stays down rather than the recorded 继续 firing late.
+        await Task.Delay(200);
+        Assert.Equal(DownloadStatus.Paused, item.Status);
+    }
+
     private DownloadEngine Engine(int maxConcurrent = 4, int retries = 0) => new(
         _transport,
         _sinks,

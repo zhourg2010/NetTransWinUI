@@ -136,7 +136,13 @@ public sealed class DownloadEngine : IAsyncDisposable
     public void Pause(int id)
     {
         Running? running;
-        lock (_gate) _running.TryGetValue(id, out running);
+
+        lock (_gate)
+        {
+            // 暂停 after a 继续 that has not been acted on yet: the later press
+            // is the one that counts.
+            if (_running.TryGetValue(id, out running)) running.ResumeRequested = false;
+        }
 
         if (running is not null)
         {
@@ -153,6 +159,20 @@ public sealed class DownloadEngine : IAsyncDisposable
         if (Find(id) is not { } item || item.Status == DownloadStatus.Completed) return;
 
         item.ErrorMessage = null;
+
+        lock (_gate)
+        {
+            // Still winding down from a pause: it cannot be started twice, and
+            // its job is about to stamp its own outcome over anything we set
+            // here. The intent is recorded instead, and acted on the moment the
+            // job lets go of the slot.
+            if (_running.TryGetValue(id, out var running))
+            {
+                running.ResumeRequested = true;
+                return;
+            }
+        }
+
         SetStatus(item, DownloadStatus.Queued);
         Pump();
     }
@@ -273,6 +293,8 @@ public sealed class DownloadEngine : IAsyncDisposable
         }
 
         bool stillQueued;
+        bool resumeRequested;
+
         lock (_gate)
         {
             // Only our own registration, never a successor's.
@@ -282,6 +304,10 @@ public sealed class DownloadEngine : IAsyncDisposable
             }
 
             stillQueued = _items.Any(existing => existing.Id == item.Id);
+
+            // Read under the same lock that Resume writes it under, so a 继续
+            // landing either side of this line is honoured exactly once.
+            resumeRequested = running.ResumeRequested;
         }
 
         // Removed while it was running: nobody is listening for it any more.
@@ -291,24 +317,29 @@ public sealed class DownloadEngine : IAsyncDisposable
             return;
         }
 
-        switch (outcome)
+        // 继续 pressed while this job was stopping. A finished transfer has
+        // nothing left to resume, so only an interrupted one goes back.
+        if (resumeRequested && outcome != JobOutcome.Completed)
         {
-            case JobOutcome.Completed:
-                SetStatus(item, DownloadStatus.Completed);
-                Completed?.Invoke(this, item);
-                break;
-
-            case JobOutcome.Failed:
-                SetStatus(item, DownloadStatus.Error);
-                Failed?.Invoke(this, item);
-                break;
-
-            default:
-                // Re-queued while this job was stopping: the user's newer
-                // intent wins, and the Pump below acts on it.
-                if (item.Status == DownloadStatus.Downloading) SetStatus(item, DownloadStatus.Paused);
-                break;
+            SetStatus(item, DownloadStatus.Queued);
+            Pump();
+            return;
         }
+
+        // The job stamps its own terminal status as it unwinds, so assigning
+        // rather than SetStatus-ing: the value is usually already correct and
+        // the change still has to reach the shell.
+        item.Status = outcome switch
+        {
+            JobOutcome.Completed => DownloadStatus.Completed,
+            JobOutcome.Failed => DownloadStatus.Error,
+            _ => DownloadStatus.Paused,
+        };
+
+        StatusChanged?.Invoke(this, item);
+
+        if (outcome == JobOutcome.Completed) Completed?.Invoke(this, item);
+        else if (outcome == JobOutcome.Failed) Failed?.Invoke(this, item);
 
         Pump();
     }
@@ -356,6 +387,9 @@ public sealed class DownloadEngine : IAsyncDisposable
         public Running(DownloadJob job) => Job = job;
 
         public DownloadJob Job { get; }
+
+        /// <summary>Set under the engine's gate when 继续 arrives mid-teardown.</summary>
+        public bool ResumeRequested { get; set; }
 
         public Task Completion => _completion.Task;
 

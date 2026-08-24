@@ -107,12 +107,25 @@ dotnet build -f net8.0-windows10.0.19041.0 -r win-x64
 `NetTrans.Core` and its tests need none of that and build with a bare .NET 8
 SDK on any OS.
 
-This rewrite, like the original scaffold, was authored without access to a
-Windows toolchain, so **give the shell a first build pass on Windows before
-relying on it**. Expect typo-level XAML/C# fixes rather than architectural
-ones. The two places most worth checking first are the
-`CommunityToolkit.WinUI.Media` shadow API in `Resources/Styles/Shadows.xaml`
-and the Win32 interop in `Interop/`.
+## CI
+
+`.github/workflows/build.yml` runs on every push to a `claude/**` branch and
+every PR into `main`:
+
+| Job | Runner | What it covers |
+| --- | --- | --- |
+| `test` | `ubuntu-latest` | `dotnet test NetTrans.Core.Tests` — the whole portable half, in ~15s |
+| `build` | `windows-latest` | `dotnet build NetTrans` for both target frameworks |
+
+This is the only place the WinUI shell gets compiled, since it was authored
+without a Windows toolchain to hand. It currently builds clean on both
+`net8.0-windows10.0.19041.0` and `net10.0-windows10.0.19041.0`.
+
+**Compiling is not running.** Nothing in CI launches the app — GitHub's hosted
+runners are headless, so everything that only exists at runtime is still
+unverified: the magnetic docking, the window regions and their squared-off
+corners, the island following the task frame, edge-hide, the boss key, and
+whether any of it looks like the design. That needs a real Windows desktop.
 
 ## Testing
 
@@ -120,7 +133,7 @@ and the Win32 interop in `Interop/`.
 dotnet test NetTrans.Core.Tests
 ```
 
-Runs on Linux, macOS or Windows — it never touches WinUI.
+290 tests, ~15 seconds, on Linux, macOS or Windows — it never touches WinUI.
 
 The expectations are not hand-written. `tools/golden/generate-golden.mjs` pulls
 `mb()`, `spd()`, `eta()`, `STATE_CN`, `SEED` and the `SORT` map **out of the
@@ -143,6 +156,21 @@ rewrite:
 - **加入时间 order.** `SORT.added` is `a.id - b.id` — creation order, not queue
   position. The implementation was sorting by queue index, so 移到队首 appeared
   to reorder the list when the design says it does not.
+
+The download engine's first CI run found four more, all of which would have
+shipped:
+
+- **Speed readouts could spike.** The meter divided by the span between the
+  samples still inside its window; once only one was left that span collapses
+  towards zero and the rate explodes. It divides by elapsed time now, capped at
+  the window.
+- **Pause could be dropped.** A pause asked for between a task being queued and
+  its transfer loop starting was lost, so 暂停 right after adding a download
+  kept downloading.
+- **A queued task's action did nothing.** `Toggle` sent anything not
+  `Downloading` to `Resume`, which put a queued task straight back in the queue.
+- **The resume timer busy-looped under a fake clock**, and swamped the recorded
+  backoff delays it shared a channel with.
 
 The download engine is covered the same way, against a fake server and an
 in-memory file: how a file is split, that the ranges tile it exactly, that a

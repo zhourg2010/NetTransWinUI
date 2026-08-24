@@ -1,0 +1,36 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:media="using:CommunityToolkit.WinUI.Media">
+
+    <!--
+        The handoff's box-shadows. WinUI has no built-in blurred drop shadow for
+        arbitrary elements, so these use the Windows Community Toolkit's
+        AttachedCardShadow (Win2D-backed), applied with ui:Effects.Shadow.
+        Every shadow in the design is declared here so the dependency stays
+        confined to one file.
+    -->
+
+    <!-- .seg__thumb: 0 3px 8px rgba(0,0,0,.12) -->
+    <media:AttachedCardShadow x:Key="SegThumbShadow" BlurRadius="8" Opacity="0.12" Offset="0,3" CornerRadius="7" Color="Black"/>
+
+    <!-- .sw i (switch knob): 0 3px 8px rgba(0,0,0,.15) -->
+    <media:AttachedCardShadow x:Key="SwitchKnobShadow" BlurRadius="8" Opacity="0.15" Offset="0,3" CornerRadius="14" Color="Black"/>
+
+    <!-- .ctx: 0 12px 34px rgba(0,0,0,.24) -->
+    <media:AttachedCardShadow x:Key="PopoverShadow" BlurRadius="34" Opacity="0.24" Offset="0,12" CornerRadius="13" Color="Black"/>
+
+    <!-- .banner: 0 12px 34px rgba(0,0,0,.24) -->
+    <media:AttachedCardShadow x:Key="BannerShadow" BlurRadius="34" Opacity="0.24" Offset="0,12" CornerRadius="17" Color="Black"/>
+
+    <!-- .toast: 0 8px 24px rgba(0,0,0,.28) -->
+    <media:AttachedCardShadow x:Key="ToastShadow" BlurRadius="24" Opacity="0.28" Offset="0,8" CornerRadius="20" Color="Black"/>
+
+    <!-- The island's own 0 10px 30px shadow has no equivalent here: it is its
+         own top-level window, and a shadow drawn inside it would be clipped by
+         the window's rounded region. It relies on the OS window shadow. -->
+
+    <!-- .sheet: 0 -8px 30px rgba(0,0,0,.2) -->
+    <media:AttachedCardShadow x:Key="SheetShadow" BlurRadius="30" Opacity="0.2" Offset="0,-8" CornerRadius="14" Color="Black"/>
+
+</ResourceDictionary>

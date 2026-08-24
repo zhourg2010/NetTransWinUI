@@ -1,0 +1,61 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- .navsearch: the search field that replaces the nav title -->
+    <Style x:Key="NavSearchBoxStyle" TargetType="TextBox">
+        <Setter Property="Background" Value="{ThemeResource FillBrush}"/>
+        <Setter Property="Foreground" Value="{ThemeResource LabelBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontFamily" Value="{StaticResource UiFontFamily}"/>
+        <Setter Property="FontSize" Value="13.5"/>
+        <Setter Property="Height" Value="26"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="10,0"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+
+    <!-- .frow input[type=text]: a borderless field sitting inside a form row -->
+    <Style x:Key="FormTextBoxStyle" TargetType="TextBox">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{ThemeResource LabelBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontFamily" Value="{StaticResource UiFontFamily}"/>
+        <Setter Property="FontSize" Value="15"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="TextAlignment" Value="Right"/>
+    </Style>
+
+    <!-- .frow input.l: same, left aligned (the URL fields) -->
+    <Style x:Key="FormTextBoxLeftStyle" TargetType="TextBox" BasedOn="{StaticResource FormTextBoxStyle}">
+        <Setter Property="TextAlignment" Value="Left"/>
+    </Style>
+
+    <!--
+        .frow select. WinUI's ComboBox template already matches the shape once
+        the chrome is retinted, so this restyles rather than retemplates — a
+        full template would have to reimplement the popup for no visual gain.
+    -->
+    <Style x:Key="FormSelectStyle" TargetType="ComboBox">
+        <Setter Property="Background" Value="{ThemeResource FillBrush}"/>
+        <Setter Property="Foreground" Value="{ThemeResource LabelBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontFamily" Value="{StaticResource UiFontFamily}"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="CornerRadius" Value="7"/>
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+
+    <!-- .insp__ctl select: the inspector runs its dropdowns a size down -->
+    <Style x:Key="InspectorSelectStyle" TargetType="ComboBox" BasedOn="{StaticResource FormSelectStyle}">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Padding" Value="6,3"/>
+    </Style>
+
+</ResourceDictionary>

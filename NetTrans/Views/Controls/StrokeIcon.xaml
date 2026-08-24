@@ -1,0 +1,22 @@
+<UserControl
+    x:Class="NetTrans.Views.Controls.StrokeIcon"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    IsHitTestVisible="False">
+
+    <!--
+        The handoff's <Ic>: a 24x24 stroke SVG. Drawing on a fixed 24x24 Canvas
+        inside a Viewbox reproduces SVG viewBox semantics exactly, including the
+        stroke scaling down with the icon, which a stretched Path would not.
+    -->
+    <Viewbox Stretch="Uniform">
+        <Canvas Width="24" Height="24">
+            <Path
+                x:Name="Glyph"
+                Stretch="None"
+                StrokeLineJoin="Round"
+                StrokeStartLineCap="Round"
+                StrokeEndLineCap="Round"/>
+        </Canvas>
+    </Viewbox>
+</UserControl>

@@ -1,35 +1,47 @@
 using System.Collections.ObjectModel;
+using NetTrans.Models;
 using NetTrans.ViewModels;
 
 namespace NetTrans.Services;
 
+/// <summary>What the 新建下载 sheet hands the engine.</summary>
 public sealed record NewDownloadRequest(
     string Url,
-    string SaveAs,
     string SaveTo,
     string Category,
     int Connections,
-    double? SpeedLimitBytesPerSecond,
-    string StartOption = "now"); // "now" | "queue" | "schedule" | "manual"
+    TaskPriority Priority,
+    bool StartNow,
+    string? ScheduledAt = null);
 
 public interface IDownloadEngine
 {
-    ObservableCollection<DownloadItemViewModel> ActiveDownloads { get; }
-    ObservableCollection<DownloadItemViewModel> CompletedDownloads { get; }
+    /// <summary>Every task, in queue order. The shell filters and sorts a view over this.</summary>
+    ObservableCollection<DownloadItemViewModel> Tasks { get; }
 
-    bool IsThrottled { get; set; }
     double TotalSpeed { get; }
-    long BytesTransferredThisMonth { get; }
+    double UploadSpeed { get; }
 
-    /// <summary>Raised once per engine tick so listeners can refresh live-only readouts (e.g. the command bar's total-speed display) without waiting for a collection change.</summary>
+    /// <summary>The island's 26-bar sparkline, oldest sample first.</summary>
+    IReadOnlyList<double> SpeedHistory { get; }
+
+    /// <summary>True while at least one task is running -- drives the toolbar's play/pause glyph.</summary>
+    bool IsRunning { get; }
+
+    /// <summary>Raised once per tick so live-only readouts can refresh without a collection change.</summary>
     event EventHandler? Ticked;
 
-    void Pause(int id);
-    void Resume(int id);
-    void Retry(int id);
-    void Remove(int id);
-    void PauseAll();
-    void ResumeAll();
+    /// <summary>Raised when a task finishes, so the shell can drop the completion banner.</summary>
+    event EventHandler<DownloadItemViewModel>? Completed;
 
-    DownloadItemViewModel AddDownload(NewDownloadRequest request);
+    void Toggle(int id);
+    void Remove(IEnumerable<int> ids);
+    void ToggleAll();
+    void MoveToFront(int id);
+    void MoveToBack(int id);
+
+    /// <summary>Restarts a task against the newer server-side build and clears its 新版本 flag.</summary>
+    void Redownload(int id);
+
+    DownloadItemViewModel Add(NewDownloadRequest request);
 }

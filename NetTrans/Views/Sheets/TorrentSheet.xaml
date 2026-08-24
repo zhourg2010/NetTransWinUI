@@ -1,0 +1,32 @@
+<UserControl
+    x:Class="NetTrans.Views.Sheets.TorrentSheet"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:NetTrans.Views.Controls">
+
+    <controls:SheetHost
+        x:Name="Host"
+        Title="种子内容"
+        RightLabel="下载"
+        Cancelled="OnCancelled"
+        Confirmed="OnConfirmed">
+
+        <StackPanel>
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel>
+                    <controls:FormRow Label="名称" Value="archlinux-2026.08" ShowSeparator="False"/>
+                    <controls:FormRow Label="总大小" Value="3.32 GB"/>
+                    <controls:FormRow Label="节点 / 种子" Value="12 / 4"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Margin="4,16,4,6" Style="{StaticResource GroupHeaderTextStyle}" Text="选择要下载的文件"/>
+
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel x:Name="FileList"/>
+            </Border>
+
+            <TextBlock Margin="4,6,4,0" Style="{StaticResource NoteTextStyle}" Text="未勾选的文件不会占用磁盘空间。"/>
+        </StackPanel>
+    </controls:SheetHost>
+</UserControl>

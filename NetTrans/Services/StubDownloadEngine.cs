@@ -1,275 +1,397 @@
 using System.Collections.ObjectModel;
-using Microsoft.UI.Dispatching;
+using Microsoft.UI.Xaml;
 using NetTrans.Models;
 using NetTrans.ViewModels;
 
 namespace NetTrans.Services;
 
 /// <summary>
-/// Timer-driven fake download engine: seeds the same sample data as the
-/// design reference's app.jsx (ACTIVE/COMPLETED/SOURCES) and advances
-/// progress every 250ms with light noise so the UI has something live to
-/// bind to. Swap this out for a real multi-segment HTTP engine later —
-/// IDownloadEngine is the seam.
+/// Timer-driven fake engine, seeded with the handoff's own SEED array and
+/// ticking on the same 900ms cadence and the same growth curve
+/// (kbs = max(60, kbs * (0.93 + rand * 0.15))). Swap it for a real
+/// multi-segment HTTP engine behind <see cref="IDownloadEngine"/>.
 /// </summary>
-public sealed class StubDownloadEngine : IDownloadEngine, IDisposable
+public sealed class StubDownloadEngine : IDownloadEngine
 {
-    private readonly DispatcherQueue _dispatcher;
-    private readonly DispatcherQueueTimer _timer;
-    private readonly Random _rng = new();
-    private readonly Dictionary<int, DownloadItemViewModel> _byId = new();
+    private const int BlockCount = 96;
+    private const int IslandSamples = 26;
+    private const int SessionSamples = 40;
+    private const double TickSeconds = 0.9;
+    private const double Mb = 1024 * 1024;
+    private const double Kb = 1024;
+
+    private readonly DispatcherTimer _timer;
+    private readonly Random _random = new();
+    private readonly double[] _speedHistory = new double[IslandSamples];
     private int _nextId = 100;
-    private double _elapsedSeconds;
-    private bool _erroredOne;
 
-    public ObservableCollection<DownloadItemViewModel> ActiveDownloads { get; } = new();
-    public ObservableCollection<DownloadItemViewModel> CompletedDownloads { get; } = new();
+    public ObservableCollection<DownloadItemViewModel> Tasks { get; } = new();
 
-    public bool IsThrottled { get; set; }
     public double TotalSpeed { get; private set; }
-    public long BytesTransferredThisMonth { get; private set; } = 412_000_000_000L;
+    public double UploadSpeed { get; private set; }
+    public IReadOnlyList<double> SpeedHistory => _speedHistory;
+    public bool IsRunning => Tasks.Any(t => t.IsRunning);
 
     public event EventHandler? Ticked;
-
-    private static readonly MirrorSource[] SampleMirrors =
-    [
-        new() { Region = "Frankfurt, DE", Host = "fra1.cdn.akamai.net", Speed = 6_400_000, Share = 36 },
-        new() { Region = "Amsterdam, NL", Host = "ams2.cdn.akamai.net", Speed = 5_100_000, Share = 28 },
-        new() { Region = "London, UK", Host = "lon3.cdn.akamai.net", Speed = 3_900_000, Share = 22 },
-        new() { Region = "Stockholm, SE", Host = "arn1.cdn.akamai.net", Speed = 1_800_000, Share = 10 },
-        new() { Region = "Madrid, ES", Host = "mad1.cdn.akamai.net", Speed = 600_000, Share = 4 },
-    ];
+    public event EventHandler<DownloadItemViewModel>? Completed;
 
     public StubDownloadEngine()
     {
-        _dispatcher = DispatcherQueue.GetForCurrentThread()
-            ?? throw new InvalidOperationException("StubDownloadEngine must be constructed on a UI thread with a DispatcherQueue.");
+        foreach (var item in Seed()) Tasks.Add(new DownloadItemViewModel(item));
 
-        SeedSampleData();
+        for (int i = 0; i < _speedHistory.Length; i++)
+        {
+            _speedHistory[i] = (900 + _random.NextDouble() * 900) * Kb;
+        }
 
-        _timer = _dispatcher.CreateTimer();
-        _timer.Interval = TimeSpan.FromMilliseconds(250);
+        Recompute();
+
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(TickSeconds) };
         _timer.Tick += (_, _) => Tick();
         _timer.Start();
     }
 
-    private void SeedSampleData()
-    {
-        DownloadItem[] active =
-        [
-            new() { Id = 1, Name = "Windows11_24H2_x64_en-us.iso", Host = "software-download.microsoft.com", Kind = FileKind.Iso, Category = "apps", Size = 5_840_000_000, Done = 2_104_000_000, Speed = 18_400_000, Status = DownloadStatus.Downloading, StartedAt = "10:24", SegmentCount = 8, Mirrors = SampleMirrors },
-            new() { Id = 2, Name = "Anomaly Detection in Time Series.pdf", Host = "arxiv.org", Kind = FileKind.Doc, Category = "docs", Size = 12_400_000, Done = 9_300_000, Speed = 1_120_000, Status = DownloadStatus.Downloading, StartedAt = "10:31", SegmentCount = 4 },
-            new() { Id = 3, Name = "Cinematic — Dunes (4K HDR).mkv", Host = "vimeo-cdn.akamai.net", Kind = FileKind.Video, Category = "video", Size = 2_840_000_000, Done = 0, Speed = 0, Status = DownloadStatus.Queued, StartedAt = "queued", SegmentCount = 8 },
-            new() { Id = 4, Name = "ableton-live-12-suite.dmg", Host = "ableton.com", Kind = FileKind.App, Category = "apps", Size = 3_200_000_000, Done = 1_120_000_000, Speed = 0, Status = DownloadStatus.Paused, StartedAt = "09:58", SegmentCount = 8 },
-            new() { Id = 5, Name = "research-corpus-2026-Q1.tar.zst", Host = "huggingface.co", Kind = FileKind.Zip, Category = "archives", Size = 48_700_000_000, Done = 47_900_000, Speed = 0, Status = DownloadStatus.Error, ErrorMessage = "Connection reset by peer", StartedAt = "09:42", SegmentCount = 16 },
-        ];
-
-        // The queued sample doubles as the "scheduled for off-peak" demo item.
-        active[2].IsScheduled = true;
-
-        foreach (var item in active)
-        {
-            item.Url = $"https://{item.Host}/files/{Uri.EscapeDataString(item.Name)}";
-            item.SegmentProgress = MakeInitialSegments(item);
-            var vm = new DownloadItemViewModel(item, this);
-            _byId[item.Id] = vm;
-            ActiveDownloads.Add(vm);
-        }
-        _nextId = active.Max(a => a.Id) + 1;
-
-        DownloadItem[] completed =
-        [
-            new() { Id = 11, Name = "Cyberpunk OST — Disc 2.flac.zip", Host = "bandcamp.com", Kind = FileKind.Zip, Category = "music", Size = 612_000_000, Done = 612_000_000, Status = DownloadStatus.Completed, CompletedWhen = "Today, 09:14", Duration = "00:01:42" },
-            new() { Id = 12, Name = "blender-4.3.0-macos-arm64.dmg", Host = "blender.org", Kind = FileKind.App, Category = "apps", Size = 348_000_000, Done = 348_000_000, Status = DownloadStatus.Completed, CompletedWhen = "Today, 08:51", Duration = "00:00:38" },
-            new() { Id = 13, Name = "Annual Report 2025.pdf", Host = "ir.contoso.com", Kind = FileKind.Doc, Category = "docs", Size = 18_400_000, Done = 18_400_000, Status = DownloadStatus.Completed, CompletedWhen = "Yesterday", Duration = "00:00:04" },
-            new() { Id = 14, Name = "wallpapers-4k-pack-vol3.zip", Host = "unsplash.com", Kind = FileKind.Zip, Category = "archives", Size = 1_240_000_000, Done = 1_240_000_000, Status = DownloadStatus.Completed, CompletedWhen = "Yesterday", Duration = "00:02:18" },
-            new() { Id = 15, Name = "Lecture 7 — Distributed Systems.mp4", Host = "stanford.edu", Kind = FileKind.Video, Category = "video", Size = 880_000_000, Done = 880_000_000, Status = DownloadStatus.Completed, CompletedWhen = "Mon", Duration = "00:01:11" },
-        ];
-
-        foreach (var item in completed)
-        {
-            item.Url = $"https://{item.Host}/files/{Uri.EscapeDataString(item.Name)}";
-            CompletedDownloads.Add(new DownloadItemViewModel(item, this));
-        }
-    }
-
-    private double[] MakeInitialSegments(DownloadItem item)
-    {
-        var segs = new double[item.SegmentCount];
-        double basePct = item.Size > 0 ? item.Done / (double)item.Size * 100 : 0;
-        for (int i = 0; i < segs.Length; i++)
-        {
-            segs[i] = Math.Clamp(basePct + _rng.NextDouble() * 20 - 10, 0, 100);
-        }
-        return segs;
-    }
-
     private void Tick()
     {
-        _elapsedSeconds += 0.25;
-        double total = 0;
-
-        foreach (var vm in ActiveDownloads.ToArray())
+        foreach (var task in Tasks.ToList())
         {
-            var item = vm.Model;
+            if (!task.IsRunning) continue;
+            var model = task.Model;
 
-            if (item.Status != DownloadStatus.Downloading)
+            model.Speed = Math.Max(60 * Kb, model.Speed * (0.93 + _random.NextDouble() * 0.15));
+            model.Done = (long)Math.Min(model.Size, model.Done + model.Speed * TickSeconds);
+            model.PeakSpeed = Math.Max(model.PeakSpeed, model.Speed);
+            model.SpeedHistory = Push(model.SpeedHistory, model.Speed, SessionSamples);
+
+            if (model.Done >= model.Size)
             {
-                if (vm.Status != item.Status) vm.ApplyTick(item.Done, item.Speed, item.Status, item.ErrorMessage);
+                model.Done = model.Size;
+                model.Speed = 0;
+                model.Status = DownloadStatus.Completed;
+                model.Connections = 0;
+                model.Checksum = "SHA-256 已校验";
+                model.ConnectionSpeeds = System.Array.Empty<double>();
+                model.Blocks = Enumerable.Repeat(1, BlockCount).ToArray();
+                model.Log.Add(new LogEntry(Stamp(), "下载完成"));
+                task.Refresh();
+                Completed?.Invoke(this, task);
                 continue;
             }
 
-            double throttleFactor = IsThrottled ? 0.35 : 1.0;
-            double noise = 0.85 + _rng.NextDouble() * 0.3;
-            double speed = item.Speed <= 0 ? item.Size * 0.002 : item.Speed;
-            speed = Math.Max(200_000, speed * noise) * throttleFactor;
-
-            long done = Math.Min(item.Size, item.Done + (long)(speed * 0.25));
-            item.Done = done;
-            item.Speed = speed;
-            item.DownloadElapsedSeconds += 0.25;
-            total += speed;
-
-            // Reassign (not mutate in place) so the SegmentMapControl DependencyProperty's
-            // reference-equality change check actually fires and repaints.
-            var segments = new double[item.SegmentProgress.Length];
-            for (int i = 0; i < segments.Length; i++)
-            {
-                segments[i] = Math.Clamp(item.SegmentProgress[i] + _rng.NextDouble() * 6, 0, 100);
-            }
-            item.SegmentProgress = segments;
-            item.SpeedHistory = AppendHistory(item.SpeedHistory, speed);
-
-            if (done >= item.Size)
-            {
-                item.Status = DownloadStatus.Completed;
-                item.Speed = 0;
-                item.CompletedWhen = "Just now";
-                item.Duration = FormatHelpers.Eta(TimeSpan.FromSeconds(_elapsedSeconds));
-                vm.ApplyTick(item.Done, 0, DownloadStatus.Completed, null);
-                ActiveDownloads.Remove(vm);
-                CompletedDownloads.Insert(0, vm);
-                continue;
-            }
-
-            if (!_erroredOne && item.DownloadElapsedSeconds >= 30)
-            {
-                item.Status = DownloadStatus.Error;
-                item.ErrorMessage = "Connection timed out";
-                item.Speed = 0;
-                _erroredOne = true;
-            }
-
-            vm.ApplyTick(item.Done, item.Speed, item.Status, item.ErrorMessage);
+            model.Blocks = MakeBlocks(model.Done / (double)model.Size);
+            model.ConnectionSpeeds = MakeConnections(model.Connections, model.Speed);
+            task.Refresh();
         }
 
-        TotalSpeed = total;
-        BytesTransferredThisMonth += (long)(total * 0.25);
+        Recompute();
         Ticked?.Invoke(this, EventArgs.Empty);
     }
 
-    private static double[] AppendHistory(double[] history, double speed)
+    private void Recompute()
     {
-        var next = history.Length >= 60 ? history[1..] : history;
-        var result = new double[next.Length + 1];
-        Array.Copy(next, result, next.Length);
-        result[^1] = speed;
-        return result;
+        TotalSpeed = Tasks.Sum(t => t.Speed);
+        UploadSpeed = Tasks.Sum(t => t.Model.UploadSpeed);
+
+        System.Array.Copy(_speedHistory, 1, _speedHistory, 0, _speedHistory.Length - 1);
+        _speedHistory[^1] = TotalSpeed;
     }
 
-    public void Pause(int id)
+    public void Toggle(int id)
     {
-        if (_byId.TryGetValue(id, out var vm) && vm.Model.Status == DownloadStatus.Downloading)
+        var task = Tasks.FirstOrDefault(t => t.Id == id);
+        if (task is null || task.IsDone) return;
+        var model = task.Model;
+
+        if (task.IsRunning)
         {
-            vm.Model.Status = DownloadStatus.Paused;
-            vm.Model.Speed = 0;
-            vm.ApplyTick(vm.Model.Done, 0, DownloadStatus.Paused, null);
+            model.Status = DownloadStatus.Paused;
+            model.Speed = 0;
+            model.ConnectionSpeeds = System.Array.Empty<double>();
+            model.Log.Add(new LogEntry(Stamp(), "已暂停"));
         }
-    }
-
-    public void Resume(int id)
-    {
-        if (_byId.TryGetValue(id, out var vm) && vm.CanResume)
+        else
         {
-            vm.Model.Status = DownloadStatus.Downloading;
-            vm.Model.ErrorMessage = null;
-            vm.ApplyTick(vm.Model.Done, vm.Model.Speed, DownloadStatus.Downloading, null);
+            model.Status = DownloadStatus.Downloading;
+            model.Speed = (300 + _random.NextDouble() * 700) * Kb;
+            model.Connections = model.Connections > 0 ? model.Connections : 8;
+            model.ErrorMessage = null;
+            model.Log.Add(new LogEntry(Stamp(), $"已建立 {model.Connections} 个连接"));
         }
+
+        task.Refresh();
+        Recompute();
     }
 
-    public void Retry(int id) => Resume(id);
-
-    public void Remove(int id)
+    public void Remove(IEnumerable<int> ids)
     {
-        if (_byId.TryGetValue(id, out var vm))
+        foreach (int id in ids.ToList())
         {
-            ActiveDownloads.Remove(vm);
-            CompletedDownloads.Remove(vm);
-            _byId.Remove(id);
+            if (Tasks.FirstOrDefault(t => t.Id == id) is { } task) Tasks.Remove(task);
         }
+
+        Recompute();
     }
 
-    public void PauseAll()
+    public void ToggleAll()
     {
-        foreach (var vm in ActiveDownloads.ToArray()) Pause(vm.Id);
-    }
+        bool pausing = IsRunning;
 
-    public void ResumeAll()
-    {
-        foreach (var vm in ActiveDownloads.ToArray())
+        foreach (var task in Tasks)
         {
-            if (vm.CanResume) Resume(vm.Id);
+            if (task.IsDone) continue;
+            var model = task.Model;
+            model.Status = pausing ? DownloadStatus.Paused : DownloadStatus.Downloading;
+            model.Speed = pausing ? 0 : (300 + _random.NextDouble() * 800) * Kb;
+            if (!pausing && model.Connections == 0) model.Connections = 8;
+            task.Refresh();
         }
+
+        Recompute();
     }
 
-    public DownloadItemViewModel AddDownload(NewDownloadRequest request)
+    public void MoveToFront(int id)
     {
-        var host = Uri.TryCreate(request.Url, UriKind.Absolute, out var uri) ? uri.Host : "unknown";
-        var item = new DownloadItem
+        int index = IndexOf(id);
+        if (index > 0) Tasks.Move(index, 0);
+    }
+
+    public void MoveToBack(int id)
+    {
+        int index = IndexOf(id);
+        if (index >= 0 && index < Tasks.Count - 1) Tasks.Move(index, Tasks.Count - 1);
+    }
+
+    public void Redownload(int id)
+    {
+        var task = Tasks.FirstOrDefault(t => t.Id == id);
+        if (task is null) return;
+
+        var model = task.Model;
+        model.Done = 0;
+        model.Status = DownloadStatus.Downloading;
+        model.Speed = (420 + _random.NextDouble() * 600) * Kb;
+        model.Connections = model.Connections > 0 ? model.Connections : 8;
+        model.Checksum = null;
+        model.Blocks = MakeBlocks(0);
+        model.Log.Add(new LogEntry(Stamp(), "按新版本重新开始下载"));
+
+        task.NewerVersion = null;
+        task.Refresh();
+        Recompute();
+    }
+
+    public DownloadItemViewModel Add(NewDownloadRequest request)
+    {
+        string name = FileNameFrom(request.Url);
+        var kind = KindFrom(name);
+
+        var model = new DownloadItem
         {
             Id = _nextId++,
-            Name = string.IsNullOrWhiteSpace(request.SaveAs) ? Path.GetFileName(request.Url) : request.SaveAs,
-            Host = host,
-            Kind = GuessKind(request.SaveAs),
+            Name = name,
+            Host = HostFrom(request.Url),
+            Kind = kind,
+            Size = (long)((80 + _random.NextDouble() * 900) * Mb),
             Category = request.Category,
-            SavePath = request.SaveTo,
-            Size = 1_000_000_000,
-            Status = DownloadStatus.Queued,
-            StartedAt = "queued",
-            SegmentCount = request.Connections,
+            Tint = TintFor(kind),
             Url = request.Url,
-            IsScheduled = request.StartOption == "schedule",
+            SavePath = request.SaveTo,
+            Priority = request.Priority,
+            Connections = request.StartNow ? request.Connections : 0,
+            Status = request.StartNow ? DownloadStatus.Downloading : DownloadStatus.Queued,
+            Speed = request.StartNow ? (300 + _random.NextDouble() * 700) * Kb : 0,
+            AddedAt = "今天 " + DateTime.Now.ToString("HH:mm"),
         };
-        item.SegmentProgress = new double[item.SegmentCount];
 
-        var vm = new DownloadItemViewModel(item, this);
-        _byId[item.Id] = vm;
-        ActiveDownloads.Insert(0, vm);
+        model.Blocks = MakeBlocks(0);
+        model.Log.Add(new LogEntry(Stamp(), "任务已创建"));
+        model.Log.Add(new LogEntry(Stamp(), request.StartNow ? $"已连接 {model.Host}" : "已加入队列，等待空闲通道"));
 
-        // "now" starts immediately; "queue"/"schedule" wait as Queued (this stub has no real
-        // scheduler); "manual" ("Don't start") sits Paused so the user has to explicitly Resume it.
-        item.Status = request.StartOption == "now" ? DownloadStatus.Downloading
-            : request.StartOption == "manual" ? DownloadStatus.Paused
-            : DownloadStatus.Queued;
-        item.StartedAt = item.Status == DownloadStatus.Downloading ? "just now" : "queued";
-        vm.ApplyTick(item.Done, item.Speed, item.Status, null);
-        return vm;
+        var task = new DownloadItemViewModel(model);
+        Tasks.Add(task);
+        Recompute();
+        return task;
     }
 
-    private static FileKind GuessKind(string fileName)
+    private int IndexOf(int id)
     {
-        var ext = Path.GetExtension(fileName).TrimStart('.').ToLowerInvariant();
+        for (int i = 0; i < Tasks.Count; i++)
+        {
+            if (Tasks[i].Id == id) return i;
+        }
+
+        return -1;
+    }
+
+    // ── the handoff's mkBlocks / mkConns ──────────────────────────────────
+    private int[] MakeBlocks(double fraction)
+    {
+        var blocks = new int[BlockCount];
+        for (int i = 0; i < BlockCount; i++)
+        {
+            double at = i / (double)BlockCount;
+            blocks[i] = at < fraction ? 1
+                : _random.NextDouble() < 0.05 && at < fraction + 0.12 ? 2
+                : 0;
+        }
+
+        return blocks;
+    }
+
+    private double[] MakeConnections(int count, double speed)
+    {
+        if (count <= 0) return System.Array.Empty<double>();
+
+        var values = new double[count];
+        for (int i = 0; i < count; i++)
+        {
+            values[i] = speed > 0 ? speed / count * (0.55 + _random.NextDouble() * 0.9) : 0;
+        }
+
+        return values;
+    }
+
+    private static double[] Push(double[] history, double value, int cap)
+    {
+        if (history.Length < cap) return history.Append(value).ToArray();
+        var next = new double[cap];
+        System.Array.Copy(history, 1, next, 0, cap - 1);
+        next[^1] = value;
+        return next;
+    }
+
+    private static string Stamp() => DateTime.Now.ToString("HH:mm");
+
+    private static string FileNameFrom(string url)
+    {
+        string trimmed = url.Split('?')[0].TrimEnd('/');
+        int slash = trimmed.LastIndexOf('/');
+        string name = slash >= 0 && slash < trimmed.Length - 1 ? trimmed[(slash + 1)..] : trimmed;
+        return name.Length == 0 ? "未命名下载" : name;
+    }
+
+    private static string HostFrom(string url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Host.Length > 0 ? uri.Host : "未知来源";
+
+    private static FileKind KindFrom(string name)
+    {
+        string ext = System.IO.Path.GetExtension(name).ToLowerInvariant();
         return ext switch
         {
-            "iso" => FileKind.Iso,
-            "pdf" or "doc" or "docx" or "txt" => FileKind.Doc,
-            "mp4" or "mkv" or "mov" or "avi" => FileKind.Video,
-            "exe" or "msi" or "dmg" or "app" => FileKind.App,
-            "mp3" or "flac" or "wav" or "aac" => FileKind.Music,
-            "png" or "jpg" or "jpeg" or "gif" or "webp" => FileKind.Image,
-            _ => FileKind.Zip,
+            ".iso" or ".img" or ".dmg" or ".torrent" => FileKind.Disc,
+            ".mp4" or ".mkv" or ".mov" or ".avi" or ".webm" => FileKind.Film,
+            ".zip" or ".7z" or ".rar" or ".tar" or ".gz" or ".zst" => FileKind.Zip,
+            ".flac" or ".mp3" or ".m4a" or ".wav" => FileKind.Music,
+            _ => FileKind.Doc,
         };
     }
 
-    public void Dispose() => _timer.Stop();
+    private static string TintFor(FileKind kind) => kind switch
+    {
+        FileKind.Disc => "#FF9500",
+        FileKind.Film => "#AF52DE",
+        FileKind.Zip => "#5856D6",
+        FileKind.Music => "#FF2D55",
+        _ => "#0A84FF",
+    };
+
+    // ── seed data: the handoff's SEED, MB converted to bytes ──────────────
+    private IEnumerable<DownloadItem> Seed()
+    {
+        yield return Task(1, "ubuntu-24.04.2-desktop.iso", FileKind.Disc, "#FF9500", "soft", 5940, 3742, 1180,
+            DownloadStatus.Downloading, 8, "releases.ubuntu.com",
+            "https://releases.ubuntu.com/24.04/ubuntu-24.04.2-desktop-amd64.iso",
+            checksum: "SHA-256 待校验", priority: TaskPriority.High,
+            newer: new NewVersionInfo("ubuntu-24.04.3-desktop.iso", (long)(6042 * Mb), "2 天前"));
+
+        yield return Task(3, "4k-timelapse-reel.mp4", FileKind.Film, "#AF52DE", "video", 1180, 486, 742,
+            DownloadStatus.Downloading, 6, "cdn.video-host.net",
+            "https://cdn.video-host.net/stream/8841/4k-timelapse-reel.mp4");
+
+        yield return Task(5, "source-sans-pack.zip", FileKind.Zip, "#5856D6", "doc", 86, 21, 214,
+            DownloadStatus.Downloading, 4, "fonts.mirror.dev",
+            "https://fonts.mirror.dev/packs/source-sans-3-complete.zip");
+
+        yield return Task(4, "arch-linux-2026.08.torrent", FileKind.Disc, "#8E8E93", "bt", 3210, 1104, 0,
+            DownloadStatus.Paused, 0, "12 个节点", "magnet:?xt=urn:btih:9f2c1a…",
+            peers: 12, seeds: 4, ratio: 0.42, upload: 86);
+
+        yield return Task(7, "logic-samples-vol3.flac", FileKind.Music, "#FF2D55", "music", 740, 96, 0,
+            DownloadStatus.Error, 0, "cdn.audio-lib.net",
+            "https://cdn.audio-lib.net/vol3/logic-samples-vol3.flac",
+            retries: 2, error: "连接被服务器重置",
+            log: new[]
+            {
+                new LogEntry("09:38", "任务已创建"),
+                new LogEntry("09:39", "已连接 cdn.audio-lib.net"),
+                new LogEntry("09:44", "连接被服务器重置", IsError: true),
+                new LogEntry("09:44", "第 2 次重试失败", IsError: true),
+            });
+
+        yield return Task(8, "design-system-handoff.pdf", FileKind.Doc, "#0A84FF", "doc", 62, 0, 0,
+            DownloadStatus.Queued, 0, "docs.internal", "https://docs.internal/handoff/design-system.pdf",
+            log: new[] { new LogEntry("09:45", "已加入队列，等待空闲通道") });
+
+        yield return Task(2, "blender-4.2-portable.7z", FileKind.Zip, "#34C759", "soft", 412, 412, 0,
+            DownloadStatus.Completed, 0, "mirror.blender.org",
+            "https://mirror.blender.org/release/blender-4.2.7z",
+            checksum: "SHA-256 已校验",
+            newer: new NewVersionInfo("blender-4.2.1-portable.7z", (long)(418 * Mb), "今天 08:12"));
+
+        yield return Task(6, "quarterly-report-q2.pdf", FileKind.Doc, "#FF3B30", "doc", 14, 14, 0,
+            DownloadStatus.Completed, 0, "docs.internal", "https://docs.internal/reports/2026-q2.pdf");
+    }
+
+    private DownloadItem Task(
+        int id, string name, FileKind kind, string tint, string category,
+        double sizeMb, double doneMb, double speedKb,
+        DownloadStatus status, int connections, string host, string url,
+        string? checksum = null, TaskPriority priority = TaskPriority.Normal,
+        NewVersionInfo? newer = null, int retries = 0, string? error = null,
+        int? peers = null, int? seeds = null, double? ratio = null, double upload = 0,
+        LogEntry[]? log = null)
+    {
+        var item = new DownloadItem
+        {
+            Id = id,
+            Name = name,
+            Kind = kind,
+            Tint = tint,
+            Category = category,
+            Size = (long)(sizeMb * Mb),
+            Done = (long)(doneMb * Mb),
+            Speed = speedKb * Kb,
+            Status = status,
+            Connections = connections,
+            Host = host,
+            Url = url,
+            Checksum = checksum,
+            Priority = priority,
+            NewerVersion = newer,
+            Retries = retries,
+            ErrorMessage = error,
+            Peers = peers,
+            Seeds = seeds,
+            Ratio = ratio,
+            UploadSpeed = upload * Kb,
+            AddedAt = "今天 09:41",
+        };
+
+        item.PeakSpeed = item.Speed * 1.24;
+        item.Blocks = MakeBlocks(item.Size == 0 ? 0 : item.Done / (double)item.Size);
+        item.ConnectionSpeeds = MakeConnections(connections, item.Speed);
+        item.SpeedHistory = Enumerable.Range(0, SessionSamples)
+            .Select(_ => item.Speed * (0.6 + _random.NextDouble() * 0.7))
+            .ToArray();
+
+        item.Log.AddRange(log ?? new[]
+        {
+            new LogEntry("09:41", "任务已创建"),
+            new LogEntry("09:41", $"已连接 {host}"),
+            new LogEntry("09:41", "服务器支持断点续传"),
+            new LogEntry("09:42", $"已建立 {connections} 个连接"),
+        });
+
+        return item;
+    }
 }

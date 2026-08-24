@@ -1,0 +1,207 @@
+<UserControl
+    x:Class="NetTrans.Views.InspectorShell"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:NetTrans.Views.Controls"
+    xmlns:conv="using:NetTrans.Converters"
+    xmlns:prim="using:Microsoft.UI.Xaml.Controls.Primitives">
+
+    <!-- `.frame.sidewin`: the inspector, same 536x680 as the task frame. -->
+    <Grid x:Name="Root" Background="{ThemeResource GroupBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="44"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid.RenderTransform>
+            <ScaleTransform x:Name="RootScale" CenterX="268" CenterY="340"/>
+        </Grid.RenderTransform>
+
+        <!-- ── .nav ──────────────────────────────────────────────────────── -->
+        <Grid
+            x:Name="NavBar"
+            Grid.Row="0"
+            Background="{ThemeResource NavBrush}"
+            Padding="12,0"
+            PointerPressed="OnNavPointerPressed">
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                <!-- .grip -->
+                <StackPanel Spacing="2.5" Padding="2,3" VerticalAlignment="Center">
+                    <Border Width="13" Height="1.5" CornerRadius="1" Background="{ThemeResource Label3Brush}"/>
+                    <Border Width="13" Height="1.5" CornerRadius="1" Background="{ThemeResource Label3Brush}"/>
+                    <Border Width="13" Height="1.5" CornerRadius="1" Background="{ThemeResource Label3Brush}"/>
+                </StackPanel>
+
+                <!-- .attach -->
+                <Button x:Name="AttachChip" Style="{StaticResource AttachChipStyle}" Click="OnAttachClick">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <controls:StrokeIcon x:Name="AttachGlyph" Data="{StaticResource IconCopy}" IconSize="11" Thickness="2"/>
+                        <TextBlock x:Name="AttachLabel" FontSize="11" FontWeight="SemiBold" Text="已吸附"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
+            <TextBlock
+                Grid.Column="1"
+                Margin="8,0"
+                VerticalAlignment="Center"
+                TextAlignment="Center"
+                Style="{StaticResource NavTitleTextStyle}"
+                Text="详细信息"/>
+
+            <Button Grid.Column="2" Style="{StaticResource NavButtonStyle}" Click="OnCloseClick" ToolTipService.ToolTip="关闭详情窗口">
+                <controls:StrokeIcon Data="{StaticResource IconClose}" IconSize="17" Thickness="2.3"/>
+            </Button>
+
+            <Border Grid.ColumnSpan="3" Style="{StaticResource HairlineStyle}" VerticalAlignment="Bottom"/>
+        </Grid>
+
+        <!-- ── .seg ──────────────────────────────────────────────────────── -->
+        <controls:SegmentedControl
+            x:Name="Tabs"
+            Grid.Row="1"
+            Margin="12,11,12,11"
+            SelectionChanged="OnTabChanged"/>
+
+        <!-- ── .side__body ───────────────────────────────────────────────── -->
+        <ScrollViewer Grid.Row="2" Padding="12,0,12,14" VerticalScrollBarVisibility="Auto" HorizontalScrollMode="Disabled">
+            <StackPanel>
+
+                <TextBlock
+                    x:Name="EmptyState"
+                    Margin="16,28"
+                    HorizontalAlignment="Center"
+                    Style="{StaticResource NoteTextStyle}"
+                    Text="选择一个任务查看详情。"
+                    Visibility="Collapsed"/>
+
+                <!-- .newver -->
+                <Border
+                    x:Name="NewVersionNotice"
+                    Margin="0,0,0,14"
+                    Style="{StaticResource NoticeStyle}"
+                    Visibility="Collapsed">
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Width="26" Height="26" CornerRadius="13" Background="{ThemeResource BlueBrush}" VerticalAlignment="Center">
+                            <controls:StrokeIcon Data="{StaticResource IconUp}" IconSize="15" Thickness="2.4" Foreground="White"/>
+                        </Border>
+
+                        <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource NoticeTitleTextStyle}" Text="服务器上有更新版本"/>
+                            <TextBlock
+                                x:Name="NewVersionSubtitle"
+                                Style="{StaticResource RowSubTextStyle}"
+                                FontSize="12"/>
+                        </StackPanel>
+
+                        <Button Grid.Column="2" Style="{StaticResource NoticeButtonStyle}" Content="下载新版" Click="OnRedownloadClick"/>
+                    </Grid>
+                </Border>
+
+                <!-- ── 概览 ──────────────────────────────────────────────── -->
+                <StackPanel x:Name="OverviewTab">
+                    <controls:RingProgress x:Name="Ring" Margin="0,8,0,2" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="RingCaption" Margin="0,0,0,10" Style="{StaticResource RingCaptionTextStyle}"/>
+
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel>
+                            <controls:FormRow x:Name="StatusRow" Label="状态" IsCompact="True" ShowSeparator="False"/>
+                            <controls:FormRow x:Name="HostRow" Label="来源" IsCompact="True"/>
+                            <controls:FormRow x:Name="ConnectionsRow" Label="连接数" IsCompact="True"/>
+                            <controls:FormRow x:Name="SpeedRow" Label="速度" IsCompact="True"/>
+                            <controls:FormRow x:Name="ChecksumRow" Label="校验" IsCompact="True"/>
+                            <controls:FormRow Label="断点续传" Value="支持" IsCompact="True"/>
+                            <controls:FormRow x:Name="AddedRow" Label="添加时间" IsCompact="True"/>
+                            <controls:FormRow x:Name="SavePathRow" Label="保存位置" IsCompact="True"/>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Margin="4,16,4,5" Style="{StaticResource GroupHeaderTextStyle}" FontSize="11.5" Text="传输"/>
+
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel>
+                            <controls:FormRow Label="优先级" IsCompact="True" ShowSeparator="False">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <prim:ToggleButton x:Name="PriorityHigh" Style="{StaticResource PriorityButtonStyle}" Content="高" Click="OnPriorityClick" Tag="High"/>
+                                    <prim:ToggleButton x:Name="PriorityNormal" Style="{StaticResource PriorityButtonStyle}" Content="普通" Click="OnPriorityClick" Tag="Normal"/>
+                                    <prim:ToggleButton x:Name="PriorityLow" Style="{StaticResource PriorityButtonStyle}" Content="低" Click="OnPriorityClick" Tag="Low"/>
+                                </StackPanel>
+                            </controls:FormRow>
+
+                            <controls:FormRow Label="速度上限" IsCompact="True">
+                                <ComboBox x:Name="LimitBox" Style="{StaticResource InspectorSelectStyle}" SelectionChanged="OnLimitChanged">
+                                    <x:String>不限</x:String>
+                                    <x:String>1 MB/s</x:String>
+                                    <x:String>512 KB/s</x:String>
+                                    <x:String>128 KB/s</x:String>
+                                </ComboBox>
+                            </controls:FormRow>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock x:Name="UrlText" Margin="4,6,4,0" Style="{StaticResource NoteTextStyle}"/>
+                </StackPanel>
+
+                <!-- ── 分块 ──────────────────────────────────────────────── -->
+                <StackPanel x:Name="BlocksTab" Visibility="Collapsed">
+                    <TextBlock x:Name="BlocksHeader" Margin="4,0,4,5" Style="{StaticResource GroupHeaderTextStyle}" FontSize="11.5"/>
+                    <Border Style="{StaticResource CardStyle}">
+                        <controls:BlockGrid x:Name="Blocks"/>
+                    </Border>
+
+                    <TextBlock Margin="4,16,4,5" Style="{StaticResource GroupHeaderTextStyle}" FontSize="11.5" Text="本次会话"/>
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel>
+                            <controls:SessionBars x:Name="Session"/>
+                            <controls:FormRow x:Name="AverageRow" Label="平均速度" IsCompact="True"/>
+                            <controls:FormRow x:Name="PeakRow" Label="峰值" IsCompact="True"/>
+                            <controls:FormRow x:Name="RetryRow" Label="重试" IsCompact="True"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ── 连接 ──────────────────────────────────────────────── -->
+                <StackPanel x:Name="ConnectionsTab" Visibility="Collapsed">
+                    <TextBlock x:Name="ConnectionsHeader" Margin="4,0,4,5" Style="{StaticResource GroupHeaderTextStyle}" FontSize="11.5"/>
+                    <Border Style="{StaticResource CardStyle}">
+                        <controls:ConnectionList x:Name="Connections"/>
+                    </Border>
+
+                    <StackPanel x:Name="TorrentGroup" Visibility="Collapsed">
+                        <TextBlock Margin="4,16,4,5" Style="{StaticResource GroupHeaderTextStyle}" FontSize="11.5" Text="BT"/>
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel>
+                                <controls:FormRow x:Name="PeersRow" Label="节点" IsCompact="True" ShowSeparator="False"/>
+                                <controls:FormRow x:Name="SeedsRow" Label="种子" IsCompact="True"/>
+                                <controls:FormRow x:Name="RatioRow" Label="分享率" IsCompact="True"/>
+                                <controls:FormRow x:Name="UploadRow" Label="上传" IsCompact="True"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- ── 日志 ──────────────────────────────────────────────── -->
+                <StackPanel x:Name="LogTab" Visibility="Collapsed">
+                    <TextBlock Margin="4,0,4,5" Style="{StaticResource GroupHeaderTextStyle}" FontSize="11.5" Text="日志"/>
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel x:Name="LogList" Padding="0,4"/>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

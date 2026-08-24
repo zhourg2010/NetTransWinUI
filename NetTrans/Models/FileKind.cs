@@ -1,12 +1,11 @@
 namespace NetTrans.Models;
 
+/// <summary>The `kind` field of a task: picks the tile glyph, exactly as in the handoff's seed data.</summary>
 public enum FileKind
 {
-    Iso,
-    Doc,
-    Video,
-    App,
+    Disc,
+    Film,
     Zip,
     Music,
-    Image,
+    Doc,
 }

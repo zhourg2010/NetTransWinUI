@@ -1,0 +1,51 @@
+<UserControl
+    x:Class="NetTrans.Views.Controls.FormRow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:NetTrans.Views.Controls"
+    xmlns:conv="using:NetTrans.Converters">
+
+    <!-- `.frow`: label, value, optional trailing control, optional chevron. -->
+    <Grid x:Name="Surface" Background="{ThemeResource CardBrush}" MinHeight="44">
+        <Border x:Name="Separator" Style="{StaticResource HairlineStyle}" Margin="13,0,0,0"
+                Visibility="{x:Bind conv:BindingHelpers.Visible(ShowSeparator), Mode=OneWay}"/>
+
+        <Grid x:Name="RowContent" Padding="13,10" ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock
+                x:Name="LabelText"
+                VerticalAlignment="Center"
+                Style="{StaticResource FormLabelTextStyle}"
+                Text="{x:Bind Label, Mode=OneWay}"
+                TextTrimming="CharacterEllipsis"/>
+
+            <TextBlock
+                x:Name="ValueText"
+                Grid.Column="1"
+                VerticalAlignment="Center"
+                Style="{StaticResource FormValueTextStyle}"
+                Text="{x:Bind Value, Mode=OneWay}"
+                Visibility="{x:Bind conv:BindingHelpers.VisibleIfNotNull(Value), Mode=OneWay}"/>
+
+            <ContentPresenter
+                Grid.Column="2"
+                VerticalAlignment="Center"
+                Content="{x:Bind Trailing, Mode=OneWay}"/>
+
+            <controls:StrokeIcon
+                Grid.Column="3"
+                Data="{StaticResource IconChevron}"
+                IconSize="13"
+                Thickness="2.4"
+                Foreground="{ThemeResource Label3Brush}"
+                VerticalAlignment="Center"
+                Visibility="{x:Bind conv:BindingHelpers.Visible(ShowChevron), Mode=OneWay}"/>
+        </Grid>
+    </Grid>
+</UserControl>

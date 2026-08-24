@@ -1,36 +1,42 @@
 namespace NetTrans.Models;
 
+/// <summary>
+/// Everything the 设置 sheet exposes, plus the shell toggles that live in the
+/// tray menu. Persisted next to the executable in portable mode -- the sheet's
+/// own footnote promises no registry writes.
+/// </summary>
 public sealed class AppSettings
 {
-    public string Theme { get; set; } = "auto"; // "light" | "dark" | "auto"
-    public string Accent { get; set; } = "#0067C0";
-    public string Density { get; set; } = "comfy"; // "comfy" | "compact"
-    public bool ShowDetailPane { get; set; } = true;
-    public bool Throttled { get; set; }
+    // 下载
+    public string DefaultSavePath { get; set; } = @"D:\Downloads";
+    public bool FoldersByCategory { get; set; } = true;
+    public int MaxSimultaneousDownloads { get; set; } = 3;
 
-    public string DefaultSavePath { get; set; } = @"C:\Users\you\Downloads";
-    public int MaxSimultaneousDownloads { get; set; } = 4;
-    public int SegmentsPerFile { get; set; } = 8;
+    /// <summary>Global cap as shown in the dropdown ("不限", "4 MB/s", ...).</summary>
+    public string GlobalSpeedLimit { get; set; } = "不限";
+    public bool UncappedAtNight { get; set; }
 
-    public bool VerifyChecksums { get; set; } = true;
-    public bool AutoExtractArchives { get; set; }
+    // 队列与计划
+    public string OffPeakStart { get; set; } = "23:00";
+    public string OffPeakEnd { get; set; } = "07:00";
+    public string RetryPolicy { get; set; } = "3 次";
+
+    /// <summary>无操作 | 退出程序 | 休眠 | 关机</summary>
+    public string WhenAllComplete { get; set; } = "无操作";
+
+    // 行为
+    public bool WatchClipboard { get; set; } = true;
     public bool NotifyOnCompletion { get; set; } = true;
-    public bool LaunchAtSignIn { get; set; } = true;
-    public bool ResumeInterruptedDownloads { get; set; } = true;
+    public bool VerifyChecksums { get; set; } = true;
+    public bool ScanOnCompletion { get; set; } = true;
+    public bool EdgeHide { get; set; } = true;
+    public string BossKey { get; set; } = "Ctrl + Alt + H";
 
-    // Schedule (off-peak window)
-    public bool ScheduleEnabled { get; set; } = true;
-    public string OffPeakStart { get; set; } = "02:00";
-    public string OffPeakEnd { get; set; } = "06:00";
-
-    // Browser capture
-    public bool CaptureEdge { get; set; } = true;
-    public bool CaptureChrome { get; set; } = true;
-    public bool CaptureFirefox { get; set; }
-    public bool NotifyOnCapture { get; set; } = true;
-
-    // Advanced
-    public int MaxConnectionsPerServer { get; set; } = 16;
-    public bool PreallocateFiles { get; set; } = true;
-    public string UserAgent { get; set; } = "";
+    // shell state the tray menu and 显示与排序 menu remember
+    public bool ShowIsland { get; set; } = true;
+    public bool ShowInspector { get; set; } = true;
+    public bool DenseRows { get; set; }
+    public string SortKey { get; set; } = "added";
+    public string SortDirection { get; set; } = "asc";
+    public string Theme { get; set; } = "auto"; // light | dark | auto
 }

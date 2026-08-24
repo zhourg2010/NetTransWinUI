@@ -94,6 +94,9 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty] private bool _isDropTarget;
     [ObservableProperty] private string _pendingUrl = "https://";
 
+    /// <summary>Which task the 重命名 sheet is about.</summary>
+    [ObservableProperty] private DownloadItemViewModel? _renameTarget;
+
     // ── derived header readouts ───────────────────────────────────────────
     public int ActiveCount => TaskQuery.ActiveCount(Engine.Tasks, t => t.Model, Category);
     public int DoneCount => TaskQuery.DoneCount(Engine.Tasks, t => t.Model, Category);
@@ -252,7 +255,62 @@ public sealed partial class ShellViewModel : ObservableObject
     private void OpenFolder()
     {
         if (Current is null) return;
-        Say($"已在文件夹中显示“{Current.Name}”");
+
+        if (!FileActions.OpenFolder(Current.SavePath)) Say($"打不开 {Current.SavePath}");
+    }
+
+    [RelayCommand]
+    private void OpenFile(DownloadItemViewModel? item)
+    {
+        item ??= Current;
+        if (item is null || Engine.PathOf(item.Id) is not { } path) return;
+
+        if (!FileActions.Open(path)) Say($"打不开“{item.Name}”，文件可能已被移动");
+    }
+
+    [RelayCommand]
+    private void RevealFile(DownloadItemViewModel? item)
+    {
+        item ??= Current;
+        if (item is null || Engine.PathOf(item.Id) is not { } path) return;
+
+        if (!FileActions.Reveal(path)) Say($"打不开 {item.SavePath}");
+    }
+
+    /// <summary>校验 SHA-256. Hashing a large file takes a while, so it reports at both ends.</summary>
+    [RelayCommand]
+    private async Task VerifyAsync(DownloadItemViewModel? item)
+    {
+        item ??= Current;
+        if (item is null) return;
+
+        Say($"正在校验“{item.Name}”…");
+
+        string? result = await Engine.VerifyAsync(item.Id);
+        Say(result ?? $"找不到“{item.Name}”，无法校验");
+    }
+
+    [RelayCommand]
+    private async Task CheckUpdateAsync(DownloadItemViewModel? item)
+    {
+        item ??= Current;
+        if (item is null) return;
+
+        Say(await Engine.CheckForUpdateAsync(item.Id)
+            ? "服务器上有更新版本"
+            : "已是服务器上的最新版本");
+    }
+
+    /// <summary>重命名, from the rename sheet.</summary>
+    public void RenameTask(DownloadItemViewModel item, string newName)
+    {
+        if (item.IsRunning)
+        {
+            Say("下载中的任务无法重命名，请先暂停");
+            return;
+        }
+
+        Say(Engine.Rename(item.Id, newName) ? $"已重命名为“{newName}”" : "重命名失败，该名称可能已被占用");
     }
 
     [RelayCommand]

@@ -218,6 +218,32 @@ Running the app with `--demo` swaps the real engine for `StubDownloadEngine`,
 which replays the handoff's seed data. That is how the UI is worked on without a
 network or real files.
 
+## The rest of the features
+
+- **校验 SHA-256** streams the file so a 6 GB ISO does not have to fit in memory,
+  and runs automatically on completion when 完成后校验 is on. Comparing against a
+  published checksum tolerates the usual `<hash>  <filename>` shape.
+- **批量下载** really crawls: 抓取深度, 仅限本站 and 后缀筛选 are honoured, every
+  found link is probed for its size (which is what 最小文件 filters on), pages are
+  never fetched twice, and pages that could not be read are reported rather than
+  quietly shrinking the result.
+- **视频嗅探** works from the page's own markup, since the portable build injects
+  nothing into a browser: `<source>` elements with their labels, and the media
+  URLs that players leave in script blobs. Best quality first, audio last. HLS
+  and DASH playlists are listed but refused, because fetching one saves the
+  index, not the video.
+- **新版本** re-probes the URL and compares ETag, then Last-Modified, then length
+  against what was recorded when the file was fetched. It runs after every
+  completed download and from 检查更新 in the context menu.
+- **打开文件 / 在文件夹中显示 / 打开文件夹 / 重命名** hand off to the shell. Rename
+  moves the file and drops the stale resume sidecar, and refuses while a
+  transfer is live rather than leaving the writer pointed at the old handle.
+
+**BitTorrent is not implemented.** The 种子 / 磁力链 sheet says so. A real client
+is the peer wire protocol, DHT and piece scheduling — a project of its own, and
+parsing a `.torrent` well enough to list its contents and then failing to fetch
+them would be worse than being plain about it.
+
 ## Deliberate departures from the handoff
 
 Everything else is pixel-for-pixel; these could not be, and each is commented at
@@ -254,7 +280,6 @@ the site:
   (`NetTrans.settings.json`), falling back to `%LOCALAPPDATA%\NetTrans` when that
   directory is read-only — matching the 设置 sheet's promise of no registry writes.
 - Clipboard URL detection is live (`Clipboard.ContentChanged`).
-- Still unimplemented, reporting through the toast lane only: 打开文件,
-  在文件夹中显示, 重命名, 校验 SHA-256, 批量下载's crawler, 视频嗅探's probe, and
-  BT (磁力链 / 种子). The 新版本 check has no server-side query behind it yet —
-  `NewVersionInfo` is populated only by the demo seed data.
+- Still unimplemented: BitTorrent (磁力链 / 种子), and HLS/DASH playlists, which
+  the sniffer lists but will not fetch. Both are called out in the UI rather
+  than failing quietly.

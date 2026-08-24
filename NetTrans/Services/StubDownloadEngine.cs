@@ -28,6 +28,12 @@ public sealed class StubDownloadEngine : IDownloadEngine
 
     public ObservableCollection<DownloadItemViewModel> Tasks { get; } = new();
 
+    /// <summary>
+    /// Real, even in demo mode: 批量下载 and 视频嗅探 read pages off the network,
+    /// and there is nothing to fake about that.
+    /// </summary>
+    public NetTrans.Net.IHttpTransport Transport { get; } = new NetTrans.Net.HttpTransport(userAgent: "NetTrans/1.0");
+
     public double TotalSpeed { get; private set; }
     public double UploadSpeed { get; private set; }
     public IReadOnlyList<double> SpeedHistory => _speedHistory;
@@ -184,6 +190,34 @@ public sealed class StubDownloadEngine : IDownloadEngine
     /// <summary>Nothing to apply: the stub ignores concurrency and rate limits.</summary>
     public void ApplySettings(AppSettings settings)
     {
+    }
+
+    public string? PathOf(int id) =>
+        Tasks.FirstOrDefault(task => task.Id == id) is { } task
+            ? System.IO.Path.Combine(task.SavePath, task.Name)
+            : null;
+
+    /// <summary>The demo has no files, so it reports the state the seed data already claims.</summary>
+    public Task<string?> VerifyAsync(int id, CancellationToken cancellationToken = default)
+    {
+        if (Tasks.FirstOrDefault(task => task.Id == id) is not { } task) return Task.FromResult<string?>(null);
+
+        task.Checksum = NetTrans.Download.FileHash.Verified;
+        task.Refresh();
+        return Task.FromResult<string?>(task.Checksum);
+    }
+
+    /// <summary>The demo's 新版本 flags come from the seed data, not from a server.</summary>
+    public Task<bool> CheckForUpdateAsync(int id, CancellationToken cancellationToken = default) =>
+        Task.FromResult(false);
+
+    public bool Rename(int id, string newName)
+    {
+        if (Tasks.FirstOrDefault(task => task.Id == id) is not { } task) return false;
+
+        task.Model.Name = newName;
+        task.Refresh();
+        return true;
     }
 
     public DownloadItemViewModel Add(NewDownloadRequest request)

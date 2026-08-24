@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using NetTrans.Models;
+using NetTrans.Net;
 using NetTrans.ViewModels;
 
 namespace NetTrans.Services;
@@ -18,6 +19,9 @@ public interface IDownloadEngine
 {
     /// <summary>Every task, in queue order. The shell filters and sorts a view over this.</summary>
     ObservableCollection<DownloadItemViewModel> Tasks { get; }
+
+    /// <summary>Shared with the sheets, so 批量下载 and 视频嗅探 go out through the same client the transfers do.</summary>
+    IHttpTransport Transport { get; }
 
     double TotalSpeed { get; }
     double UploadSpeed { get; }
@@ -47,4 +51,16 @@ public interface IDownloadEngine
 
     /// <summary>Re-reads the 同时下载 and 全局限速 settings after the sheet changes them.</summary>
     void ApplySettings(AppSettings settings);
+
+    /// <summary>Where a task's bytes are, or will be.</summary>
+    string? PathOf(int id);
+
+    /// <summary>校验 SHA-256. Returns the text for the 校验 row, or null if there was nothing to hash.</summary>
+    Task<string?> VerifyAsync(int id, CancellationToken cancellationToken = default);
+
+    /// <summary>Asks the server whether the file has changed. True when a 新版本 notice was raised.</summary>
+    Task<bool> CheckForUpdateAsync(int id, CancellationToken cancellationToken = default);
+
+    /// <summary>重命名. Fails while a task is running, or if the new name is taken.</summary>
+    bool Rename(int id, string newName);
 }

@@ -6,27 +6,30 @@
 
     <controls:SheetHost
         x:Name="Host"
-        Title="种子内容"
+        Title="种子 / 磁力链"
         RightLabel="下载"
+        IsRightEnabled="False"
         Cancelled="OnCancelled"
-        Confirmed="OnConfirmed">
+        Confirmed="OnCancelled">
 
         <StackPanel>
             <Border Style="{StaticResource CardStyle}">
-                <StackPanel>
-                    <controls:FormRow Label="名称" Value="archlinux-2026.08" ShowSeparator="False"/>
-                    <controls:FormRow Label="总大小" Value="3.32 GB"/>
-                    <controls:FormRow Label="节点 / 种子" Value="12 / 4"/>
+                <controls:FormRow Label="" ShowSeparator="False">
+                    <TextBox x:Name="LinkBox" Width="420" Style="{StaticResource FormTextBoxLeftStyle}"
+                             PlaceholderText="magnet:?xt=urn:btih:… 或种子文件路径"/>
+                </controls:FormRow>
+            </Border>
+
+            <Border Margin="0,16,0,0" Style="{StaticResource NoticeStyle}"
+                    Background="{ThemeResource Fill2Brush}">
+                <StackPanel Spacing="6">
+                    <TextBlock Style="{StaticResource NoticeTitleTextStyle}" Text="BT 下载尚未实现"/>
+                    <TextBlock Style="{StaticResource NoteTextStyle}"
+                               Text="NetTrans 目前只做 HTTP / HTTPS 传输。BT 需要 peer wire 协议、DHT 与分片调度，是一整块独立的工作，与其做一半不如先说清楚。"/>
+                    <TextBlock Style="{StaticResource NoteTextStyle}"
+                               Text="种子里的文件通常也有 HTTP 镜像，可以用「新建下载」直接添加。"/>
                 </StackPanel>
             </Border>
-
-            <TextBlock Margin="4,16,4,6" Style="{StaticResource GroupHeaderTextStyle}" Text="选择要下载的文件"/>
-
-            <Border Style="{StaticResource CardStyle}">
-                <StackPanel x:Name="FileList"/>
-            </Border>
-
-            <TextBlock Margin="4,6,4,0" Style="{StaticResource NoteTextStyle}" Text="未勾选的文件不会占用磁盘空间。"/>
         </StackPanel>
     </controls:SheetHost>
 </UserControl>

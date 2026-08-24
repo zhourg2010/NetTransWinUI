@@ -27,11 +27,13 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
     private readonly DispatcherQueue _dispatcher;
     private readonly DispatcherTimer _timer;
     private readonly double[] _speedHistory = new double[IslandSamples];
+    private readonly AppSettings _settings;
 
     private int _nextId = 1;
 
     public HttpDownloadEngine(AppSettings settings)
     {
+        _settings = settings;
         _dispatcher = DispatcherQueue.GetForCurrentThread();
         _transport = new HttpTransport(userAgent: "NetTrans/1.0");
 
@@ -58,6 +60,8 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
     }
 
     public ObservableCollection<DownloadItemViewModel> Tasks { get; } = new();
+
+    public IHttpTransport Transport => _transport;
 
     public double TotalSpeed { get; private set; }
 
@@ -165,6 +169,70 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
         _engine.GlobalSpeedLimit = SpeedLimits.Parse(settings.GlobalSpeedLimit);
     }
 
+    public string? PathOf(int id) =>
+        Tasks.FirstOrDefault(task => task.Id == id) is { } task
+            ? System.IO.Path.Combine(task.SavePath, task.Name)
+            : null;
+
+    public async Task<string?> VerifyAsync(int id, CancellationToken cancellationToken = default)
+    {
+        if (Tasks.FirstOrDefault(task => task.Id == id) is not { } task) return null;
+
+        string path = System.IO.Path.Combine(task.SavePath, task.Name);
+        if (!System.IO.File.Exists(path)) return null;
+
+        string hash;
+        try
+        {
+            // Hashing a several-gigabyte file is not something to do on the UI
+            // thread, and ComputeFileAsync opens the file for async reads.
+            hash = await FileHash.ComputeFileAsync(path, cancellationToken: cancellationToken).ConfigureAwait(true);
+        }
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            return null;
+        }
+
+        task.Model.Sha256 = hash;
+        task.Checksum = FileHash.Describe(hash, expected: null);
+        task.Model.Log.Add(new LogEntry(DateTime.Now.ToString("HH:mm"), $"SHA-256 {hash}"));
+        task.Refresh();
+
+        return task.Checksum;
+    }
+
+    public async Task<bool> CheckForUpdateAsync(int id, CancellationToken cancellationToken = default)
+    {
+        if (Tasks.FirstOrDefault(task => task.Id == id) is not { } task) return false;
+
+        var newer = await VersionCheck.CheckAsync(task.Model, _transport, cancellationToken).ConfigureAwait(true);
+        if (newer is null) return false;
+
+        task.NewerVersion = newer;
+        task.Refresh();
+        return true;
+    }
+
+    public bool Rename(int id, string newName)
+    {
+        if (Tasks.FirstOrDefault(task => task.Id == id) is not { } task) return false;
+
+        newName = FileActions.Sanitise(newName);
+        if (newName.Length == 0 || newName == task.Name) return false;
+
+        // Renaming under a live transfer would leave the writer pointed at the
+        // old handle and the resume sidecar pointed at neither.
+        if (task.IsRunning) return false;
+
+        string path = System.IO.Path.Combine(task.SavePath, task.Name);
+        if (!FileActions.Rename(path, newName, out _)) return false;
+
+        ResumeStore.Instance.Delete(path);
+        task.Model.Name = newName;
+        task.Refresh();
+        return true;
+    }
+
     /// <summary>The one place view models are refreshed, on the UI thread.</summary>
     private void Tick()
     {
@@ -185,12 +253,25 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
     }
 
     private void OnCoreCompleted(object? sender, DownloadItem item) =>
-        _dispatcher.TryEnqueue(() =>
+        _dispatcher.TryEnqueue(async () =>
         {
             if (Tasks.FirstOrDefault(task => task.Id == item.Id) is not { } task) return;
 
             task.Refresh();
             Completed?.Invoke(this, task);
+
+            // 完成后校验 SHA-256, then see whether the server has moved on. Both
+            // are after the fact, so a failure in either must not disturb a
+            // transfer that already succeeded.
+            try
+            {
+                if (_settings.VerifyChecksums) await VerifyAsync(item.Id);
+                await CheckForUpdateAsync(item.Id);
+            }
+            catch (Exception)
+            {
+                // Housekeeping; the download itself is done.
+            }
         });
 
     private void OnCoreStatusChanged(object? sender, DownloadItem item) =>

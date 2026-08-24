@@ -119,3 +119,76 @@ public class PageCrawlerTests
         Assert.Single(crawler.Failures);
     }
 }
+
+/// <summary>Sizing crawled links, for the sheet's size column and 最小文件.</summary>
+public class LinkSizerTests
+{
+    [Fact]
+    public async Task Asks_the_server_for_every_size()
+    {
+        var site = new FakeWebsite()
+            .File("https://x.test/a.pdf", 4_200_000)
+            .File("https://x.test/b.zip", 128_000_000);
+
+        var sized = await LinkSizer.MeasureAsync(site, Links("https://x.test/a.pdf", "https://x.test/b.zip"));
+
+        Assert.Equal(new long?[] { 4_200_000, 128_000_000 }, sized.Select(link => link.SizeBytes));
+        Assert.Equal(2, site.Probed.Count);
+    }
+
+    [Fact]
+    public async Task Keeps_the_original_order()
+    {
+        var site = new FakeWebsite().File("https://x.test/a.pdf", 1).File("https://x.test/b.pdf", 2);
+
+        var sized = await LinkSizer.MeasureAsync(site, Links("https://x.test/a.pdf", "https://x.test/b.pdf"));
+
+        Assert.Equal(new[] { "a.pdf", "b.pdf" }, sized.Select(link => link.Name));
+    }
+
+    [Fact]
+    public async Task A_link_that_will_not_answer_keeps_an_unknown_size()
+    {
+        var site = new FakeWebsite().Broken("https://x.test/a.pdf");
+
+        var link = Assert.Single(await LinkSizer.MeasureAsync(site, Links("https://x.test/a.pdf")));
+        Assert.Null(link.SizeBytes);
+    }
+
+    [Fact]
+    public async Task Measuring_nothing_is_not_an_error() =>
+        Assert.Empty(await LinkSizer.MeasureAsync(new FakeWebsite(), Array.Empty<DiscoveredLink>()));
+
+    [Fact]
+    public void Filters_below_the_minimum_but_keeps_unknown_sizes()
+    {
+        var links = new[]
+        {
+            LinkExtractor.Describe(new Uri("https://x.test/small.pdf")) with { SizeBytes = 1000 },
+            LinkExtractor.Describe(new Uri("https://x.test/big.pdf")) with { SizeBytes = 5_000_000 },
+            LinkExtractor.Describe(new Uri("https://x.test/unknown.pdf")),
+        };
+
+        var kept = LinkSizer.AtLeast(links, 1024 * 1024);
+
+        Assert.Equal(new[] { "big.pdf", "unknown.pdf" }, kept.Select(link => link.Name));
+    }
+
+    [Fact]
+    public void No_minimum_keeps_everything()
+    {
+        var links = Links("https://x.test/a.pdf");
+        Assert.Same(links, LinkSizer.AtLeast(links, 0));
+    }
+
+    [Theory]
+    [InlineData("不限", 0L)]
+    [InlineData("100 KB", 102400L)]
+    [InlineData("1 MB", 1048576L)]
+    [InlineData("10 MB", 10485760L)]
+    public void Reads_the_minimum_size_labels(string label, long expected) =>
+        Assert.Equal(expected, LinkSizer.ParseMinimum(label));
+
+    private static IReadOnlyList<DiscoveredLink> Links(params string[] urls) =>
+        urls.Select(url => LinkExtractor.Describe(new Uri(url))).ToList();
+}

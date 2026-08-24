@@ -266,9 +266,14 @@ public sealed partial class MainShell : UserControl
         var item = request.Item;
         var items = new List<PopoverItem>();
 
-        if (item.IsDone) items.Add(new PopoverItem("打开文件", Glyph("IconOpen")));
+        if (item.IsDone)
+        {
+            items.Add(new PopoverItem("打开文件", Glyph("IconOpen"),
+                Invoke: () => ViewModel.OpenFileCommand.Execute(item)));
+        }
+
         items.Add(new PopoverItem("在文件夹中显示", Glyph("IconFolder"),
-            Invoke: () => ViewModel.OpenFolderCommand.Execute(null)));
+            Invoke: () => ViewModel.RevealFileCommand.Execute(item)));
 
         if (!item.IsDone)
         {
@@ -290,9 +295,15 @@ public sealed partial class MainShell : UserControl
         }
 
         items.Add(new PopoverItem("校验 SHA-256", Glyph("IconShield"), SeparatorBefore: item.IsDone,
-            Invoke: () => ViewModel.Say($"已开始校验“{item.Name}”")));
+            Invoke: () => ViewModel.VerifyCommand.Execute(item)));
+        items.Add(new PopoverItem("检查更新", Glyph("IconRedo"),
+            Invoke: () => ViewModel.CheckUpdateCommand.Execute(item)));
         items.Add(new PopoverItem("拷贝链接", Glyph("IconCopy"), SeparatorBefore: true, Invoke: () => CopyLink(item)));
-        items.Add(new PopoverItem("重命名", Glyph("IconRename")));
+        items.Add(new PopoverItem("重命名", Glyph("IconRename"), Invoke: () =>
+        {
+            ViewModel.RenameTarget = item;
+            ViewModel.ActiveSheet = "rename";
+        }));
         items.Add(new PopoverItem("删除", Glyph("IconTrash"), IsDestructive: true, SeparatorBefore: true,
             Invoke: () => ViewModel.RemoveTaskCommand.Execute(item)));
 
@@ -346,12 +357,20 @@ public sealed partial class MainShell : UserControl
             return;
         }
 
+        // 重命名 needs a target; without one there is nothing to show.
+        if (name == "rename" && ViewModel.RenameTarget is null)
+        {
+            ViewModel.ActiveSheet = null;
+            return;
+        }
+
         FrameworkElement sheet = name switch
         {
             "add" => new AddSheet(ViewModel),
             "batch" => new BatchSheet(ViewModel),
             "torrent" => new TorrentSheet(ViewModel),
             "sniff" => new SniffSheet(ViewModel),
+            "rename" => new RenameSheet(ViewModel, ViewModel.RenameTarget!),
             _ => new SettingsSheet(ViewModel),
         };
 

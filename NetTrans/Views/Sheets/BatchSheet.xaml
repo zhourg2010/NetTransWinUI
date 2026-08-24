@@ -27,7 +27,7 @@
                 <Border Margin="0,14,0,0" Style="{StaticResource CardStyle}">
                     <StackPanel>
                         <controls:FormRow Label="抓取深度" ShowSeparator="False">
-                            <ComboBox Style="{StaticResource FormSelectStyle}" SelectedIndex="1">
+                            <ComboBox x:Name="DepthBox" Style="{StaticResource FormSelectStyle}" SelectedIndex="1">
                                 <x:String>仅本页</x:String>
                                 <x:String>1 层</x:String>
                                 <x:String>2 层</x:String>
@@ -36,15 +36,15 @@
                         </controls:FormRow>
 
                         <controls:FormRow Label="仅限本站">
-                            <controls:IosSwitch IsOn="True"/>
+                            <controls:IosSwitch x:Name="SameSiteSwitch" IsOn="True"/>
                         </controls:FormRow>
 
                         <controls:FormRow Label="后缀筛选">
-                            <TextBox Width="180" Style="{StaticResource FormTextBoxStyle}" Text="pdf; zip; png"/>
+                            <TextBox x:Name="ExtensionsBox" Width="180" Style="{StaticResource FormTextBoxStyle}" Text="pdf; zip; png"/>
                         </controls:FormRow>
 
                         <controls:FormRow Label="最小文件">
-                            <ComboBox Style="{StaticResource FormSelectStyle}" SelectedIndex="0">
+                            <ComboBox x:Name="MinimumBox" Style="{StaticResource FormSelectStyle}" SelectedIndex="0">
                                 <x:String>不限</x:String>
                                 <x:String>100 KB</x:String>
                                 <x:String>1 MB</x:String>
@@ -68,6 +68,7 @@
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel x:Name="FoundList"/>
                 </Border>
+                <TextBlock x:Name="Problems" Margin="4,6,4,0" Style="{StaticResource NoteTextStyle}" Visibility="Collapsed"/>
                 <Button Margin="0,8,0,0" Style="{StaticResource BigPlainButtonStyle}" Content="全选" Click="OnSelectAllClick"/>
             </StackPanel>
         </Grid>

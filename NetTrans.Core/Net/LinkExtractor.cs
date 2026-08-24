@@ -6,7 +6,8 @@ namespace NetTrans.Net;
 /// <param name="Url">Absolute URL.</param>
 /// <param name="Name">The file name it would be saved as.</param>
 /// <param name="Extension">Lower-case, without the dot; empty when there is none.</param>
-public sealed record DiscoveredLink(Uri Url, string Name, string Extension)
+/// <param name="SizeBytes">Filled in by <see cref="LinkSizer"/>; null until the server has been asked.</param>
+public sealed record DiscoveredLink(Uri Url, string Name, string Extension, long? SizeBytes = null)
 {
     /// <summary>Looks like another page rather than a file to download.</summary>
     public bool IsPage => Extension is "" or "htm" or "html" or "php" or "asp" or "aspx" or "jsp";

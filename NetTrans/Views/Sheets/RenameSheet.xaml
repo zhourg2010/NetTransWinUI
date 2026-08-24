@@ -1,0 +1,24 @@
+<UserControl
+    x:Class="NetTrans.Views.Sheets.RenameSheet"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:NetTrans.Views.Controls">
+
+    <controls:SheetHost
+        x:Name="Host"
+        Title="重命名"
+        RightLabel="完成"
+        Cancelled="OnCancelled"
+        Confirmed="OnConfirmed">
+
+        <StackPanel>
+            <Border Style="{StaticResource CardStyle}">
+                <controls:FormRow Label="" ShowSeparator="False">
+                    <TextBox x:Name="NameBox" Width="420" Style="{StaticResource FormTextBoxLeftStyle}"/>
+                </controls:FormRow>
+            </Border>
+
+            <TextBlock x:Name="Note" Margin="4,6,4,0" Style="{StaticResource NoteTextStyle}"/>
+        </StackPanel>
+    </controls:SheetHost>
+</UserControl>

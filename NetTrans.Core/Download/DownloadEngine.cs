@@ -14,7 +14,7 @@ public sealed class DownloadEngine : IAsyncDisposable
     private readonly IFileSinkFactory _sinks;
     private readonly IClock _clock;
     private readonly ResumeStore? _resume;
-    private readonly DownloadOptions _options;
+    private DownloadOptions _options;
     private readonly TokenBucket _globalLimit;
 
     private readonly List<DownloadItem> _items = new();
@@ -49,6 +49,17 @@ public sealed class DownloadEngine : IAsyncDisposable
         {
             lock (_gate) return _items.ToList();
         }
+    }
+
+    /// <summary>
+    /// The knobs new transfers are started with. A running job keeps the
+    /// options it began with -- changing the retry budget mid-flight would
+    /// make a transfer's own history hard to read.
+    /// </summary>
+    public DownloadOptions Options
+    {
+        get => _options;
+        set => _options = value ?? throw new ArgumentNullException(nameof(value));
     }
 
     public int MaxConcurrent

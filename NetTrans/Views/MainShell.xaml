@@ -281,6 +281,35 @@
                 </Grid>
             </Border>
 
+            <!-- 全部完成后 countdown -->
+            <Border
+                x:Name="Countdown"
+                Width="308"
+                Margin="0,72,0,0"
+                Padding="13,10"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Visibility="Collapsed"
+                Background="{ThemeResource BannerBrush}"
+                CornerRadius="17"
+                ui:Effects.Shadow="{StaticResource BannerShadow}">
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Width="32" Height="32" CornerRadius="8" Background="{ThemeResource OrangeBrush}">
+                        <controls:StrokeIcon Data="{StaticResource IconPower}" IconSize="17" Thickness="2.6" Foreground="White"/>
+                    </Border>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock x:Name="CountdownTitle" Style="{StaticResource NoticeTitleTextStyle}"/>
+                        <TextBlock x:Name="CountdownSubtitle" Style="{StaticResource RowSubTextStyle}" FontSize="12"/>
+                    </StackPanel>
+                    <Button Grid.Column="2" Style="{StaticResource NavButtonStyle}" Content="取消" Click="OnCountdownCancelClick"/>
+                </Grid>
+            </Border>
+
             <!-- .toast -->
             <Border
                 x:Name="Toast"

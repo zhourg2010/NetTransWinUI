@@ -135,4 +135,13 @@ internal static partial class NativeMethods
 
     [LibraryImport("dwmapi.dll")]
     internal static partial int DwmSetWindowAttribute(nint hWnd, int attr, ref int attrValue, int attrSize);
+
+    // 全部完成后 · 休眠. Hibernate false means suspend-to-RAM, which is what the
+    // 休眠 entry offers; the third argument is ignored on every modern Windows.
+    [LibraryImport("powrprof.dll", EntryPoint = "SetSuspendState")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool SetSuspendState(
+        [MarshalAs(UnmanagedType.Bool)] bool hibernate,
+        [MarshalAs(UnmanagedType.Bool)] bool forceCritical,
+        [MarshalAs(UnmanagedType.Bool)] bool disableWakeEvent);
 }

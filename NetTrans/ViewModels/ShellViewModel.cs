@@ -20,6 +20,10 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly ISettingsStore _settingsStore;
     private readonly DispatcherTimer _toastTimer = new() { Interval = TimeSpan.FromMilliseconds(1700) };
     private readonly DispatcherTimer _bannerTimer = new() { Interval = TimeSpan.FromMilliseconds(3600) };
+    private readonly DispatcherTimer _countdownTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+    private readonly QueueDrain _drain = new();
+
+    private CompletionAction _pendingAction = CompletionAction.Nothing;
 
     public IDownloadEngine Engine { get; }
     public AppSettings Settings { get; }
@@ -60,6 +64,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
         _toastTimer.Tick += (_, _) => { _toastTimer.Stop(); Toast = null; };
         _bannerTimer.Tick += (_, _) => { _bannerTimer.Stop(); Banner = null; };
+        _countdownTimer.Tick += (_, _) => CountDown();
 
         if (Engine.Tasks.FirstOrDefault() is { } first) SelectedIds.Add(first.Id);
         Rebuild();
@@ -92,6 +97,14 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty] private string? _toast;
     [ObservableProperty] private DownloadItemViewModel? _banner;
     [ObservableProperty] private bool _isDropTarget;
+
+    /// <summary>
+    /// 全部完成后, once the queue has drained: the label of what is about to
+    /// happen, and how long is left to stop it. Null when nothing is pending.
+    /// </summary>
+    [ObservableProperty] private string? _pendingActionLabel;
+
+    [ObservableProperty] private int _pendingActionSeconds;
     [ObservableProperty] private string _pendingUrl = "https://";
 
     /// <summary>Which task the 重命名 sheet is about.</summary>
@@ -409,6 +422,68 @@ public sealed partial class ShellViewModel : ObservableObject
         // other keys are stable, so only those two need a rebuild per tick.
         if (SortKey is "progress" or "speed") Rebuild();
         else RaiseShellState();
+
+        WatchForDrain();
+    }
+
+    // ── 全部完成后 ────────────────────────────────────────────────────────
+
+    private const int CountdownSeconds = 20;
+
+    /// <summary>
+    /// Arms the configured action the moment the last transfer stops. Nothing
+    /// happens straight away: the shell counts down first, so an action the
+    /// user set hours ago is never a surprise they cannot stop.
+    /// </summary>
+    private void WatchForDrain()
+    {
+        int busy = Engine.Tasks.Count(task => task.Status is DownloadStatus.Downloading or DownloadStatus.Queued);
+        if (!_drain.Drained(busy)) return;
+
+        var action = SettingsRules.WhenAllComplete(Settings.WhenAllComplete);
+        if (action == CompletionAction.Nothing) return;
+
+        // Already counting down from an earlier batch: leave it be rather than
+        // restarting the clock under the user.
+        if (_pendingAction != CompletionAction.Nothing) return;
+
+        _pendingAction = action;
+        PendingActionLabel = SettingsRules.Describe(action);
+        PendingActionSeconds = CountdownSeconds;
+        _countdownTimer.Start();
+    }
+
+    private void CountDown()
+    {
+        PendingActionSeconds--;
+        if (PendingActionSeconds > 0) return;
+
+        var action = _pendingAction;
+        ClearPendingAction();
+
+        if (PowerActions.Run(action)) return;
+
+        Say($"系统拒绝了{SettingsRules.Describe(action)}");
+    }
+
+    /// <summary>取消 on the countdown: this batch only, not the setting.</summary>
+    [RelayCommand]
+    private void CancelPendingAction()
+    {
+        if (_pendingAction == CompletionAction.Nothing) return;
+
+        string label = SettingsRules.Describe(_pendingAction);
+        ClearPendingAction();
+        _drain.Disarm();
+        Say($"已取消{label}");
+    }
+
+    private void ClearPendingAction()
+    {
+        _countdownTimer.Stop();
+        _pendingAction = CompletionAction.Nothing;
+        PendingActionLabel = null;
+        PendingActionSeconds = 0;
     }
 
     private void OnTaskCompleted(object? sender, DownloadItemViewModel task)

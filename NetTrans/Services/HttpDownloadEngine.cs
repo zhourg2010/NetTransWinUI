@@ -44,9 +44,9 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
             ResumeStore.Instance,
             // Per-task connection counts come from the 新建下载 sheet; this is
             // only the fallback for a task that did not specify one.
-            new DownloadOptions(Connections: 8),
+            new DownloadOptions(Connections: 8, MaxRetries: SettingsRules.Retries(settings.RetryPolicy)),
             Math.Max(1, settings.MaxSimultaneousDownloads),
-            SpeedLimits.Parse(settings.GlobalSpeedLimit));
+            SettingsRules.SpeedLimitAt(settings, DateTimeOffset.Now));
 
         _engine.Completed += OnCoreCompleted;
         _engine.Failed += OnCoreStatusChanged;
@@ -136,7 +136,11 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
 
     public DownloadItemViewModel Add(NewDownloadRequest request)
     {
-        string name = FileNameFrom(request.Url);
+        // 按分类建子文件夹, then a name that is not already spoken for -- by a
+        // file on disk or by another task in this queue heading for the same
+        // place, which the disk cannot tell us about yet.
+        string directory = SavePathPlanner.Directory(request.SaveTo, request.Category, _settings.FoldersByCategory);
+        string name = SavePathPlanner.UniqueName(directory, FileNameFrom(request.Url), IsTaken);
 
         var model = new DownloadItem
         {
@@ -148,7 +152,7 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
             Category = request.Category,
             Tint = TintFor(KindFrom(name)),
             Url = request.Url,
-            SavePath = request.SaveTo,
+            SavePath = directory,
             Priority = request.Priority,
             RequestedConnections = Math.Max(1, request.Connections),
             AddedAt = "今天 " + DateTime.Now.ToString("HH:mm"),
@@ -163,10 +167,32 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
         return task;
     }
 
+    /// <summary>
+    /// Whether anything is already headed for this path: a file that exists, or
+    /// a task that has not written its first byte yet.
+    /// </summary>
+    private bool IsTaken(string path) =>
+        System.IO.File.Exists(path) ||
+        Tasks.Any(task => string.Equals(
+            System.IO.Path.Combine(task.SavePath, task.Name), path, StringComparison.OrdinalIgnoreCase));
+
     public void ApplySettings(AppSettings settings)
     {
         _engine.MaxConcurrent = Math.Max(1, settings.MaxSimultaneousDownloads);
-        _engine.GlobalSpeedLimit = SpeedLimits.Parse(settings.GlobalSpeedLimit);
+        _engine.Options = _engine.Options with { MaxRetries = SettingsRules.Retries(settings.RetryPolicy) };
+        ApplySpeedLimit(settings);
+    }
+
+    /// <summary>
+    /// The cap in force right now, which 夜间不限速 makes a function of the
+    /// clock rather than of the dropdown alone.
+    /// </summary>
+    private void ApplySpeedLimit(AppSettings settings)
+    {
+        double limit = SettingsRules.SpeedLimitAt(settings, DateTimeOffset.Now);
+        if (Math.Abs(limit - _engine.GlobalSpeedLimit) < 0.5) return;
+
+        _engine.GlobalSpeedLimit = limit;
     }
 
     public string? PathOf(int id) =>
@@ -244,6 +270,10 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
             task.Refresh();
         }
 
+        // 夜间不限速 changes what the cap is without anyone touching a setting,
+        // so the tick that already runs is where the window is noticed.
+        ApplySpeedLimit(_settings);
+
         TotalSpeed = Tasks.Sum(task => task.Speed);
 
         Array.Copy(_speedHistory, 1, _speedHistory, 0, _speedHistory.Length - 1);
@@ -266,6 +296,7 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
             try
             {
                 if (_settings.VerifyChecksums) await VerifyAsync(item.Id);
+                if (_settings.ScanOnCompletion) await ScanAsync(task);
                 await CheckForUpdateAsync(item.Id);
             }
             catch (Exception)
@@ -273,6 +304,27 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
                 // Housekeeping; the download itself is done.
             }
         });
+
+    /// <summary>
+    /// 完成后扫描: mark the file as web-sourced, then let Defender look at it if
+    /// this machine has one. Both halves are best-effort by construction.
+    /// </summary>
+    private static async Task ScanAsync(DownloadItemViewModel task)
+    {
+        string path = System.IO.Path.Combine(task.SavePath, task.Name);
+        if (!System.IO.File.Exists(path)) return;
+
+        bool marked = FileScan.Mark(path, task.Model.Url);
+
+        var verdict = await FileScan.ScanAsync(path).ConfigureAwait(true);
+
+        task.Model.Log.Add(new LogEntry(
+            DateTime.Now.ToString("HH:mm"),
+            marked ? FileScan.Describe(verdict) : "无法写入来源标记（分区不支持）",
+            IsError: verdict == ScanVerdict.ThreatFound));
+
+        task.Refresh();
+    }
 
     private void OnCoreStatusChanged(object? sender, DownloadItem item) =>
         _dispatcher.TryEnqueue(() => Tasks.FirstOrDefault(task => task.Id == item.Id)?.Refresh());

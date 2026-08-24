@@ -442,6 +442,11 @@ public sealed partial class MainShell : UserControl
                 SyncBanner();
                 break;
 
+            case nameof(ShellViewModel.PendingActionLabel):
+            case nameof(ShellViewModel.PendingActionSeconds):
+                SyncCountdown();
+                break;
+
             case nameof(ShellViewModel.ActiveSheet):
                 ShowSheet(ViewModel?.ActiveSheet);
                 break;
@@ -501,6 +506,32 @@ public sealed partial class MainShell : UserControl
         Animations.Slide(BannerOffset, "Y", 0, 340).Begin();
         Animations.Fade(Banner, 1, 340).Begin();
     }
+
+    /// <summary>The 全部完成后 countdown: what is about to happen, and 取消.</summary>
+    private void SyncCountdown()
+    {
+        if (ViewModel?.PendingActionLabel is not { } label)
+        {
+            Countdown.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        bool wasHidden = Countdown.Visibility == Visibility.Collapsed;
+
+        CountdownTitle.Text = $"下载已全部完成，即将{label}";
+        CountdownSubtitle.Text = $"{ViewModel.PendingActionSeconds} 秒后执行 · 点“取消”停止";
+        Countdown.Visibility = Visibility.Visible;
+
+        // Only on the way in: re-fading every second would make the bar blink
+        // once a tick while the user is trying to read it.
+        if (!wasHidden) return;
+
+        Countdown.Opacity = 0;
+        Animations.Fade(Countdown, 1, 340).Begin();
+    }
+
+    private void OnCountdownCancelClick(object sender, RoutedEventArgs e) =>
+        ViewModel?.CancelPendingActionCommand.Execute(null);
 
     private void OnBannerOpenClick(object sender, RoutedEventArgs e)
     {

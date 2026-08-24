@@ -70,9 +70,12 @@ public static class VersionCheck
 
         var age = DateTimeOffset.UtcNow - published;
 
-        return age.TotalDays >= 2 ? $"{(int)age.TotalDays} 天前"
+        // Rounded, not truncated: HTTP dates carry no sub-second part, so a
+        // file published exactly three days ago arrives as 2.9999 days and
+        // would otherwise read "2 天前".
+        return age.TotalDays >= 2 ? $"{(int)Math.Round(age.TotalDays)} 天前"
             : age.TotalDays >= 1 ? "昨天"
-            : age.TotalHours >= 1 ? $"{(int)age.TotalHours} 小时前"
+            : age.TotalHours >= 1 ? $"{(int)Math.Round(age.TotalHours)} 小时前"
             : "刚刚";
     }
 }

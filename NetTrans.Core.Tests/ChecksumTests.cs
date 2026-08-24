@@ -52,11 +52,21 @@ public class ChecksumTests : IDisposable
         var bytes = new byte[2 * 1024 * 1024 + 5];
         using var stream = new MemoryStream(bytes);
 
-        var reported = new List<long>();
-        await FileHash.ComputeAsync(stream, new Progress<long>(reported.Add));
+        // Progress<T> raises on the thread pool, so the readings are recorded
+        // through interlocked state rather than a list the assert would be
+        // enumerating while it is still being appended to.
+        long highest = 0;
+        long outOfRange = 0;
 
-        // Progress is posted asynchronously, so only the invariant is safe to assert.
-        Assert.All(reported, value => Assert.InRange(value, 1, bytes.Length));
+        await FileHash.ComputeAsync(stream, new Progress<long>(value =>
+        {
+            if (value < 1 || value > bytes.Length) Interlocked.Increment(ref outOfRange);
+
+            long seen = Interlocked.Read(ref highest);
+            if (value > seen) Interlocked.Exchange(ref highest, value);
+        }));
+
+        Assert.Equal(0, Interlocked.Read(ref outOfRange));
     }
 
     [Fact]

@@ -309,25 +309,25 @@ public sealed class StubDownloadEngine : IDownloadEngine
     // ── seed data: the handoff's SEED, MB converted to bytes ──────────────
     private IEnumerable<DownloadItem> Seed()
     {
-        yield return Task(1, "ubuntu-24.04.2-desktop.iso", FileKind.Disc, "#FF9500", "soft", 5940, 3742, 1180,
+        yield return SeedTask(1, "ubuntu-24.04.2-desktop.iso", FileKind.Disc, "#FF9500", "soft", 5940, 3742, 1180,
             DownloadStatus.Downloading, 8, "releases.ubuntu.com",
             "https://releases.ubuntu.com/24.04/ubuntu-24.04.2-desktop-amd64.iso",
             checksum: "SHA-256 待校验", priority: TaskPriority.High,
             newer: new NewVersionInfo("ubuntu-24.04.3-desktop.iso", (long)(6042 * Mb), "2 天前"));
 
-        yield return Task(3, "4k-timelapse-reel.mp4", FileKind.Film, "#AF52DE", "video", 1180, 486, 742,
+        yield return SeedTask(3, "4k-timelapse-reel.mp4", FileKind.Film, "#AF52DE", "video", 1180, 486, 742,
             DownloadStatus.Downloading, 6, "cdn.video-host.net",
             "https://cdn.video-host.net/stream/8841/4k-timelapse-reel.mp4");
 
-        yield return Task(5, "source-sans-pack.zip", FileKind.Zip, "#5856D6", "doc", 86, 21, 214,
+        yield return SeedTask(5, "source-sans-pack.zip", FileKind.Zip, "#5856D6", "doc", 86, 21, 214,
             DownloadStatus.Downloading, 4, "fonts.mirror.dev",
             "https://fonts.mirror.dev/packs/source-sans-3-complete.zip");
 
-        yield return Task(4, "arch-linux-2026.08.torrent", FileKind.Disc, "#8E8E93", "bt", 3210, 1104, 0,
+        yield return SeedTask(4, "arch-linux-2026.08.torrent", FileKind.Disc, "#8E8E93", "bt", 3210, 1104, 0,
             DownloadStatus.Paused, 0, "12 个节点", "magnet:?xt=urn:btih:9f2c1a…",
             peers: 12, seeds: 4, ratio: 0.42, upload: 86);
 
-        yield return Task(7, "logic-samples-vol3.flac", FileKind.Music, "#FF2D55", "music", 740, 96, 0,
+        yield return SeedTask(7, "logic-samples-vol3.flac", FileKind.Music, "#FF2D55", "music", 740, 96, 0,
             DownloadStatus.Error, 0, "cdn.audio-lib.net",
             "https://cdn.audio-lib.net/vol3/logic-samples-vol3.flac",
             retries: 2, error: "连接被服务器重置",
@@ -339,21 +339,21 @@ public sealed class StubDownloadEngine : IDownloadEngine
                 new LogEntry("09:44", "第 2 次重试失败", IsError: true),
             });
 
-        yield return Task(8, "design-system-handoff.pdf", FileKind.Doc, "#0A84FF", "doc", 62, 0, 0,
+        yield return SeedTask(8, "design-system-handoff.pdf", FileKind.Doc, "#0A84FF", "doc", 62, 0, 0,
             DownloadStatus.Queued, 0, "docs.internal", "https://docs.internal/handoff/design-system.pdf",
             log: new[] { new LogEntry("09:45", "已加入队列，等待空闲通道") });
 
-        yield return Task(2, "blender-4.2-portable.7z", FileKind.Zip, "#34C759", "soft", 412, 412, 0,
+        yield return SeedTask(2, "blender-4.2-portable.7z", FileKind.Zip, "#34C759", "soft", 412, 412, 0,
             DownloadStatus.Completed, 0, "mirror.blender.org",
             "https://mirror.blender.org/release/blender-4.2.7z",
             checksum: "SHA-256 已校验",
             newer: new NewVersionInfo("blender-4.2.1-portable.7z", (long)(418 * Mb), "今天 08:12"));
 
-        yield return Task(6, "quarterly-report-q2.pdf", FileKind.Doc, "#FF3B30", "doc", 14, 14, 0,
+        yield return SeedTask(6, "quarterly-report-q2.pdf", FileKind.Doc, "#FF3B30", "doc", 14, 14, 0,
             DownloadStatus.Completed, 0, "docs.internal", "https://docs.internal/reports/2026-q2.pdf");
     }
 
-    private DownloadItem Task(
+    private DownloadItem SeedTask(
         int id, string name, FileKind kind, string tint, string category,
         double sizeMb, double doneMb, double speedKb,
         DownloadStatus status, int connections, string host, string url,

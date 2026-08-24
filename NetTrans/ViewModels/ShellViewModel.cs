@@ -31,12 +31,21 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>Selected task ids; the last one drives the inspector, matching the handoff's `sel`.</summary>
     public ObservableCollection<int> SelectedIds { get; } = new();
 
-    public ShellViewModel(IDownloadEngine engine, IClipboardWatcher clipboardWatcher, ISettingsStore settingsStore)
+    /// <summary>
+    /// <paramref name="settings"/> is passed in when the host already loaded
+    /// them -- the engine is configured from the same instance, so a change in
+    /// the 设置 sheet reaches both.
+    /// </summary>
+    public ShellViewModel(
+        IDownloadEngine engine,
+        IClipboardWatcher clipboardWatcher,
+        ISettingsStore settingsStore,
+        AppSettings? settings = null)
     {
         Engine = engine;
         _clipboardWatcher = clipboardWatcher;
         _settingsStore = settingsStore;
-        Settings = settingsStore.Load();
+        Settings = settings ?? settingsStore.Load();
 
         _denseRows = Settings.DenseRows;
         _sortKey = Settings.SortKey;
@@ -401,6 +410,9 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public void Persist()
     {
+        // 同时下载 and 全局限速 have to reach the running engine, not just the file.
+        Engine.ApplySettings(Settings);
+
         try
         {
             _settingsStore.Save(Settings);

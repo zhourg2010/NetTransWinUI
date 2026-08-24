@@ -21,10 +21,17 @@ public partial class App : Application
         ThemeBrushes.SetTheme(Current.RequestedTheme);
 
         ISettingsStore settingsStore = new JsonSettingsStore();
-        IDownloadEngine downloadEngine = new StubDownloadEngine();
+        var settings = settingsStore.Load();
+
+        // `--demo` swaps the real transfers for the handoff's seed data, which
+        // is how the UI is worked on without a network or real files.
+        IDownloadEngine downloadEngine = Environment.GetCommandLineArgs().Contains("--demo")
+            ? new StubDownloadEngine()
+            : new HttpDownloadEngine(settings);
+
         IClipboardWatcher clipboardWatcher = new ClipboardWatcher();
 
-        var shellViewModel = new ShellViewModel(downloadEngine, clipboardWatcher, settingsStore);
+        var shellViewModel = new ShellViewModel(downloadEngine, clipboardWatcher, settingsStore, settings);
 
         _shell = new ShellHost(shellViewModel);
         _shell.Start();

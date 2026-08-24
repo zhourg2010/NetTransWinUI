@@ -44,4 +44,7 @@ public interface IDownloadEngine
     void Redownload(int id);
 
     DownloadItemViewModel Add(NewDownloadRequest request);
+
+    /// <summary>Re-reads the 同时下载 and 全局限速 settings after the sheet changes them.</summary>
+    void ApplySettings(AppSettings settings);
 }

@@ -181,6 +181,11 @@ public sealed class StubDownloadEngine : IDownloadEngine
         Recompute();
     }
 
+    /// <summary>Nothing to apply: the stub ignores concurrency and rate limits.</summary>
+    public void ApplySettings(AppSettings settings)
+    {
+    }
+
     public DownloadItemViewModel Add(NewDownloadRequest request)
     {
         string name = FileNameFrom(request.Url);

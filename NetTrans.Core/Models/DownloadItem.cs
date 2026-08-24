@@ -9,10 +9,15 @@ namespace NetTrans.Models;
 public sealed class DownloadItem
 {
     public required int Id { get; init; }
-    public required string Name { get; init; }
+
+    /// <summary>Set from Content-Disposition once the transfer has probed, if the request did not name the file.</summary>
+    public required string Name { get; set; }
+
     public required string Host { get; init; }
     public required FileKind Kind { get; init; }
-    public required long Size { get; init; }
+
+    /// <summary>Set from the probe; a request only carries an estimate until then.</summary>
+    public required long Size { get; set; }
 
     /// <summary>soft | video | doc | music | bt -- the category chips.</summary>
     public required string Category { get; init; }
@@ -30,6 +35,9 @@ public sealed class DownloadItem
 
     /// <summary>Live connection count (`conns`), not the configured segment count.</summary>
     public int Connections { get; set; }
+
+    /// <summary>How many connections the task was created with, which is what the file gets split into.</summary>
+    public int RequestedConnections { get; init; } = 8;
 
     public TaskPriority Priority { get; set; } = TaskPriority.Normal;
 

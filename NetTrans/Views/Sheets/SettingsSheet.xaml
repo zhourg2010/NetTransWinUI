@@ -126,7 +126,7 @@
             <TextBlock Margin="4,6,4,0" Style="{StaticResource NoteTextStyle}"
                        Text="按下老板键后主窗口、悬浮窗、托盘图标全部消失，下载在后台继续。"/>
             <TextBlock Margin="4,6,4,0" Style="{StaticResource NoteTextStyle}"
-                       Text="便携模式：设置写入程序同目录，不写注册表、不关联协议、不驻留开机项。并发数优化需手动执行，会改动系统设置。"/>
+                       Text="便携模式：设置写入程序同目录，不写注册表、不关联协议、不驻留开机项。并发数由程序自身控制，无需改动系统设置。"/>
 
             <Button Margin="0,8,0,0" Style="{StaticResource BigPlainButtonStyle}"
                     Content="执行并发数优化…" Click="OnOptimizeClick"/>

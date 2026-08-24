@@ -286,6 +286,49 @@ public class DownloadJobTests : IDisposable
         return bytes;
     }
 
+    [Fact]
+    public async Task Changing_the_per_task_limit_reaches_a_running_transfer()
+    {
+        var (job, _, transport, _) = Build(Payload(50_000));
+        job.SpeedLimit = 4096;
+
+        // Held at the first open, so the transfer is live and holding its bucket.
+        var gate = new TaskCompletionSource();
+        transport.BeforeOpen = () => gate.Task;
+        var running = job.RunAsync(CancellationToken.None);
+
+        await Until(() => job.EffectiveSpeedLimit == 4096);
+
+        // 单任务限速 changed from the inspector while it runs.
+        job.SpeedLimit = 0;
+        Assert.Equal(0, job.EffectiveSpeedLimit);
+
+        gate.SetResult();
+        Assert.Equal(JobOutcome.Completed, await running);
+    }
+
+    [Fact]
+    public void A_limit_set_before_the_transfer_starts_is_the_one_in_force()
+    {
+        var (job, _, _, _) = Build(Payload(1000));
+        job.SpeedLimit = 2048;
+
+        Assert.Equal(2048, job.EffectiveSpeedLimit);
+    }
+
+    private static async Task Until(Func<bool> condition, int timeoutMilliseconds = 5000)
+    {
+        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMilliseconds);
+
+        while (DateTime.UtcNow < deadline)
+        {
+            if (condition()) return;
+            await Task.Delay(10);
+        }
+
+        Assert.Fail($"The job did not reach the expected state within {timeoutMilliseconds}ms.");
+    }
+
     private (DownloadJob Job, MemoryFileSinkFactory Sinks, FakeHttpTransport Transport, ManualClock Clock) Build(
         byte[] content,
         int connections = 1,

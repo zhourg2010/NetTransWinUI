@@ -198,8 +198,15 @@ public sealed partial class SettingsSheet : UserControl
             .GetKeyStateForCurrentThread(key)
             .HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
 
+    /// <summary>
+    /// The handoff's 执行并发数优化 comes from the era when a downloader had to
+    /// raise WinINET's MaxConnectionsPerServer in the registry to get more than
+    /// two sockets to a host. This build uses SocketsHttpHandler, whose limit
+    /// is a property on its own handler, so there is nothing in the system to
+    /// change -- and saying that is better than a button that pretends.
+    /// </summary>
     private void OnOptimizeClick(object sender, RoutedEventArgs e) =>
-        _viewModel.Say("并发数优化会改动系统设置，已记录为待执行");
+        _viewModel.Say($"本版本无需改动系统：每主机 32 连接、同时 {_viewModel.Settings.MaxSimultaneousDownloads} 个任务已生效");
 
     private void OnClosed(object? sender, EventArgs e) => _viewModel.ActiveSheet = null;
 

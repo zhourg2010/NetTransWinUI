@@ -29,6 +29,9 @@ public sealed class DownloadJob
     private bool _pauseRequested;
     private DateTimeOffset _lastMapRefresh;
 
+    private double _speedLimit;
+    private TokenBucket? _perTaskLimit;
+
     public DownloadJob(
         DownloadItem item,
         IHttpTransport transport,
@@ -50,14 +53,34 @@ public sealed class DownloadJob
 
     public DownloadItem Item { get; }
 
+    /// <summary>
+    /// The cap the transfer is enforcing right now. Equal to
+    /// <see cref="SpeedLimit"/> once a transfer is running; before one starts
+    /// there is no bucket yet and the two are the same by definition. Worth
+    /// asking separately because the two take effect at different moments.
+    /// </summary>
+    public double EffectiveSpeedLimit => _perTaskLimit?.BytesPerSecond ?? SpeedLimit;
+
     /// <summary>Null until the transfer has probed and planned.</summary>
     public SegmentPlan? Plan { get; private set; }
 
     /// <summary>Where the bytes are being written.</summary>
     public string? TargetPath { get; private set; }
 
-    /// <summary>Per-task cap in bytes per second; zero or less means 不限.</summary>
-    public double SpeedLimit { get; set; }
+    /// <summary>
+    /// Per-task cap in bytes per second; zero or less means 不限. Settable while
+    /// the transfer runs -- the inspector's 单任务限速 dropdown changes it under
+    /// a live download -- so it writes through to the bucket in use.
+    /// </summary>
+    public double SpeedLimit
+    {
+        get => _speedLimit;
+        set
+        {
+            _speedLimit = value;
+            if (_perTaskLimit is { } bucket) bucket.BytesPerSecond = value;
+        }
+    }
 
     public double BytesPerSecond => _meter.BytesPerSecond(_clock.UtcNow);
 
@@ -191,7 +214,8 @@ public sealed class DownloadJob
         Item.Connections = pending.Count;
         Item.Log.Add(new LogEntry(Stamp(), $"已建立 {pending.Count} 个连接"));
 
-        var limit = new TokenBucket(SpeedLimit, _clock.UtcNow);
+        // Held so a change to SpeedLimit mid-transfer reaches this bucket.
+        var limit = _perTaskLimit = new TokenBucket(SpeedLimit, _clock.UtcNow);
         using var persistence = _resume is null ? null : new PeriodicPersister(this, _options.ResumeInterval);
 
         var transfers = pending

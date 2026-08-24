@@ -535,8 +535,13 @@ public sealed partial class MainShell : UserControl
 
     private void OnBannerOpenClick(object sender, RoutedEventArgs e)
     {
-        if (ViewModel?.Banner is { } task) ViewModel.Say($"已打开“{task.Name}”");
-        if (ViewModel is not null) ViewModel.Banner = null;
+        if (ViewModel is null) return;
+
+        // The same command the row's 打开文件 uses, so a file that has been
+        // moved reports that rather than the banner claiming it opened.
+        if (ViewModel.Banner is { } task) ViewModel.OpenFileCommand.Execute(task);
+
+        ViewModel.Banner = null;
     }
 
     private static Geometry Glyph(string key) => (Geometry)Application.Current.Resources[key];

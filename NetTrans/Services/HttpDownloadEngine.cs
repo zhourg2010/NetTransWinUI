@@ -265,7 +265,15 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
         foreach (var task in Tasks)
         {
             // Per-connection rates only exist while a job is live.
-            if (_engine.JobFor(task.Id) is { } job) task.Model.ConnectionSpeeds = job.ConnectionSpeeds;
+            if (_engine.JobFor(task.Id) is { } job)
+            {
+                task.Model.ConnectionSpeeds = job.ConnectionSpeeds;
+
+                // 单任务限速 can be changed from the inspector while the transfer
+                // is running, and the job holds its own bucket.
+                double limit = SpeedLimits.Parse(task.Model.SpeedLimit);
+                if (Math.Abs(job.SpeedLimit - limit) > 0.5) job.SpeedLimit = limit;
+            }
 
             task.Refresh();
         }

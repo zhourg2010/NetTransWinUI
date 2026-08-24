@@ -209,7 +209,8 @@ which is the only place view models change.
   exponential backoff, up to the retry budget. Asking for a range and getting
   `200` back is refused outright rather than silently corrupting the file.
 - **Rate limiting.** 全局限速 and the per-task 速度上限 are token buckets, one
-  shared and one per job, both driven by the injected clock.
+  shared and one per job, both driven by the injected clock. Changing either
+  from the inspector reaches the running transfer rather than the next one.
 - **Live detail.** The inspector's 分块, 连接 and 日志 tabs are fed by the real
   transfer: the chunk map comes from segment positions, the per-connection rates
   from a meter per segment.

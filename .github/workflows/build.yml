@@ -10,6 +10,21 @@ on:
   workflow_dispatch:
 
 jobs:
+  # NetTrans.Core has no WinUI dependency, so its tests run on Linux in
+  # seconds — that is the fast feedback loop. The Windows build below is the
+  # only thing that can compile the shell.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Test NetTrans.Core
+        run: dotnet test NetTrans.Core.Tests/NetTrans.Core.Tests.csproj -c Release --logger "console;verbosity=normal"
+
   build:
     runs-on: windows-latest
     strategy:

@@ -29,35 +29,44 @@ public class SavePathPlannerTests
 
     [Fact]
     public void A_free_name_is_used_as_it_is() =>
-        Assert.Equal("setup.exe", SavePathPlanner.UniqueName(@"D:\x", "setup.exe", _ => false));
+        Assert.Equal("setup.exe", SavePathPlanner.UniqueName(Directory, "setup.exe", _ => false));
 
     [Fact]
     public void A_taken_name_gets_the_next_number()
     {
-        var taken = new HashSet<string> { @"D:\x\setup.exe", @"D:\x\setup (2).exe" };
+        var taken = Taken("setup.exe", "setup (2).exe");
 
-        Assert.Equal("setup (3).exe", SavePathPlanner.UniqueName(@"D:\x", "setup.exe", taken.Contains));
+        Assert.Equal("setup (3).exe", SavePathPlanner.UniqueName(Directory, "setup.exe", taken));
     }
 
     [Fact]
     public void The_suffix_goes_before_the_extension_not_after()
     {
-        var taken = new HashSet<string> { @"D:\x\archive.tar.gz" };
-
         // Only the last extension is one, which is what Path itself thinks and
         // what the shell would do.
-        Assert.Equal("archive.tar (2).gz", SavePathPlanner.UniqueName(@"D:\x", "archive.tar.gz", taken.Contains));
+        Assert.Equal(
+            "archive.tar (2).gz",
+            SavePathPlanner.UniqueName(Directory, "archive.tar.gz", Taken("archive.tar.gz")));
     }
 
     [Fact]
-    public void A_name_with_no_extension_still_numbers_cleanly()
-    {
-        var taken = new HashSet<string> { @"D:\x\README" };
-
-        Assert.Equal("README (2)", SavePathPlanner.UniqueName(@"D:\x", "README", taken.Contains));
-    }
+    public void A_name_with_no_extension_still_numbers_cleanly() =>
+        Assert.Equal("README (2)", SavePathPlanner.UniqueName(Directory, "README", Taken("README")));
 
     [Fact]
     public void A_directory_that_claims_everything_is_taken_gives_up_rather_than_hanging() =>
-        Assert.Equal("setup.exe", SavePathPlanner.UniqueName(@"D:\x", "setup.exe", _ => true));
+        Assert.Equal("setup.exe", SavePathPlanner.UniqueName(Directory, "setup.exe", _ => true));
+
+    /// <summary>
+    /// The tests run on Linux and the app on Windows, so a taken path is built
+    /// the same way the planner builds the one it asks about, rather than
+    /// spelled out with separators of either flavour.
+    /// </summary>
+    private static string Directory => Path.Combine("D:", "x");
+
+    private static Func<string, bool> Taken(params string[] names)
+    {
+        var paths = names.Select(name => Path.Combine(Directory, name)).ToHashSet(StringComparer.Ordinal);
+        return paths.Contains;
+    }
 }

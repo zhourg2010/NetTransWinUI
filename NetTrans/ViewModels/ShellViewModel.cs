@@ -57,6 +57,8 @@ public sealed partial class ShellViewModel : ObservableObject
         _showInspector = Settings.ShowInspector;
         _showIsland = Settings.ShowIsland;
         _edgeHide = Settings.EdgeHide;
+        _bossKey = Settings.BossKey;
+        _watchClipboard = Settings.WatchClipboard;
 
         Engine.Tasks.CollectionChanged += OnTasksChanged;
         Engine.Ticked += OnEngineTicked;
@@ -70,7 +72,7 @@ public sealed partial class ShellViewModel : ObservableObject
         Rebuild();
 
         _clipboardWatcher.UrlDetected += OnClipboardUrlDetected;
-        if (Settings.WatchClipboard) _clipboardWatcher.Start();
+        if (WatchClipboard) _clipboardWatcher.Start();
     }
 
     // ── list state ────────────────────────────────────────────────────────
@@ -92,6 +94,11 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty] private bool _showInspector;
     [ObservableProperty] private bool _showIsland;
     [ObservableProperty] private bool _edgeHide;
+
+    /// <summary>老板键, as the sheet spells it. The shell re-registers on change.</summary>
+    [ObservableProperty] private string _bossKey;
+
+    [ObservableProperty] private bool _watchClipboard;
     [ObservableProperty] private bool _bossMode;
     [ObservableProperty] private string? _activeSheet;          // add | batch | torrent | sniff | prefs
     [ObservableProperty] private string? _toast;
@@ -532,6 +539,19 @@ public sealed partial class ShellViewModel : ObservableObject
     partial void OnShowInspectorChanged(bool value) { Settings.ShowInspector = value; Persist(); OnPropertyChanged(nameof(InspectorTooltip)); }
     partial void OnShowIslandChanged(bool value) { Settings.ShowIsland = value; Persist(); }
     partial void OnEdgeHideChanged(bool value) { Settings.EdgeHide = value; Persist(); }
+
+    partial void OnBossKeyChanged(string value) { Settings.BossKey = value; Persist(); }
+
+    partial void OnWatchClipboardChanged(bool value)
+    {
+        Settings.WatchClipboard = value;
+        Persist();
+
+        // The watcher is a live subscription to the system clipboard, so the
+        // switch has to reach it now rather than at the next start.
+        if (value) _clipboardWatcher.Start();
+        else _clipboardWatcher.Stop();
+    }
     partial void OnHiddenCountChanged(int value) => OnPropertyChanged(nameof(FoldLabel));
 
     partial void OnCategoryChanged(string value)

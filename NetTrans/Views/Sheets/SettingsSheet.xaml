@@ -16,7 +16,7 @@
             <TextBlock Margin="4,0,4,6" Style="{StaticResource GroupHeaderTextStyle}" Text="下载"/>
             <Border Style="{StaticResource CardStyle}">
                 <StackPanel>
-                    <controls:FormRow x:Name="SavePathRow" Label="默认位置" ShowChevron="True" ShowSeparator="False"/>
+                    <controls:FormRow x:Name="SavePathRow" Label="默认位置" ShowChevron="True" ShowSeparator="False" Tapped="OnSavePathTapped"/>
 
                     <controls:FormRow Label="按分类分文件夹">
                         <controls:IosSwitch x:Name="FoldersSwitch" Toggled="OnFoldersToggled"/>
@@ -50,7 +50,18 @@
             <TextBlock Margin="4,18,4,6" Style="{StaticResource GroupHeaderTextStyle}" Text="队列与计划"/>
             <Border Style="{StaticResource CardStyle}">
                 <StackPanel>
-                    <controls:FormRow x:Name="ScheduleRow" Label="计划时段" ShowChevron="True" ShowSeparator="False"/>
+                    <controls:FormRow x:Name="ScheduleRow" Label="计划时段" ShowChevron="True" ShowSeparator="False" Tapped="OnScheduleTapped"/>
+
+                    <Grid x:Name="ScheduleEditor" Margin="14,0,14,12" Visibility="Collapsed" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TimePicker x:Name="OffPeakStartPicker" ClockIdentifier="24HourClock" SelectedTimeChanged="OnScheduleChanged"/>
+                        <TextBlock Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource RowSubTextStyle}" Text="–"/>
+                        <TimePicker Grid.Column="2" x:Name="OffPeakEndPicker" ClockIdentifier="24HourClock" SelectedTimeChanged="OnScheduleChanged"/>
+                    </Grid>
 
                     <controls:FormRow Label="失败自动重试">
                         <ComboBox x:Name="RetryBox" Style="{StaticResource FormSelectStyle}" SelectionChanged="OnRetryChanged">
@@ -98,7 +109,17 @@
                         <controls:IosSwitch x:Name="IslandSwitch" Toggled="OnIslandToggled"/>
                     </controls:FormRow>
 
-                    <controls:FormRow x:Name="BossKeyRow" Label="老板键" ShowChevron="True"/>
+                    <controls:FormRow x:Name="BossKeyRow" Label="老板键" ShowChevron="True" Tapped="OnBossKeyTapped"/>
+
+                    <Button
+                        x:Name="BossKeyCapture"
+                        Margin="14,0,14,12"
+                        HorizontalAlignment="Stretch"
+                        Visibility="Collapsed"
+                        Style="{StaticResource BigPlainButtonStyle}"
+                        Content="按下新的组合键…"
+                        PreviewKeyDown="OnBossKeyCaptured"
+                        LostFocus="OnBossKeyCaptureLostFocus"/>
                 </StackPanel>
             </Border>
 

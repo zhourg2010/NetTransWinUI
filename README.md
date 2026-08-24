@@ -239,6 +239,41 @@ network or real files.
   moves the file and drops the stale resume sidecar, and refuses while a
   transfer is live rather than leaving the writer pointed at the old handle.
 
+### What the 设置 sheet actually changes
+
+Every switch and dropdown in the sheet drives something; none of them are
+decoration.
+
+- **按分类建子文件夹** files a new task under 软件 / 视频 / 文档 / 音乐 / BT inside
+  the save path, and picks `name (2).ext` when something is already headed for
+  that path — a file on disk, or another queued task the disk cannot know about
+  yet.
+- **同时下载数** and **全局限速** are the queue's concurrency and its token
+  bucket; both take effect without a restart.
+- **夜间不限速** lifts the cap while the clock is inside **计划时段**, re-checked
+  on the tick that already runs, so the window opens and closes on time. The
+  window wraps past midnight, because the default 23:00 – 07:00 does.
+- **失败自动重试** is the per-connection retry budget. A value that will not
+  parse falls back to the sheet's default rather than to zero.
+- **全部完成后** arms once per batch, on the queue draining rather than on any
+  single file finishing — an idle queue is the app's normal state and must not
+  shut the machine down by itself. 退出程序 / 休眠 / 关机 each get a 20-second bar
+  with 取消 first; cancelling stands down that batch, not the setting.
+- **完成后校验** hashes the finished file (SHA-256) off the UI thread.
+- **完成后扫描** writes the `Zone.Identifier` mark of the web — the durable half,
+  since SmartScreen and Protected View keep honouring it after the file moves —
+  and asks Defender for a single-file scan where there is one. Remediation stays
+  off: quarantining a file the user just asked for, silently, is not ours to do.
+- **剪贴板监听**, **完成提示** and **贴边隐藏** drive the clipboard watcher, the
+  completion banner and the edge-hide behaviour. The clipboard switch starts and
+  stops the live subscription immediately, not at the next launch.
+- **默认位置**, **计划时段** and **老板键** — the three rows with a chevron — are
+  editable: a folder picker, a pair of 24-hour time pickers, and a key capture
+  that re-registers the global hotkey as soon as it is pressed. A combination
+  with no modifier is refused rather than stored, since Windows would swallow
+  the bare key system-wide, and one another application already owns is
+  reported instead of silently failing.
+
 **BitTorrent is not implemented.** The 种子 / 磁力链 sheet says so. A real client
 is the peer wire protocol, DHT and piece scheduling — a project of its own, and
 parsing a `.torrent` well enough to list its contents and then failing to fetch

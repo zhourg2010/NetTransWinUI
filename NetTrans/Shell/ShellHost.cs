@@ -31,7 +31,6 @@ public sealed class ShellHost : IDisposable
     private const double EdgePeek = 36;
 
     private const int BossHotKeyId = 0xB055;
-    private const uint VkH = 0x48;
 
     private readonly ShellViewModel _viewModel;
 
@@ -78,7 +77,7 @@ public sealed class ShellHost : IDisposable
         OnDockChanged(this, EventArgs.Empty);
 
         _mainChrome.HotKeyPressed += OnHotKey;
-        _mainChrome.RegisterHotKey(BossHotKeyId, NativeMethods.MOD_CONTROL | NativeMethods.MOD_ALT, VkH);
+        ApplyBossHotKey();
 
         _mainWindow.Activate();
         if (_viewModel.EdgeHide) ScheduleEdgeHide();
@@ -226,6 +225,10 @@ public sealed class ShellHost : IDisposable
             case nameof(ShellViewModel.BossMode):
                 ApplyBossMode();
                 break;
+
+            case nameof(ShellViewModel.BossKey):
+                ApplyBossHotKey();
+                break;
         }
     }
 
@@ -261,6 +264,27 @@ public sealed class ShellHost : IDisposable
     {
         if (id != BossHotKeyId) return;
         _mainWindow.DispatcherQueue.TryEnqueue(() => _viewModel.BossMode = !_viewModel.BossMode);
+    }
+
+    /// <summary>
+    /// Registers 老板键 as configured, replacing whatever was registered
+    /// before. A combination another application already owns cannot be taken,
+    /// and a setting that will not parse is no combination at all -- either way
+    /// the shell says so rather than leaving a dead key the user thinks works.
+    /// </summary>
+    private void ApplyBossHotKey()
+    {
+        _mainChrome.UnregisterHotKey(BossHotKeyId);
+
+        if (HotKeyBinding.Parse(_viewModel.BossKey) is not { } binding)
+        {
+            _viewModel.Say($"无法识别的快捷键：{_viewModel.BossKey}");
+            return;
+        }
+
+        if (_mainChrome.RegisterHotKey(BossHotKeyId, (uint)binding.Modifiers, (uint)binding.VirtualKey)) return;
+
+        _viewModel.Say($"{binding} 已被其他程序占用");
     }
 
     private void ApplyBossMode()

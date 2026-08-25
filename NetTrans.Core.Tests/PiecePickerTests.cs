@@ -145,20 +145,24 @@ public class PiecePickerTests
     public void A_peer_leaving_takes_its_pieces_out_of_the_rarity_count()
     {
         var picker = new PiecePicker(2);
+        var all = Bitfield(2, 0, 1);
 
-        picker.Saw(Bitfield(2, 0));
-        picker.Saw(Bitfield(2, 0));
-        picker.Saw(Bitfield(2, 0, 1));
+        // Three peers have both pieces, and a fourth announced piece 1, so
+        // piece 0 is the rarer of the two.
+        picker.Saw(all);
+        picker.Saw(all);
+        picker.Saw(all);
+        picker.Saw(1);
 
-        // Piece 1 is rarest, so it goes first.
-        Assert.Equal(1, picker.Take(Bitfield(2, 0, 1)));
-        picker.Return(1);
+        Assert.Equal(0, picker.Take(all));
+        picker.Return(0);
 
-        // With the peer that had both gone, piece 0 is the rarer of the two.
-        picker.Left(Bitfield(2, 0));
-        picker.Left(Bitfield(2, 0));
+        // Two of those peers disconnect, taking their piece 1 with them, which
+        // makes piece 1 the rarer one now.
+        picker.Left(Bitfield(2, 1));
+        picker.Left(Bitfield(2, 1));
 
-        Assert.Equal(1, picker.Take(Bitfield(2, 0, 1)));
+        Assert.Equal(1, picker.Take(all));
     }
 
     [Fact]

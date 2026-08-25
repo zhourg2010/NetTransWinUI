@@ -131,6 +131,12 @@ public static class PeerWire
     /// </summary>
     public const int MaxMessageLength = 1024 * 1024;
 
+    /// <summary>
+    /// Where the eight reserved bytes start: after the length byte and the
+    /// nineteen of the protocol name, not after the length byte alone.
+    /// </summary>
+    private const int ReservedOffset = 1 + 19;
+
     /// <summary>Bit 44 of the reserved field: BEP 10 extended messages.</summary>
     private const int ExtendedReservedByte = 5;
 
@@ -144,7 +150,7 @@ public static class PeerWire
         Encoding.ASCII.GetBytes(ProtocolName).CopyTo(packet.AsSpan(1));
 
         // Eight reserved bytes, all zero except the capabilities we claim.
-        if (supportsExtended) packet[9 + ExtendedReservedByte] |= ExtendedReservedBit;
+        if (supportsExtended) packet[ReservedOffset + ExtendedReservedByte] |= ExtendedReservedBit;
 
         infoHash.CopyTo(packet.AsSpan(28, 20));
         peerId.CopyTo(packet.AsSpan(48, 20));
@@ -164,7 +170,7 @@ public static class PeerWire
             throw new PeerException("对方不是 BitTorrent 客户端。");
         }
 
-        bool extended = (packet[9 + ExtendedReservedByte] & ExtendedReservedBit) != 0;
+        bool extended = (packet[ReservedOffset + ExtendedReservedByte] & ExtendedReservedBit) != 0;
 
         return new PeerHandshake(
             packet.AsSpan(28, 20).ToArray(),

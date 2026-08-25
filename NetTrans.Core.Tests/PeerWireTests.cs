@@ -42,9 +42,13 @@ public class PeerWireTests
     {
         Assert.False(PeerWire.ParseHandshake(PeerWire.BuildHandshake(InfoHash, PeerId, supportsExtended: false)).SupportsExtended);
 
-        // BEP 10 is bit 44, which is 0x10 of reserved byte 5.
+        // BEP 10 is bit 44: 0x10 of reserved byte 5. The reserved block starts
+        // at 20, after the length byte and the nineteen of the protocol name --
+        // putting it at 9 lands inside the name and corrupts the handshake.
         var packet = PeerWire.BuildHandshake(InfoHash, PeerId);
-        Assert.Equal(0x10, packet[9 + 5]);
+
+        Assert.Equal(0x10, packet[20 + 5]);
+        Assert.Equal("BitTorrent protocol", Encoding.ASCII.GetString(packet, 1, 19));
     }
 
     [Fact]

@@ -37,6 +37,7 @@ public sealed class TorrentSwarm
     private readonly PieceStore _store;
     private readonly PiecePicker _picker;
     private readonly byte[] _peerId;
+    private readonly IClockNow _now;
 
     private readonly object _gate = new();
     private readonly HashSet<string> _attempted = new(StringComparer.Ordinal);
@@ -52,7 +53,8 @@ public sealed class TorrentSwarm
         TrackerPool trackers,
         PieceStore store,
         PiecePicker picker,
-        byte[]? peerId = null)
+        byte[]? peerId = null,
+        IClockNow? now = null)
     {
         _torrent = torrent;
         _connector = connector;
@@ -60,6 +62,7 @@ public sealed class TorrentSwarm
         _store = store;
         _picker = picker;
         _peerId = peerId ?? TrackerProtocol.NewPeerId();
+        _now = now ?? SystemNow.Instance;
     }
 
     /// <summary>How many peers to talk to at once.</summary>
@@ -181,14 +184,74 @@ public sealed class TorrentSwarm
 
         await _store.FlushAsync(CancellationToken.None).ConfigureAwait(false);
 
-        if (_picker.IsComplete)
-        {
-            SeedingSince = DateTimeOffset.UtcNow;
+        if (!_picker.IsComplete) return;
 
-            // Telling the tracker is what makes the completion count, and it
-            // costs one request.
-            await AnnounceAsync(AnnounceEvent.Completed, CancellationToken.None).ConfigureAwait(false);
+        SeedingSince = _now.UtcNow;
+
+        // Telling the tracker is what makes the completion count, and it costs
+        // one request.
+        await AnnounceAsync(AnnounceEvent.Completed, CancellationToken.None).ConfigureAwait(false);
+
+        if (Seed) await SeedAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Keeps serving after the download is done, until the configured limit is
+    /// met or the caller stops us.
+    ///
+    /// This is where 做种限制 is actually enforced. Storing the limit and never
+    /// checking it would make the setting a decoration -- and on a private
+    /// tracker, a promise about an account's ratio that nothing keeps.
+    /// </summary>
+    private async Task SeedAsync(CancellationToken cancellationToken)
+    {
+        // A zero-length limit is "stop as soon as it finishes", which is a real
+        // choice and has to be honoured before a single peer is served.
+        if (SeedingLimitReached(_now.UtcNow))
+        {
+            Say($"已达到做种限制（{SeedingLimits.Describe()}），停止做种");
+            return;
         }
+
+        Say(SeedingLimits.IsUnlimited ? "开始做种" : $"开始做种，限制：{SeedingLimits.Describe()}");
+
+        var sessions = new List<Task>();
+
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            if (SeedingLimitReached(_now.UtcNow))
+            {
+                Say($"已达到做种限制（分享率 {Ratio:0.00}），停止做种");
+                break;
+            }
+
+            while (sessions.Count < MaxPeers && TryTakePeer(out var peer))
+            {
+                sessions.Add(TalkToAsync(peer, cancellationToken));
+            }
+
+            if (sessions.Count == 0)
+            {
+                // Nobody to serve. Re-announce on the tracker's own interval
+                // rather than spinning, and let the limit be checked each time.
+                await AnnounceAsync(AnnounceEvent.None, cancellationToken).ConfigureAwait(false);
+
+                if (sessions.Count == 0 && !TryPeek())
+                {
+                    await Task.Delay(_trackers.Interval, cancellationToken).ConfigureAwait(false);
+                }
+
+                continue;
+            }
+
+            var finished = await Task.WhenAny(sessions).ConfigureAwait(false);
+            sessions.Remove(finished);
+        }
+    }
+
+    private bool TryPeek()
+    {
+        lock (_gate) return _pool.Count > 0;
     }
 
     /// <summary>Tells the trackers we are leaving, so they drop us before the interval expires.</summary>

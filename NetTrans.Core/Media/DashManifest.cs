@@ -56,14 +56,20 @@ public sealed class DashManifestLoader
         var representations = Mpd.Parse(document, manifest);
         if (representations.Count == 0) throw new NotSupportedException("清单里没有可下载的媒体。");
 
-        // Best muxed track wins outright: one file, and it plays.
-        if (representations.FirstOrDefault(r => r.Track == TrackKind.Muxed) is { } muxed)
-        {
-            return new[] { Stream(muxed, manifest) };
-        }
+        // Periods play one after another, so a manifest with several is several
+        // stretches of content back to back. Taking one Representation out of
+        // the pile would give a file a fraction of the running time.
+        var periods = representations
+            .GroupBy(r => r.PeriodIndex)
+            .OrderBy(group => group.Key)
+            .Select(group => group.ToList())
+            .ToList();
 
-        var video = representations.FirstOrDefault(r => r.Track == TrackKind.Video);
-        var audio = representations.FirstOrDefault(r => r.Track == TrackKind.Audio);
+        // Best muxed track wins outright: one file, and it plays.
+        if (Pick(periods, TrackKind.Muxed) is { } muxed) return new[] { Stream(muxed, manifest) };
+
+        var video = Pick(periods, TrackKind.Video);
+        var audio = Pick(periods, TrackKind.Audio);
 
         if (video is null && audio is null) throw new NotSupportedException("清单里没有可下载的音视频轨。");
 
@@ -73,6 +79,45 @@ public sealed class DashManifestLoader
         if (audio is not null) streams.Add(Stream(audio, manifest));
 
         return streams;
+    }
+
+    /// <summary>
+    /// The best Representation of a kind, with the matching one from every
+    /// later Period appended to it.
+    ///
+    /// Stitching is only attempted when each Period offers a Representation
+    /// with the same id and the same initialization segment: that is the case
+    /// where the stretches are the same encode cut into parts, and their
+    /// segments genuinely concatenate. Ad insertion gives each Period its own
+    /// init segment, which cannot be concatenated into one playable file
+    /// without remuxing -- so that is refused by name rather than half-done.
+    /// </summary>
+    private static DashRepresentation? Pick(IReadOnlyList<List<DashRepresentation>> periods, TrackKind kind)
+    {
+        var first = periods[0].FirstOrDefault(r => r.Track == kind);
+        if (first is null) return null;
+        if (periods.Count == 1) return first;
+
+        var segments = new List<StreamSegment>(first.Segments);
+
+        for (int i = 1; i < periods.Count; i++)
+        {
+            var match = periods[i].FirstOrDefault(r =>
+                r.Track == kind &&
+                r.Id == first.Id &&
+                r.InitSegment == first.InitSegment);
+
+            if (match is null)
+            {
+                throw new NotSupportedException(
+                    $"这个清单有 {periods.Count} 个 Period 且互不衔接（通常是插播广告），" +
+                    "无法拼接成单个文件。");
+            }
+
+            segments.AddRange(match.Segments);
+        }
+
+        return first with { Segments = segments };
     }
 
     private static SegmentedStream Stream(DashRepresentation representation, Uri manifest)

@@ -22,11 +22,13 @@ public sealed record HlsPlaylist(Uri Url, HlsMedia Media, string Quality, string
     public long EstimatedBytes { get; init; }
 
     /// <summary>
-    /// The form the transfer works in. An HLS rendition is muxed in practice --
-    /// a variant is one playable stream, audio included -- which is the whole
-    /// reason concatenating its segments gives a file that plays.
+    /// The form the transfer works in.
+    ///
+    /// <paramref name="track"/> is not always Muxed: HLS can put the audio in a
+    /// separate #EXT-X-MEDIA rendition, in which case the variant is video only
+    /// and fetching it alone gives a silent film.
     /// </summary>
-    public SegmentedStream AsStream() => new(
+    public SegmentedStream AsStream(TrackKind track = TrackKind.Muxed) => new(
         Url,
         Media.Segments
             .Select(segment => new StreamSegment(
@@ -40,7 +42,7 @@ public sealed record HlsPlaylist(Uri Url, HlsMedia Media, string Quality, string
         Media.InitSegment,
         Quality,
         Container,
-        TrackKind.Muxed,
+        track,
         EstimatedBytes);
 }
 
@@ -67,6 +69,47 @@ public sealed class HlsPlaylistLoader
     {
         string text = await PageReader.ReadAsync(_transport, playlist, cancellationToken: cancellationToken).ConfigureAwait(false);
         return M3U8.IsMaster(text) ? M3U8.ParseMaster(text, playlist) : Array.Empty<HlsVariant>();
+    }
+
+    /// <summary>
+    /// Everything that has to be fetched to have the content: one stream when
+    /// the variant carries its own audio, two when the master playlist puts the
+    /// audio in a separate #EXT-X-MEDIA rendition.
+    /// </summary>
+    public async Task<IReadOnlyList<SegmentedStream>> LoadStreamsAsync(
+        Uri playlist,
+        CancellationToken cancellationToken = default)
+    {
+        string text = await PageReader
+            .ReadAsync(_transport, playlist, cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!M3U8.IsMaster(text))
+        {
+            // A bare media playlist has no renditions to speak of: whatever it
+            // holds is all there is.
+            var only = await LoadAsync(playlist, preferred: null, cancellationToken).ConfigureAwait(false);
+            return new[] { only.AsStream() };
+        }
+
+        var variants = M3U8.ParseMaster(text, playlist);
+        if (variants.Count == 0) throw new NotSupportedException("播放列表里没有可用的清晰度。");
+
+        var best = variants[0];
+        var audio = M3U8.AudioFor(best, M3U8.ParseRenditions(text, playlist));
+
+        var video = await LoadAsync(playlist, best, cancellationToken).ConfigureAwait(false);
+
+        // No separate audio track: the variant is a complete stream.
+        if (audio?.Url is null) return new[] { video.AsStream() };
+
+        var sound = await LoadAsync(audio.Url, preferred: null, cancellationToken).ConfigureAwait(false);
+
+        return new[]
+        {
+            video.AsStream(TrackKind.Video),
+            sound.AsStream(TrackKind.Audio) with { Quality = $"音轨 {audio.Name}" },
+        };
     }
 
     /// <summary>

@@ -27,10 +27,8 @@ public sealed class StreamLoader
             return await new DashManifestLoader(_transport).LoadAsync(manifest, cancellationToken).ConfigureAwait(false);
         }
 
-        var playlist = await new HlsPlaylistLoader(_transport)
-            .LoadAsync(manifest, preferred: null, cancellationToken)
+        return await new HlsPlaylistLoader(_transport)
+            .LoadStreamsAsync(manifest, cancellationToken)
             .ConfigureAwait(false);
-
-        return new[] { playlist.AsStream() };
     }
 }

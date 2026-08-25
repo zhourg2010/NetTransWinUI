@@ -37,13 +37,41 @@ public sealed record HlsSegment(
     long? ByteRangeOffset = null,
     long? ByteRangeLength = null);
 
+/// <summary>
+/// An #EXT-X-MEDIA rendition: an alternative audio or subtitle track.
+///
+/// The URI is the part that matters. Present, the track is a separate playlist
+/// and the variant it belongs to carries video only -- fetch just the variant
+/// and you get a silent film. Absent, the track is already inside the variant
+/// and there is nothing extra to do.
+/// </summary>
+/// <param name="Type">AUDIO, SUBTITLES, VIDEO or CLOSED-CAPTIONS.</param>
+/// <param name="GroupId">What a variant's AUDIO= attribute points at.</param>
+/// <param name="Name">The label, for a picker.</param>
+/// <param name="Url">Null when the track is muxed into the variant.</param>
+/// <param name="IsDefault">DEFAULT=YES, which is the one to take when nobody chooses.</param>
+public sealed record HlsRendition(string Type, string GroupId, string Name, Uri? Url, bool IsDefault)
+{
+    public bool IsAudio => string.Equals(Type, "AUDIO", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Whether this track has to be fetched separately.</summary>
+    public bool IsSeparate => Url is not null;
+}
+
 /// <summary>One quality on offer in a master playlist.</summary>
 /// <param name="Url">The media playlist for this rendition, absolute.</param>
 /// <param name="Bandwidth">BANDWIDTH in bits per second; 0 when the tag omitted it.</param>
 /// <param name="Width">From RESOLUTION, or 0.</param>
 /// <param name="Height">From RESOLUTION, or 0.</param>
 /// <param name="Codecs">CODECS verbatim, or empty.</param>
-public sealed record HlsVariant(Uri Url, long Bandwidth, int Width, int Height, string Codecs)
+/// <param name="AudioGroup">The AUDIO= group this variant takes its sound from, when it names one.</param>
+public sealed record HlsVariant(
+    Uri Url,
+    long Bandwidth,
+    int Width,
+    int Height,
+    string Codecs,
+    string AudioGroup = "")
 {
     /// <summary>The label the 视频嗅探 sheet shows: 1080p when the tag said so, else a bitrate.</summary>
     public string Quality => Height > 0
@@ -113,7 +141,8 @@ public static class M3U8
                 Number(Value(pending, "BANDWIDTH")),
                 width,
                 height,
-                Value(pending, "CODECS") ?? ""));
+                Value(pending, "CODECS") ?? "",
+                Value(pending, "AUDIO") ?? ""));
 
             pending = null;
         }
@@ -122,6 +151,61 @@ public static class M3U8
             .OrderByDescending(variant => variant.Height)
             .ThenByDescending(variant => variant.Bandwidth)
             .ToList();
+    }
+
+    /// <summary>
+    /// The #EXT-X-MEDIA renditions a master playlist declares.
+    ///
+    /// Parsed separately from the variants because they are a different thing:
+    /// a variant is a quality to choose between, a rendition is a track that
+    /// may have to be fetched alongside whichever variant was chosen.
+    /// </summary>
+    public static IReadOnlyList<HlsRendition> ParseRenditions(string text, Uri playlistUrl)
+    {
+        var renditions = new List<HlsRendition>();
+
+        foreach (string line in Lines(text))
+        {
+            if (!line.StartsWith("#EXT-X-MEDIA:", StringComparison.Ordinal)) continue;
+
+            var attributes = Attributes(line["#EXT-X-MEDIA:".Length..]);
+
+            string type = Value(attributes, "TYPE") ?? "";
+            string group = Value(attributes, "GROUP-ID") ?? "";
+            if (type.Length == 0 || group.Length == 0) continue;
+
+            // No URI means the track is inside the variant already, which is
+            // not an error and not something to fetch.
+            Uri? url = null;
+            if (Value(attributes, "URI") is { } uri && TryResolve(uri, playlistUrl, out var resolved)) url = resolved;
+
+            renditions.Add(new HlsRendition(
+                type,
+                group,
+                Value(attributes, "NAME") ?? group,
+                url,
+                string.Equals(Value(attributes, "DEFAULT"), "YES", StringComparison.OrdinalIgnoreCase)));
+        }
+
+        return renditions;
+    }
+
+    /// <summary>
+    /// The audio track a variant needs fetching alongside it, or null when its
+    /// sound is already in the variant.
+    /// </summary>
+    public static HlsRendition? AudioFor(HlsVariant variant, IReadOnlyList<HlsRendition> renditions)
+    {
+        if (variant.AudioGroup.Length == 0) return null;
+
+        var group = renditions
+            .Where(rendition => rendition.IsAudio && rendition.GroupId == variant.AudioGroup && rendition.IsSeparate)
+            .ToList();
+
+        if (group.Count == 0) return null;
+
+        // DEFAULT=YES is the track a player would pick on its own.
+        return group.FirstOrDefault(rendition => rendition.IsDefault) ?? group[0];
     }
 
     /// <summary>

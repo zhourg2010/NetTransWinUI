@@ -13,6 +13,12 @@ namespace NetTrans.Media;
 /// <param name="Codecs">The codecs attribute, which is how a muxed track is told from a split one.</param>
 /// <param name="InitSegment">The initialization segment, absent only for a single-file Representation.</param>
 /// <param name="Segments">In play order.</param>
+/// <param name="PeriodIndex">
+/// Which Period it came from. Periods play in sequence, so a manifest with more
+/// than one is several stretches of content back to back -- ad insertion,
+/// usually -- and taking one Representation out of the pile would give a file
+/// that is a fraction of the running time.
+/// </param>
 public sealed record DashRepresentation(
     string Id,
     long Bandwidth,
@@ -21,7 +27,8 @@ public sealed record DashRepresentation(
     string MimeType,
     string Codecs,
     Uri? InitSegment,
-    IReadOnlyList<StreamSegment> Segments)
+    IReadOnlyList<StreamSegment> Segments,
+    int PeriodIndex = 0)
 {
     /// <summary>
     /// What this Representation carries. DASH usually splits audio from video,
@@ -96,6 +103,8 @@ public static partial class Mpd
 
         var mpdBase = Resolve(manifestUrl, BaseUrl(root));
 
+        int periodIndex = 0;
+
         foreach (var period in Elements(root, "Period"))
         {
             var periodBase = Resolve(mpdBase, BaseUrl(period));
@@ -108,13 +117,16 @@ public static partial class Mpd
                 foreach (var representation in Elements(adaptationSet, "Representation"))
                 {
                     var built = Build(representation, adaptationSet, setBase, periodDuration);
-                    if (built is not null) representations.Add(built);
+                    if (built is not null) representations.Add(built with { PeriodIndex = periodIndex });
                 }
             }
+
+            periodIndex++;
         }
 
         return representations
-            .OrderByDescending(r => r.Track == TrackKind.Audio ? -1 : r.Height)
+            .OrderBy(r => r.PeriodIndex)
+            .ThenByDescending(r => r.Track == TrackKind.Audio ? -1 : r.Height)
             .ThenByDescending(r => r.Bandwidth)
             .ToList();
     }

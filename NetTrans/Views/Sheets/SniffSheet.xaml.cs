@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using NetTrans.Media;
 using NetTrans.Models;
 using NetTrans.Net;
 using NetTrans.Services;
@@ -108,25 +109,29 @@ public sealed partial class SniffSheet : UserControl
         var picked = _rows.Where(entry => entry.Row.IsChecked).Select(entry => entry.Source).ToList();
         if (picked.Count == 0) return;
 
-        // An HLS/DASH playlist is an index of thousands of segments, not a
-        // file; fetching it would save the index. Muxing those back into one
-        // file is a separate piece of work, so say so rather than produce junk.
-        var playlists = picked.Where(source => source.IsPlaylist).ToList();
-        var files = picked.Where(source => !source.IsPlaylist).ToList();
+        // An HLS playlist goes into the queue like anything else -- the engine
+        // gives it a segment transfer rather than a ranged one. DASH is
+        // recognised but not yet fetchable, so it is left out here rather than
+        // queued to fail later.
+        var dash = picked.Where(source => PlaylistUrl.IsDash(source.Url.AbsoluteUri)).ToList();
+        var queued = picked.Except(dash).ToList();
 
-        foreach (var source in files)
+        foreach (var source in queued)
         {
             _viewModel.Engine.Add(new NewDownloadRequest(
                 source.Url.AbsoluteUri,
                 _viewModel.Settings.DefaultSavePath,
                 "video",
+                // A playlist's parallelism is segments at once, not ranges of
+                // one file, and eight of those is already plenty.
                 Connections: 8,
                 TaskPriority.Normal,
                 StartNow: true));
         }
 
-        _viewModel.Say(playlists.Count > 0 && files.Count == 0 ? "分片流（m3u8 / mpd）暂不支持下载"
-            : playlists.Count > 0 ? $"已加入 {files.Count} 个，分片流暂不支持"
+        _viewModel.Say(
+            queued.Count == 0 ? "MPEG-DASH（.mpd）暂不支持下载"
+            : dash.Count > 0 ? $"已加入 {queued.Count} 个，.mpd 暂不支持"
             : "已加入下载队列");
 
         _viewModel.ActiveSheet = null;

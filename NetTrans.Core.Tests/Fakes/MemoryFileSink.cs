@@ -35,6 +35,12 @@ public sealed class MemoryFileSink : IFileSink
         return ValueTask.CompletedTask;
     }
 
+    public ValueTask TruncateAsync(long length, CancellationToken cancellationToken)
+    {
+        lock (_gate) Array.Resize(ref _bytes, (int)Math.Max(0, length));
+        return ValueTask.CompletedTask;
+    }
+
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }
 

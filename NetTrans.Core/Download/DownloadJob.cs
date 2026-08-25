@@ -11,7 +11,7 @@ namespace NetTrans.Download;
 /// Everything it touches -- HTTP, the file, the clock -- is injected, so the
 /// whole loop runs in a unit test against a fake server and an in-memory file.
 /// </summary>
-public sealed class DownloadJob
+public sealed class DownloadJob : ITransferJob
 {
     private readonly IHttpTransport _transport;
     private readonly IFileSinkFactory _sinks;

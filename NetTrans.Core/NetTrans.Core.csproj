@@ -18,4 +18,15 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!--
+      The test project checks a few helpers that are internal because nothing
+      outside this assembly should call them - the block map a transfer folds
+      its progress onto, the attribute splitter the playlist reader uses. They
+      are worth testing directly rather than only through the transfer that
+      owns them.
+    -->
+    <InternalsVisibleTo Include="NetTrans.Core.Tests"/>
+  </ItemGroup>
+
 </Project>

@@ -46,7 +46,8 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
             // only the fallback for a task that did not specify one.
             new DownloadOptions(Connections: 8, MaxRetries: SettingsRules.Retries(settings.RetryPolicy)),
             Math.Max(1, settings.MaxSimultaneousDownloads),
-            SettingsRules.SpeedLimitAt(settings, DateTimeOffset.Now));
+            SettingsRules.SpeedLimitAt(settings, DateTimeOffset.Now),
+            PlaylistResumeStore.Instance);
 
         _engine.Completed += OnCoreCompleted;
         _engine.Failed += OnCoreStatusChanged;
@@ -374,7 +375,9 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
     private static FileKind KindFrom(string name) => System.IO.Path.GetExtension(name).ToLowerInvariant() switch
     {
         ".iso" or ".img" or ".dmg" or ".torrent" => FileKind.Disc,
-        ".mp4" or ".mkv" or ".mov" or ".avi" or ".webm" => FileKind.Film,
+        // A playlist is the video, as far as the row is concerned: what lands
+        // on disk is a .ts or an .mp4, not the index.
+        ".mp4" or ".mkv" or ".mov" or ".avi" or ".webm" or ".ts" or ".m3u8" or ".m3u" or ".mpd" => FileKind.Film,
         ".zip" or ".7z" or ".rar" or ".tar" or ".gz" or ".zst" => FileKind.Zip,
         ".flac" or ".mp3" or ".m4a" or ".wav" => FileKind.Music,
         _ => FileKind.Doc,

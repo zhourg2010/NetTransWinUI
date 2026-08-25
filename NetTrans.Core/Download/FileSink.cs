@@ -46,6 +46,12 @@ public sealed class FileSink : IFileSink
     /// </summary>
     public ValueTask FlushAsync(CancellationToken cancellationToken) => ValueTask.CompletedTask;
 
+    public ValueTask TruncateAsync(long length, CancellationToken cancellationToken)
+    {
+        if (length >= 0 && RandomAccess.GetLength(_handle) != length) RandomAccess.SetLength(_handle, length);
+        return ValueTask.CompletedTask;
+    }
+
     public ValueTask DisposeAsync()
     {
         _handle.Dispose();

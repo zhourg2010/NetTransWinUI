@@ -10,6 +10,17 @@ public interface IFileSink : IAsyncDisposable
     ValueTask WriteAsync(long offset, ReadOnlyMemory<byte> data, CancellationToken cancellationToken);
 
     ValueTask FlushAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Cuts the file to <paramref name="length"/>.
+    ///
+    /// A playlist transfer needs this and a ranged one does not: a ranged
+    /// transfer knows its total length up front and writes into a pre-sized
+    /// file, while a playlist restarting over a longer partial file would leave
+    /// the old tail sitting behind the new bytes -- a corrupt stream rather
+    /// than a shorter one.
+    /// </summary>
+    ValueTask TruncateAsync(long length, CancellationToken cancellationToken);
 }
 
 /// <summary>Opens the sink for a transfer. Faked in tests with an in-memory buffer.</summary>

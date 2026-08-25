@@ -1,3 +1,4 @@
+using NetTrans.Media;
 using NetTrans.Models;
 using NetTrans.Net;
 
@@ -14,6 +15,7 @@ public sealed class DownloadEngine : IAsyncDisposable
     private readonly IFileSinkFactory _sinks;
     private readonly IClock _clock;
     private readonly ResumeStore? _resume;
+    private readonly PlaylistResumeStore? _playlistResume;
     private DownloadOptions _options;
     private readonly TokenBucket _globalLimit;
 
@@ -31,12 +33,14 @@ public sealed class DownloadEngine : IAsyncDisposable
         ResumeStore? resume = null,
         DownloadOptions? options = null,
         int maxConcurrent = 3,
-        double globalSpeedLimit = 0)
+        double globalSpeedLimit = 0,
+        PlaylistResumeStore? playlistResume = null)
     {
         _transport = transport;
         _sinks = sinks;
         _clock = clock ?? SystemClock.Instance;
         _resume = resume;
+        _playlistResume = playlistResume;
         _options = options ?? new DownloadOptions();
         _maxConcurrent = Math.Max(1, maxConcurrent);
         _globalLimit = new TokenBucket(globalSpeedLimit, _clock.UtcNow);
@@ -231,10 +235,19 @@ public sealed class DownloadEngine : IAsyncDisposable
     }
 
     /// <summary>The live job for a task, when it has one -- the source of per-connection rates.</summary>
-    public DownloadJob? JobFor(int id)
+    public ITransferJob? JobFor(int id)
     {
         lock (_gate) return _running.TryGetValue(id, out var running) ? running.Job : null;
     }
+
+    /// <summary>
+    /// Which kind of transfer a task needs. A playlist is not a file: there is
+    /// no length to range over and no single request to make, so it gets a
+    /// different job rather than a special case inside the ranged one.
+    /// </summary>
+    private ITransferJob JobFor(DownloadItem item) => PlaylistUrl.IsPlaylist(item.Url)
+        ? new PlaylistJob(item, _transport, _sinks, _clock, _options, _playlistResume, _globalLimit)
+        : new DownloadJob(item, _transport, _sinks, _clock, _options, _resume, _globalLimit);
 
     /// <summary>Starts queued tasks while there are free slots, highest priority first.</summary>
     private void Pump()
@@ -267,10 +280,8 @@ public sealed class DownloadEngine : IAsyncDisposable
                 if (candidate is null) return;
                 next = candidate;
 
-                var job = new DownloadJob(next, _transport, _sinks, _clock, _options, _resume, _globalLimit)
-                {
-                    SpeedLimit = SpeedLimits.Parse(next.SpeedLimit),
-                };
+                var job = JobFor(next);
+                job.SpeedLimit = SpeedLimits.Parse(next.SpeedLimit);
 
                 running = new Running(job);
                 _running[next.Id] = running;
@@ -395,9 +406,9 @@ public sealed class DownloadEngine : IAsyncDisposable
         private readonly TaskCompletionSource _completion =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public Running(DownloadJob job) => Job = job;
+        public Running(ITransferJob job) => Job = job;
 
-        public DownloadJob Job { get; }
+        public ITransferJob Job { get; }
 
         /// <summary>Set under the engine's gate when 继续 arrives mid-teardown.</summary>
         public bool ResumeRequested { get; set; }

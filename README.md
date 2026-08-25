@@ -51,14 +51,22 @@ NetTrans.Core/              No WinUI, no Windows — buildable and testable anyw
     RemoteFileInfo.cs       Length, range support, validators, filename
   Download/
     DownloadEngine.cs       The queue: concurrency, priority, global rate cap
-    DownloadJob.cs          One transfer: probe, plan, fetch, write, resume
+    ITransferJob.cs         What the queue drives: a ranged file or a playlist
+    DownloadJob.cs          One ranged transfer: probe, plan, fetch, write, resume
+    PlaylistJob.cs          One HLS transfer: segments, in order, into one file
     SegmentPlan.cs          How a file is split, and the 96-cell chunk map
     ResumeState.cs          The .nettrans sidecar behind 断点续传
+    PlaylistResume.cs       The .nettrans-hls sidecar: whole segments, not offsets
     FileSink.cs             Concurrent disjoint writes via RandomAccess
     TokenBucket.cs          The 限速 dropdowns
     SpeedMeter.cs           Sliding-window throughput
     SpeedLimits.cs          Reads "512 KB/s" back into a rate
     IClock.cs               Time, injected, so the loop is testable
+  Media/
+    M3U8.cs                 Master and media playlists, keys, byte ranges
+    HlsPlaylist.cs          Follows a master to a rendition; refuses what it cannot do
+    HlsDecryptor.cs         AES-128 segments, with the key fetched once
+    PlaylistUrl.cs          Whether a URL is a playlist, and which kind
   Services/
     FormatHelpers.cs        mb() / spd() / eta() from the handoff
     TaskPresenter.cs        Every string the design derives from a task
@@ -230,9 +238,20 @@ network or real files.
   quietly shrinking the result.
 - **视频嗅探** works from the page's own markup, since the portable build injects
   nothing into a browser: `<source>` elements with their labels, and the media
-  URLs that players leave in script blobs. Best quality first, audio last. HLS
-  and DASH playlists are listed but refused, because fetching one saves the
-  index, not the video.
+  URLs that players leave in script blobs. Best quality first, audio last.
+- **HLS (.m3u8) downloads for real.** A playlist gets a segment transfer rather
+  than a ranged one: follow a master playlist to its best rendition, fetch the
+  segments a windowful at a time, and write them into one file strictly in the
+  order the playlist named them. No remuxing is involved and none is needed —
+  MPEG-TS segments concatenate into a playable `.ts` because that is what a TS
+  stream is, and fMP4 segments concatenate onto their `#EXT-X-MAP` init segment
+  into a playable `.mp4`. AES-128 segments are decrypted on the way in, with the
+  key fetched once and the IV taken from the tag or, when it omits one, from the
+  media sequence number. Pausing keeps whole segments and resuming appends;
+  progress is counted in segments, since a playlist never states a byte count.
+  Refused up front, with the reason on the row: a live playlist (no end to
+  download to), SAMPLE-AES (needs the codec, not a key), and MPEG-DASH `.mpd`,
+  which is recognised but not yet fetched.
 - **新版本** re-probes the URL and compares ETag, then Last-Modified, then length
   against what was recorded when the file was fetched. It runs after every
   completed download and from 检查更新 in the context menu.
@@ -316,6 +335,5 @@ the site:
   (`NetTrans.settings.json`), falling back to `%LOCALAPPDATA%\NetTrans` when that
   directory is read-only — matching the 设置 sheet's promise of no registry writes.
 - Clipboard URL detection is live (`Clipboard.ContentChanged`).
-- Still unimplemented: BitTorrent (磁力链 / 种子), and HLS/DASH playlists, which
-  the sniffer lists but will not fetch. Both are called out in the UI rather
-  than failing quietly.
+- Still unimplemented: BitTorrent (磁力链 / 种子), MPEG-DASH (`.mpd`), and live
+  HLS. Each is called out in the UI with the reason rather than failing quietly.

@@ -15,6 +15,23 @@ public sealed record NewDownloadRequest(
     bool StartNow,
     string? ScheduledAt = null);
 
+/// <summary>
+/// What the 种子 sheet asks for, per task.
+/// </summary>
+/// <param name="Sequential">顺序下载, for previewing a video before it finishes.</param>
+/// <param name="Limits">做种限制.</param>
+/// <param name="UploadLimit">上传限速 in bytes per second; zero is 不限.</param>
+/// <param name="Files">
+/// 选择文件: paths inside the torrent to fetch. Null or empty means all of them,
+/// and only a .torrent read from disk can offer the choice up front -- a magnet
+/// does not know its own file list until peers have told it.
+/// </param>
+public sealed record TorrentTaskOptions(
+    bool Sequential,
+    NetTrans.Torrent.SeedingLimits Limits,
+    double UploadLimit = 0,
+    IReadOnlyList<string>? Files = null);
+
 public interface IDownloadEngine
 {
     /// <summary>Every task, in queue order. The shell filters and sorts a view over this.</summary>
@@ -53,11 +70,10 @@ public interface IDownloadEngine
     void ApplySettings(AppSettings settings);
 
     /// <summary>
-    /// The torrent settings that cannot sensibly be global: 顺序下载, when to
-    /// stop seeding, and what to hold the upload to. Ignored for a task that is
-    /// not a torrent.
+    /// The torrent settings that cannot sensibly be global. Ignored for a task
+    /// that is not a torrent.
     /// </summary>
-    void ApplyTorrentOptions(int id, bool sequential, NetTrans.Torrent.SeedingLimits limits, double uploadLimit = 0);
+    void ApplyTorrentOptions(int id, TorrentTaskOptions options);
 
     /// <summary>
     /// Remembers the page a link came from, so later requests to that host

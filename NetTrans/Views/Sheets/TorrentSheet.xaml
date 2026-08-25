@@ -54,6 +54,16 @@
                 </StackPanel>
             </Border>
 
+            <Border x:Name="FilesCard" Margin="0,12,0,0" Visibility="Collapsed" Style="{StaticResource CardStyle}">
+                <StackPanel>
+                    <controls:FormRow x:Name="FilesHeaderRow" Label="选择文件"/>
+
+                    <ScrollViewer MaxHeight="196" Margin="14,4,14,12" VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="FilesPanel" Spacing="2"/>
+                    </ScrollViewer>
+                </StackPanel>
+            </Border>
+
             <TextBlock
                 x:Name="Summary"
                 Margin="4,10,4,0"

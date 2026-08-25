@@ -76,6 +76,12 @@ public sealed class TorrentJob : ITransferJob
     public bool Sequential { get; set; }
 
     /// <summary>
+    /// 选择文件: the paths inside the torrent that were asked for. Null or empty
+    /// means all of them, which is the ordinary case.
+    /// </summary>
+    public IReadOnlyList<string>? WantedFiles { get; set; }
+
+    /// <summary>
     /// A per-task cap, in bytes per second. A torrent's bytes come from many
     /// peers at once, so the cap is one budget for the whole swarm rather than
     /// one per connection -- and it can be moved while the transfer runs, from
@@ -194,6 +200,35 @@ public sealed class TorrentJob : ITransferJob
         }
     }
 
+    /// <summary>
+    /// Narrows the picker to the chosen files, if any were chosen.
+    ///
+    /// The size in the row becomes what will actually be fetched, which for a
+    /// selection is more than the files add up to: a piece straddling a wanted
+    /// and an unwanted file has to be fetched whole, because a piece is the
+    /// smallest thing that can be verified.
+    /// </summary>
+    private void Select(TorrentMetainfo torrent, PiecePicker picker)
+    {
+        if (WantedFiles is not { Count: > 0 } wanted) return;
+
+        var chosen = torrent.Files
+            .Where(file => wanted.Contains(file.Path, StringComparer.OrdinalIgnoreCase))
+            .ToList();
+
+        if (chosen.Count == 0 || chosen.Count == torrent.Files.Count) return;
+
+        var pieces = FileSelection.WantedPieces(torrent, chosen);
+        picker.WantOnly(pieces);
+
+        long bytes = FileSelection.BytesFor(torrent, chosen);
+        Item.Size = bytes;
+
+        Item.Log.Add(new LogEntry(
+            Stamp(),
+            $"只下载 {chosen.Count}/{torrent.Files.Count} 个文件 · {pieces.Count} 个分片 · {FormatBytes(bytes)}"));
+    }
+
     private async Task<JobOutcome> TransferAsync(CancellationToken cancellationToken)
     {
         Item.Status = DownloadStatus.Downloading;
@@ -219,6 +254,8 @@ public sealed class TorrentJob : ITransferJob
 
         var picker = new PiecePicker(torrent.PieceCount) { Sequential = Sequential };
         _picker = picker;
+
+        Select(torrent, picker);
 
         await using var store = new PieceStore(torrent, _sinks, Item.SavePath);
 

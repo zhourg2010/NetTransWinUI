@@ -34,7 +34,7 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
     private readonly RequestProfiles _profiles = new();
     private readonly LiveProxy _proxy = new();
 
-    private readonly Dictionary<int, (bool Sequential, NetTrans.Torrent.SeedingLimits Limits, double UploadLimit)> _torrentOptions = new();
+    private readonly Dictionary<int, TorrentTaskOptions> _torrentOptions = new();
 
     private int _nextId = 1;
 
@@ -204,18 +204,21 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
         Tasks.Any(task => string.Equals(
             System.IO.Path.Combine(task.SavePath, task.Name), path, StringComparison.OrdinalIgnoreCase));
 
-    public void ApplyTorrentOptions(int id, bool sequential, NetTrans.Torrent.SeedingLimits limits, double uploadLimit = 0)
+    public void ApplyTorrentOptions(int id, TorrentTaskOptions options)
     {
         // Held until the job starts: a queued task has no job yet, and a
         // running one has already read them.
-        _torrentOptions[id] = (sequential, limits, uploadLimit);
+        _torrentOptions[id] = options;
 
-        if (_engine.JobFor(id) is TorrentJob job)
-        {
-            job.Sequential = sequential;
-            job.SeedingLimits = limits;
-            job.UploadLimit = uploadLimit;
-        }
+        if (_engine.JobFor(id) is TorrentJob job) Apply(job, options);
+    }
+
+    private static void Apply(TorrentJob job, TorrentTaskOptions options)
+    {
+        job.Sequential = options.Sequential;
+        job.SeedingLimits = options.Limits;
+        job.UploadLimit = options.UploadLimit;
+        job.WantedFiles = options.Files;
     }
 
     public void RememberReferer(Uri url, Uri page) => _profiles.SetReferer(url, page);
@@ -316,9 +319,7 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
                 // pushed on the first tick that finds it running.
                 if (job is TorrentJob torrent && _torrentOptions.Remove(task.Id, out var options))
                 {
-                    torrent.Sequential = options.Sequential;
-                    torrent.SeedingLimits = options.Limits;
-                    torrent.UploadLimit = options.UploadLimit;
+                    Apply(torrent, options);
                 }
 
                 task.Model.ConnectionSpeeds = job.ConnectionSpeeds;

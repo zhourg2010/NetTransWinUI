@@ -74,6 +74,36 @@ public class TorrentJobTests
     }
 
     [Fact]
+    public async Task Only_the_chosen_files_are_fetched()
+    {
+        var world = new World(multiFile: true)
+        {
+            // The film, not the sample.
+            Wanted = new List<string> { "movie.bin" },
+        };
+
+        Assert.Equal(JobOutcome.Completed, await world.RunAsync());
+
+        // Three of the four pieces. The third holds the end of the film and the
+        // start of the sample, and is fetched whole because a piece is the
+        // smallest thing that can be verified.
+        Assert.Equal(3, world.Seed.BlocksServed);
+        Assert.Contains(world.Item.Log, entry => entry.Message.Contains("只下载 1/2 个文件"));
+    }
+
+    [Fact]
+    public async Task Choosing_everything_is_the_same_as_choosing_nothing()
+    {
+        var world = new World(multiFile: true)
+        {
+            Wanted = new List<string> { "movie.bin", "sample.bin" },
+        };
+
+        Assert.Equal(JobOutcome.Completed, await world.RunAsync());
+        Assert.DoesNotContain(world.Item.Log, entry => entry.Message.Contains("只下载"));
+    }
+
+    [Fact]
     public async Task The_row_learns_the_name_and_size_from_the_metainfo()
     {
         var world = new World();
@@ -139,7 +169,7 @@ public class TorrentJobTests
         private readonly TorrentBuilder _builder;
         private readonly string _directory;
 
-        public World(IPEndPoint[]? peers = null)
+        public World(IPEndPoint[]? peers = null, bool multiFile = false)
         {
             _directory = Path.Combine(Path.GetTempPath(), "nettrans-bt-" + Guid.NewGuid().ToString("N"));
 
@@ -148,8 +178,18 @@ public class TorrentJobTests
             Content = new byte[1000];
             for (int i = 0; i < Content.Length; i++) Content[i] = (byte)(i * 41 % 251);
 
-            _builder.Add("wanted.bin", Content);
-            _builder.Trackers.Add("http://tracker.test/announce");
+            if (multiFile)
+            {
+                // A film and the sample clip nobody asked for, which is the
+                // shape 选择文件 exists for.
+                _builder.Name = "release";
+                _builder.Add("movie.bin", Content.AsSpan(0, 700).ToArray());
+                _builder.Add("sample.bin", Content.AsSpan(700).ToArray());
+            }
+            else
+            {
+                _builder.Add("wanted.bin", Content);
+            }
 
             Torrent = TorrentMetainfo.Parse(_builder.Build());
             Seed = new FakeSeed(Torrent, Content);
@@ -199,9 +239,20 @@ public class TorrentJobTests
             }
         }
 
+        /// <summary>选择文件, as the sheet would have set it.</summary>
+        public List<string>? Wanted { get; set; }
+
         public async Task<JobOutcome> RunAsync(int timeoutMilliseconds = 8000)
         {
-            var job = new TorrentJob(Item, Transport, _sinks, new ManualClock(), Options(), Connector);
+            var job = new TorrentJob(Item, Transport, _sinks, new ManualClock(), Options(), Connector)
+            {
+                WantedFiles = Wanted,
+
+                // 下完即停. Seeding has no natural end, and these tests are about
+                // what happens up to the last piece -- without this each one
+                // sits until its own deadline. Seeding has its own tests.
+                SeedingLimits = new SeedingLimits(MaxSeedingTime: TimeSpan.Zero),
+            };
 
             using var cancellation = new CancellationTokenSource(timeoutMilliseconds);
 

@@ -36,6 +36,9 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
 
     private readonly Dictionary<int, TorrentTaskOptions> _torrentOptions = new();
 
+    /// <summary>Tasks that asked for 强制校验 and have not had it yet.</summary>
+    private readonly HashSet<int> _rechecking = new();
+
     private int _nextId = 1;
 
     public HttpDownloadEngine(AppSettings settings)
@@ -97,6 +100,7 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
             // A task deleted before it ever ran leaves its BT settings behind,
             // and nothing would ever come to collect them.
             _torrentOptions.Remove(id);
+            _rechecking.Remove(id);
 
             if (Tasks.FirstOrDefault(task => task.Id == id) is { } removed) Tasks.Remove(removed);
         }
@@ -223,6 +227,22 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
 
     public void RememberReferer(Uri url, Uri page) => _profiles.SetReferer(url, page);
 
+    public void Recheck(int id)
+    {
+        if (Tasks.FirstOrDefault(task => task.Id == id) is not { } task) return;
+        if (!NetTrans.Torrent.TorrentUrl.IsTorrent(task.Model.Url)) return;
+
+        _rechecking.Add(id);
+
+        task.Model.Log.Add(new LogEntry(DateTime.Now.ToString("HH:mm"), "已安排强制校验"));
+        task.Refresh();
+
+        // A transfer has read its resume record by the time it is running, so
+        // rechecking means running it again -- which for a finished torrent is
+        // the whole point, and is why this is Restart rather than Resume.
+        _engine.Restart(id);
+    }
+
     public void ApplySettings(AppSettings settings)
     {
         _proxy.Set(settings.Proxy);
@@ -317,9 +337,13 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
             {
                 // A torrent job reads these once, when it starts, so they are
                 // pushed on the first tick that finds it running.
-                if (job is TorrentJob torrent && _torrentOptions.Remove(task.Id, out var options))
+                if (job is TorrentJob torrent)
                 {
-                    Apply(torrent, options);
+                    if (_torrentOptions.Remove(task.Id, out var options)) Apply(torrent, options);
+
+                    // The job reads this when it starts and clears it once it
+                    // has hashed the files.
+                    if (_rechecking.Remove(task.Id)) torrent.Recheck = true;
                 }
 
                 task.Model.ConnectionSpeeds = job.ConnectionSpeeds;

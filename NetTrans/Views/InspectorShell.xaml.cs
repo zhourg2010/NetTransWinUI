@@ -258,6 +258,22 @@ public sealed partial class InspectorShell : UserControl
         RefreshOverview(_item);
     }
 
+    /// <summary>
+    /// 强制校验: hash the files on disk again rather than trusting the resume
+    /// record.
+    ///
+    /// The task is run again to do it, which for a torrent that had finished is
+    /// exactly what is wanted -- that is the case this exists for, along with a
+    /// sidecar that has gone stale and files moved in from somewhere else.
+    /// </summary>
+    private void OnRecheckTapped(object sender, TappedRoutedEventArgs e)
+    {
+        if (_item is null || _viewModel is null) return;
+
+        _viewModel.Engine.Recheck(_item.Id);
+        _viewModel.Say("正在重新校验磁盘上的文件…");
+    }
+
     private void OnLimitChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_item is null || LimitBox.SelectedItem is not string limit) return;

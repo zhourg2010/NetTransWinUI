@@ -85,6 +85,13 @@ public interface IDownloadEngine
     /// </summary>
     void RememberReferer(Uri url, Uri page);
 
+    /// <summary>
+    /// 强制校验: hash what is on disk again instead of trusting the resume
+    /// record. Takes effect the next time the task runs, and starts it if it is
+    /// not running. Does nothing for a task that is not a torrent.
+    /// </summary>
+    void Recheck(int id);
+
     /// <summary>Where a task's bytes are, or will be.</summary>
     string? PathOf(int id);
 

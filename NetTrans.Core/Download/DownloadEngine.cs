@@ -196,6 +196,38 @@ public sealed class DownloadEngine : IAsyncDisposable
         Pump();
     }
 
+    /// <summary>
+    /// Runs a task again, including one that has already finished.
+    ///
+    /// <see cref="Resume"/> deliberately refuses a completed task -- pressing 继续
+    /// on a finished row should do nothing. Starting one again is a separate,
+    /// explicit act: 强制校验 on a seeding torrent, or fetching a file whose
+    /// server has a newer copy.
+    /// </summary>
+    public void Restart(int id)
+    {
+        if (Find(id) is not { } item) return;
+
+        item.ErrorMessage = null;
+
+        Running? running;
+        lock (_gate)
+        {
+            if (_running.TryGetValue(id, out running)) running.ResumeRequested = true;
+        }
+
+        // Still running: stopping it is what frees the slot, and the recorded
+        // intent starts it again the moment it lets go.
+        if (running is not null)
+        {
+            running.Job.Pause();
+            return;
+        }
+
+        SetStatus(item, DownloadStatus.Queued);
+        Pump();
+    }
+
     public void PauseAll()
     {
         foreach (var item in Items.Where(item => item.Status is DownloadStatus.Downloading or DownloadStatus.Queued))

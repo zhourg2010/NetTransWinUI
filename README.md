@@ -363,10 +363,19 @@ everything else.
   of order and each is verified alone. With no sidecar but files on disk, they
   are hashed instead of fetched again — which is also what makes seeding an
   already-downloaded torrent work.
-- **选择文件** narrows a multi-file torrent to what was asked for. A piece
-  straddling a wanted and an unwanted file is still fetched, since a piece is
-  the smallest verifiable unit — so the size shown is the piece cost rather than
-  the sum of the file sizes.
+- **选择文件** narrows a multi-file torrent to what was asked for. The 种子 sheet
+  lists the files of a .torrent it can read and each one can be unticked; a
+  magnet has no list until peers have sent one, so it is not offered the choice.
+  A piece straddling a wanted and an unwanted file is still fetched, since a
+  piece is the smallest verifiable unit — so the size shown is the piece cost
+  rather than the sum of the file sizes, which is also why unticking a small
+  file next to a wanted one often saves nothing.
+- **强制校验** is a row in the inspector's BT group. It runs the task again with
+  the resume record ignored and the files on disk hashed instead — for a stale
+  sidecar, for files moved in from elsewhere, and for cross-seeding, which
+  begins with exactly that question. A finished torrent can be rechecked too,
+  which is what `Restart` exists for: 继续 deliberately does nothing to a row
+  that has already completed.
 
 **Not implemented, and named in the sheet rather than failed quietly:** DHT and
 PEX, so a magnet with no trackers cannot find peers; MSE/PE encryption; and µTP.

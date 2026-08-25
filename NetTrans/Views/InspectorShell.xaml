@@ -189,6 +189,13 @@
                                 <controls:FormRow x:Name="SeedsRow" Label="种子" IsCompact="True"/>
                                 <controls:FormRow x:Name="RatioRow" Label="分享率" IsCompact="True"/>
                                 <controls:FormRow x:Name="UploadRow" Label="上传" IsCompact="True"/>
+                                <controls:FormRow
+                                    x:Name="RecheckRow"
+                                    Label="强制校验"
+                                    Value="重新读盘"
+                                    IsCompact="True"
+                                    ShowChevron="True"
+                                    Tapped="OnRecheckTapped"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>

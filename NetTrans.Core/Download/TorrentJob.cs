@@ -82,6 +82,16 @@ public sealed class TorrentJob : ITransferJob
     public IReadOnlyList<string>? WantedFiles { get; set; }
 
     /// <summary>
+    /// 强制校验: hash what is on disk instead of trusting the resume sidecar.
+    ///
+    /// Asked for more often than it sounds. A sidecar can be stale, files can
+    /// be moved in from elsewhere, and cross-seeding the same content under a
+    /// second torrent begins with exactly this question. Cleared once done, so
+    /// it costs one pass rather than every start.
+    /// </summary>
+    public bool Recheck { get; set; }
+
+    /// <summary>
     /// A per-task cap, in bytes per second. A torrent's bytes come from many
     /// peers at once, so the cap is one budget for the whole swarm rather than
     /// one per connection -- and it can be moved while the transfer runs, from
@@ -354,6 +364,18 @@ public sealed class TorrentJob : ITransferJob
         PieceStore store,
         CancellationToken cancellationToken)
     {
+        // 强制校验 is the whole point of the setting: the sidecar is exactly what
+        // is not to be trusted this time.
+        if (Recheck)
+        {
+            Recheck = false;
+
+            Item.Log.Add(new LogEntry(Stamp(), "强制校验：忽略续传记录，重新校验磁盘上的文件"));
+            await VerifyDiskAsync(torrent, picker, store, cancellationToken).ConfigureAwait(false);
+
+            return;
+        }
+
         // The sidecar is the cheap path and needs a store to have been given.
         if (_resume is not null && TargetPath is not null)
         {
@@ -377,13 +399,27 @@ public sealed class TorrentJob : ITransferJob
         if (!torrent.Files.Any(file => _sinks.Exists(store.PathOf(file)))) return;
 
         Item.Log.Add(new LogEntry(Stamp(), "发现已有文件，正在校验…"));
+        await VerifyDiskAsync(torrent, picker, store, cancellationToken).ConfigureAwait(false);
+    }
 
+    private async Task VerifyDiskAsync(
+        TorrentMetainfo torrent,
+        PiecePicker picker,
+        PieceStore store,
+        CancellationToken cancellationToken)
+    {
         var verified = await TorrentVerifier
             .VerifyAsync(torrent, store, cancellationToken: cancellationToken)
             .ConfigureAwait(false);
 
         picker.Restore(verified);
+
         Item.Log.Add(new LogEntry(Stamp(), $"校验完成：{picker.CompletedCount} / {torrent.PieceCount} 个分片可用"));
+        Record(new SwarmProgress(0, torrent.TotalLength, picker.CompletedCount, torrent.PieceCount, 0, 0));
+
+        // What the sidecar said is now wrong either way; the truth is what was
+        // just hashed.
+        await PersistAsync().ConfigureAwait(false);
     }
 
     private void Record(SwarmProgress progress)

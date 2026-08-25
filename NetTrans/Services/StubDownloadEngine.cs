@@ -197,6 +197,10 @@ public sealed class StubDownloadEngine : IDownloadEngine
     {
     }
 
+    public void Recheck(int id)
+    {
+    }
+
     public void ApplySettings(AppSettings settings)
     {
     }

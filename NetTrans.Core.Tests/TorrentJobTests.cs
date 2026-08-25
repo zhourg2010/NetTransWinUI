@@ -152,6 +152,21 @@ public class TorrentJobTests
     }
 
     [Fact]
+    public async Task A_recheck_hashes_the_files_instead_of_believing_the_resume_record()
+    {
+        var world = new World { Recheck = true };
+        world.PlaceEverythingOnDisk();
+
+        Assert.Equal(JobOutcome.Completed, await world.RunAsync());
+
+        // Nothing was asked of the seed, and the log says why: the files were
+        // hashed rather than trusted or fetched.
+        Assert.Equal(0, world.Seed.BlocksServed);
+        Assert.Contains(world.Item.Log, entry => entry.Message.Contains("强制校验"));
+        Assert.Contains(world.Item.Log, entry => entry.Message.Contains("校验完成"));
+    }
+
+    [Fact]
     public async Task Something_that_is_neither_a_magnet_nor_a_readable_torrent_says_so()
     {
         var world = new World();
@@ -190,6 +205,8 @@ public class TorrentJobTests
             {
                 _builder.Add("wanted.bin", Content);
             }
+
+            _builder.Trackers.Add("http://tracker.test/announce");
 
             Torrent = TorrentMetainfo.Parse(_builder.Build());
             Seed = new FakeSeed(Torrent, Content);
@@ -242,11 +259,15 @@ public class TorrentJobTests
         /// <summary>选择文件, as the sheet would have set it.</summary>
         public List<string>? Wanted { get; set; }
 
+        /// <summary>强制校验, as the inspector's row would have set it.</summary>
+        public bool Recheck { get; set; }
+
         public async Task<JobOutcome> RunAsync(int timeoutMilliseconds = 8000)
         {
             var job = new TorrentJob(Item, Transport, _sinks, new ManualClock(), Options(), Connector)
             {
                 WantedFiles = Wanted,
+                Recheck = Recheck,
 
                 // 下完即停. Seeding has no natural end, and these tests are about
                 // what happens up to the last piece -- without this each one

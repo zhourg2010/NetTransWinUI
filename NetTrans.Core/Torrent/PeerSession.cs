@@ -157,8 +157,20 @@ public sealed class PeerSession
 
         try
         {
-            while (!cancellationToken.IsCancellationRequested && !_picker.IsComplete)
+            while (!cancellationToken.IsCancellationRequested)
             {
+                // Nothing left to fetch. Leaving here is what makes a client a
+                // leech: the peer on the other end may still want something
+                // from us, and a finished download is exactly when we are worth
+                // the most to it.
+                if (_picker.IsComplete)
+                {
+                    if (!Seed) break;
+
+                    await ServeUntilDoneAsync(cancellationToken).ConfigureAwait(false);
+                    break;
+                }
+
                 // Take a piece as soon as we are unchoked and have none.
                 if (current is null && !_choked)
                 {

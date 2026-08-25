@@ -116,7 +116,10 @@ public class SeedingTests
             await stream.WriteAsync(PeerWire.Encode(PeerMessage.Request(99, 0, 16)), cancellation);
         });
 
+        // Zero because all three were refused, not because the client was
+        // unwilling to serve: it unchoked us, which is the willing part.
         Assert.Equal(0, world.Session.Uploaded);
+        Assert.True(world.Session.PeerIsInterested);
     }
 
     /// <summary>A client that has the torrent, and a peer that wants some of it.</summary>

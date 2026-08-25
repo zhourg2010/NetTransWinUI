@@ -21,10 +21,12 @@ public sealed class FileSink : IFileSink
         string? directory = Path.GetDirectoryName(path);
         if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
 
+        // ReadWrite, not Write: serving a block to a peer means reading a piece
+        // back out of the file we are still writing into.
         var handle = File.OpenHandle(
             path,
             FileMode.OpenOrCreate,
-            FileAccess.Write,
+            FileAccess.ReadWrite,
             FileShare.Read,
             FileOptions.Asynchronous);
 
@@ -45,6 +47,18 @@ public sealed class FileSink : IFileSink
     /// point in the transfer.
     /// </summary>
     public ValueTask FlushAsync(CancellationToken cancellationToken) => ValueTask.CompletedTask;
+
+    public async ValueTask<int> ReadAsync(long offset, Memory<byte> buffer, CancellationToken cancellationToken)
+    {
+        long length = RandomAccess.GetLength(_handle);
+        if (offset < 0 || offset >= length) return 0;
+
+        int wanted = (int)Math.Min(buffer.Length, length - offset);
+
+        return await RandomAccess
+            .ReadAsync(_handle, buffer[..wanted], offset, cancellationToken)
+            .ConfigureAwait(false);
+    }
 
     public ValueTask TruncateAsync(long length, CancellationToken cancellationToken)
     {

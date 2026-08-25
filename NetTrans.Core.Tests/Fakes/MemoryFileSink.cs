@@ -35,6 +35,19 @@ public sealed class MemoryFileSink : IFileSink
         return ValueTask.CompletedTask;
     }
 
+    public ValueTask<int> ReadAsync(long offset, Memory<byte> buffer, CancellationToken cancellationToken)
+    {
+        lock (_gate)
+        {
+            if (offset < 0 || offset >= _bytes.Length) return ValueTask.FromResult(0);
+
+            int wanted = (int)Math.Min(buffer.Length, _bytes.Length - offset);
+            _bytes.AsSpan((int)offset, wanted).CopyTo(buffer.Span);
+
+            return ValueTask.FromResult(wanted);
+        }
+    }
+
     public ValueTask TruncateAsync(long length, CancellationToken cancellationToken)
     {
         lock (_gate) Array.Resize(ref _bytes, (int)Math.Max(0, length));

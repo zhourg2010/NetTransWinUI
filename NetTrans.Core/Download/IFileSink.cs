@@ -21,6 +21,16 @@ public interface IFileSink : IAsyncDisposable
     /// than a shorter one.
     /// </summary>
     ValueTask TruncateAsync(long length, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Reads back what was written, returning how many bytes were available.
+    ///
+    /// A downloader has no use for this; a BitTorrent client cannot work
+    /// without it. Serving a block to a peer means reading a piece back off
+    /// disk, and a client that never uploads is one every swarm -- and every
+    /// private tracker -- is right to reject.
+    /// </summary>
+    ValueTask<int> ReadAsync(long offset, Memory<byte> buffer, CancellationToken cancellationToken);
 }
 
 /// <summary>Opens the sink for a transfer. Faked in tests with an in-memory buffer.</summary>

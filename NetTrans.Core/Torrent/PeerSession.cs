@@ -81,6 +81,10 @@ public sealed class PeerSession
     private bool _choked = true;
     private bool _interested;
 
+    /// <summary>Whether we are refusing to serve this peer. Everyone starts choked.</summary>
+    private bool _choking = true;
+
+
     public PeerSession(
         Stream stream,
         TorrentMetainfo torrent,
@@ -99,14 +103,35 @@ public sealed class PeerSession
 
     public IPEndPoint? Address { get; }
 
+    /// <summary>
+    /// Whether to stay connected and keep serving once there is nothing left to
+    /// download from this peer.
+    /// </summary>
+    public bool Seed { get; set; } = true;
+
+    /// <summary>Whether this peer wants something we have. Shown in the inspector's 连接 tab.</summary>
+    public bool PeerIsInterested { get; private set; }
+
     /// <summary>Bytes of verified pieces this peer contributed.</summary>
     public long Downloaded { get; private set; }
+
+    /// <summary>
+    /// Bytes served to this peer.
+    ///
+    /// Not bookkeeping: this is what a tracker is told, and a client that only
+    /// ever reports zero is one a private tracker is right to ban and a public
+    /// swarm is right to choke.
+    /// </summary>
+    public long Uploaded { get; private set; }
 
     /// <summary>Pieces this peer sent that did not hash right.</summary>
     public int BadPieces { get; private set; }
 
     /// <summary>Raised whenever a piece is verified and written, so the shell can move a bar.</summary>
     public event EventHandler<int>? PieceCompleted;
+
+    /// <summary>Raised with the size of each block served, so upload can be metered.</summary>
+    public event EventHandler<int>? BlockServed;
 
     /// <summary>
     /// Runs until the torrent is complete, the peer has nothing left we want,
@@ -139,9 +164,19 @@ public sealed class PeerSession
                 {
                     wanted = _picker.Take(_peerBitfield);
 
-                    // Nothing this peer has is still wanted: it is of no further
-                    // use for this torrent.
-                    if (wanted < 0) break;
+                    // Nothing this peer has that we still want. That is the end
+                    // of the conversation only if we are not seeding: a peer we
+                    // want nothing from may still want something from us, and
+                    // hanging up on it is exactly the behaviour that makes a
+                    // client unwelcome.
+                    if (wanted < 0)
+                    {
+                        if (!Seed) break;
+
+                        await UpdateInterestAsync(cancellationToken).ConfigureAwait(false);
+                        await ServeUntilDoneAsync(cancellationToken).ConfigureAwait(false);
+                        break;
+                    }
 
                     current = new PieceBuffer(wanted, (int)_torrent.LengthOfPiece(wanted));
                     await RequestAsync(current, cancellationToken).ConfigureAwait(false);
@@ -187,6 +222,28 @@ public sealed class PeerSession
 
                         break;
 
+                    case PeerMessageKind.Interested:
+                        PeerIsInterested = true;
+
+                        // Unchoked as soon as they ask. A real client rations
+                        // its upload slots; refusing outright is what makes a
+                        // leech, so the default here is to say yes.
+                        if (_choking)
+                        {
+                            _choking = false;
+                            await SendAsync(PeerMessage.Unchoke, cancellationToken).ConfigureAwait(false);
+                        }
+
+                        break;
+
+                    case PeerMessageKind.NotInterested:
+                        PeerIsInterested = false;
+                        break;
+
+                    case PeerMessageKind.Request:
+                        await ServeAsync(message, cancellationToken).ConfigureAwait(false);
+                        break;
+
                     case PeerMessageKind.Piece:
                         if (current is null || message.PieceIndex != current.Index) break;
 
@@ -230,6 +287,37 @@ public sealed class PeerSession
 
             _picker.Left(_peerBitfield);
         }
+    }
+
+    /// <summary>
+    /// Answers a peer's request for a block, when we have the piece and are not
+    /// choking them.
+    ///
+    /// A request for something we do not have is ignored rather than answered
+    /// with an error: the protocol has no error, and a peer asking for a piece
+    /// we never announced is either stale or probing.
+    /// </summary>
+    private async Task ServeAsync(PeerMessage request, CancellationToken cancellationToken)
+    {
+        if (_choking) return;
+        if (!_picker.IsDone(request.PieceIndex)) return;
+
+        // The length is theirs, so it is bounded before it becomes an
+        // allocation and a disk read.
+        if (request.BlockLength is <= 0 or > PeerWire.BlockLength * 2) return;
+
+        var block = await _store
+            .ReadAsync(request.PieceIndex, request.BlockOffset, request.BlockLength, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (block is null) return;
+
+        await SendAsync(
+            PeerMessage.Piece(request.PieceIndex, request.BlockOffset, block),
+            cancellationToken).ConfigureAwait(false);
+
+        Uploaded += block.Length;
+        BlockServed?.Invoke(this, block.Length);
     }
 
     private async Task<PeerHandshake> ExchangeHandshakeAsync(byte[] infoHash, byte[] peerId, CancellationToken cancellationToken)
@@ -292,6 +380,40 @@ public sealed class PeerSession
 
         PieceCompleted?.Invoke(this, piece.Index);
         return true;
+    }
+
+    /// <summary>
+    /// Keeps answering requests after we have stopped downloading, until the
+    /// peer goes away or we are told to stop.
+    /// </summary>
+    private async Task ServeUntilDoneAsync(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            var message = await PeerWire.ReadMessageAsync(_stream, cancellationToken).ConfigureAwait(false);
+
+            switch (message.Kind)
+            {
+                case PeerMessageKind.Interested:
+                    PeerIsInterested = true;
+
+                    if (_choking)
+                    {
+                        _choking = false;
+                        await SendAsync(PeerMessage.Unchoke, cancellationToken).ConfigureAwait(false);
+                    }
+
+                    break;
+
+                case PeerMessageKind.NotInterested:
+                    PeerIsInterested = false;
+                    break;
+
+                case PeerMessageKind.Request:
+                    await ServeAsync(message, cancellationToken).ConfigureAwait(false);
+                    break;
+            }
+        }
     }
 
     private async Task SendAsync(PeerMessage message, CancellationToken cancellationToken)

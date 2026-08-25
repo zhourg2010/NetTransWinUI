@@ -10,13 +10,15 @@ namespace NetTrans.Torrent;
 /// <param name="TotalPieces">Pieces the torrent has.</param>
 /// <param name="ConnectedPeers">Peers currently talking to us.</param>
 /// <param name="KnownPeers">Peers a tracker has told us about.</param>
+/// <param name="Uploaded">Bytes served to peers, which is what a tracker counts as a share.</param>
 public sealed record SwarmProgress(
     long Downloaded,
     long Total,
     int Pieces,
     int TotalPieces,
     int ConnectedPeers,
-    int KnownPeers);
+    int KnownPeers,
+    long Uploaded = 0);
 
 /// <summary>
 /// The download itself: announce, connect to what comes back, and keep enough
@@ -42,6 +44,7 @@ public sealed class TorrentSwarm
 
     private int _connected;
     private int _known;
+    private long _uploaded;
 
     public TorrentSwarm(
         TorrentMetainfo torrent,
@@ -62,8 +65,25 @@ public sealed class TorrentSwarm
     /// <summary>How many peers to talk to at once.</summary>
     public int MaxPeers { get; set; } = 8;
 
-    /// <summary>The port we claim to listen on. Nothing listens; peers only use it to call back.</summary>
+    /// <summary>The port we claim to listen on. Peers use it to call back.</summary>
     public int Port { get; set; } = 6881;
+
+    /// <summary>
+    /// Whether to keep serving peers after there is nothing left to fetch from
+    /// them. Off makes a leech, which public swarms choke and private trackers
+    /// ban, so it is on.
+    /// </summary>
+    public bool Seed { get; set; } = true;
+
+    /// <summary>
+    /// Whether peers may be found by any means other than the trackers.
+    ///
+    /// A torrent with the private flag set says no: no DHT, no peer exchange,
+    /// no local discovery. There is none of that here yet, so this is currently
+    /// a promise rather than a restriction -- but it is the flag anything of
+    /// that kind has to consult before it is added.
+    /// </summary>
+    public bool PeerDiscoveryAllowed => !_torrent.IsPrivate;
 
     /// <summary>Raised whenever a piece lands, so progress can be shown without polling.</summary>
     public event EventHandler<SwarmProgress>? Progressed;
@@ -85,7 +105,8 @@ public sealed class TorrentSwarm
                     pieces,
                     _torrent.PieceCount,
                     _connected,
-                    _known);
+                    _known,
+                    _uploaded);
             }
         }
     }
@@ -164,7 +185,9 @@ public sealed class TorrentSwarm
             _torrent.InfoHash,
             _peerId,
             Port,
-            Uploaded: 0,
+            // Reported honestly. A client that always says zero is one a
+            // private tracker is right to ban.
+            Uploaded: Volatile.Read(ref _uploaded),
             Downloaded: done,
             Left: Math.Max(0, _torrent.TotalLength - done),
             what,
@@ -213,8 +236,9 @@ public sealed class TorrentSwarm
 
             lock (_gate) _connected++;
 
-            var session = new PeerSession(stream, _torrent, _picker, _store, peer);
+            var session = new PeerSession(stream, _torrent, _picker, _store, peer) { Seed = Seed };
             session.PieceCompleted += (_, _) => Progressed?.Invoke(this, Progress);
+            session.BlockServed += (_, bytes) => Interlocked.Add(ref _uploaded, bytes);
 
             await session.RunAsync(_torrent.InfoHash, _peerId, cancellationToken).ConfigureAwait(false);
 

@@ -128,6 +128,88 @@ public sealed class FakeSeed
 }
 
 /// <summary>
+/// A peer that wants what we have: handshakes, says it is interested, and asks
+/// for blocks. Used to prove the client actually uploads, which is the thing a
+/// private tracker measures and a public swarm rewards.
+/// </summary>
+public sealed class FakeLeech
+{
+    private readonly TorrentMetainfo _torrent;
+
+    public FakeLeech(TorrentMetainfo torrent) => _torrent = torrent;
+
+    /// <summary>Which pieces to ask for.</summary>
+    public List<int> Wants { get; } = new();
+
+    /// <summary>What came back, by piece index.</summary>
+    public Dictionary<int, byte[]> Received { get; } = new();
+
+    public async Task LeechAsync(Stream stream, byte[] infoHash, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await PeerWire.ReadExactAsync(stream, PeerWire.HandshakeLength, cancellationToken).ConfigureAwait(false);
+
+            await stream
+                .WriteAsync(PeerWire.BuildHandshake(infoHash, Enumerable.Repeat((byte)'L', 20).ToArray()), cancellationToken)
+                .ConfigureAwait(false);
+
+            // We have nothing, so the client will want nothing from us -- which
+            // is exactly the case where a leech-only client would hang up.
+            await SendAsync(stream, PeerMessage.Bitfield(new byte[PeerWire.BitfieldLength(_torrent.PieceCount)]), cancellationToken)
+                .ConfigureAwait(false);
+
+            await SendAsync(stream, PeerMessage.Interested, cancellationToken).ConfigureAwait(false);
+
+            var pending = new Dictionary<int, PieceBuffer>();
+
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var message = await PeerWire.ReadMessageAsync(stream, cancellationToken).ConfigureAwait(false);
+
+                if (message.Kind == PeerMessageKind.Unchoke)
+                {
+                    foreach (int piece in Wants)
+                    {
+                        var buffer = new PieceBuffer(piece, (int)_torrent.LengthOfPiece(piece));
+                        pending[piece] = buffer;
+
+                        foreach (int block in buffer.Missing().ToList())
+                        {
+                            var (offset, length) = buffer.Block(block);
+                            await SendAsync(stream, PeerMessage.Request(piece, offset, length), cancellationToken)
+                                .ConfigureAwait(false);
+                        }
+                    }
+                }
+
+                if (message.Kind != PeerMessageKind.Piece) continue;
+                if (!pending.TryGetValue(message.PieceIndex, out var target)) continue;
+
+                target.Add(message.BlockOffset, message.Block);
+
+                if (!target.IsComplete) continue;
+
+                lock (Received) Received[message.PieceIndex] = target.ToArray();
+
+                if (Received.Count >= Wants.Count) return;
+            }
+        }
+        catch (Exception)
+        {
+            // The client hung up, which for a leech-only client is the bug this
+            // is here to catch.
+        }
+    }
+
+    private static async Task SendAsync(Stream stream, PeerMessage message, CancellationToken cancellationToken)
+    {
+        await stream.WriteAsync(PeerWire.Encode(message), cancellationToken).ConfigureAwait(false);
+        await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+    }
+}
+
+/// <summary>
 /// Connects a client to <see cref="FakeSeed"/>s over in-memory duplex pipes,
 /// so the swarm can be exercised without a network.
 /// </summary>

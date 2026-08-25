@@ -51,6 +51,42 @@ public sealed class PieceStore : IAsyncDisposable
         return true;
     }
 
+    /// <summary>
+    /// Reads a block back out, for serving to a peer. Returns null when the
+    /// bytes are not all there -- a piece we have not finished, or a request
+    /// that runs past the end of the torrent.
+    /// </summary>
+    public async Task<byte[]?> ReadAsync(int index, int offset, int length, CancellationToken cancellationToken)
+    {
+        if (index < 0 || index >= _torrent.PieceCount) return null;
+        if (offset < 0 || length <= 0 || length > PeerWire.MaxMessageLength) return null;
+        if (offset + length > _torrent.LengthOfPiece(index)) return null;
+
+        var block = new byte[length];
+
+        // A block is a slice of a piece, and a piece can span two files, so the
+        // read is assembled the same way the write was.
+        foreach (var (file, fileOffset, pieceOffset, span) in _torrent.Locate(index))
+        {
+            long from = Math.Max(pieceOffset, offset);
+            long to = Math.Min(pieceOffset + span, offset + length);
+            if (to <= from) continue;
+
+            var sink = await OpenAsync(file, cancellationToken).ConfigureAwait(false);
+
+            int read = await sink.ReadAsync(
+                fileOffset + (from - pieceOffset),
+                block.AsMemory((int)(from - offset), (int)(to - from)),
+                cancellationToken).ConfigureAwait(false);
+
+            // Short read: the file does not hold what we thought, so this block
+            // is not ours to hand out.
+            if (read != to - from) return null;
+        }
+
+        return block;
+    }
+
     /// <summary>Pushes everything written so far to disk.</summary>
     public async Task FlushAsync(CancellationToken cancellationToken)
     {

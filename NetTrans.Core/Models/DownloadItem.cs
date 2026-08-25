@@ -29,6 +29,12 @@ public sealed class DownloadItem
     public string SavePath { get; init; } = @"D:\Downloads";
 
     public long Done { get; set; }
+
+    /// <summary>
+    /// Bytes served to other peers. Zero for everything but a torrent, where it
+    /// is the number a tracker measures a share ratio with.
+    /// </summary>
+    public long Uploaded { get; set; }
     public double Speed { get; set; }
     public DownloadStatus Status { get; set; }
     public string? ErrorMessage { get; set; }

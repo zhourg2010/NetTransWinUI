@@ -1,5 +1,6 @@
 using NetTrans.Media;
 using NetTrans.Models;
+using NetTrans.Torrent;
 using NetTrans.Net;
 
 namespace NetTrans.Download;
@@ -16,6 +17,7 @@ public sealed class DownloadEngine : IAsyncDisposable
     private readonly IClock _clock;
     private readonly ResumeStore? _resume;
     private readonly PlaylistResumeStore? _playlistResume;
+    private readonly Torrent.TorrentResumeStore? _torrentResume;
     private DownloadOptions _options;
     private readonly TokenBucket _globalLimit;
 
@@ -34,13 +36,15 @@ public sealed class DownloadEngine : IAsyncDisposable
         DownloadOptions? options = null,
         int maxConcurrent = 3,
         double globalSpeedLimit = 0,
-        PlaylistResumeStore? playlistResume = null)
+        PlaylistResumeStore? playlistResume = null,
+        Torrent.TorrentResumeStore? torrentResume = null)
     {
         _transport = transport;
         _sinks = sinks;
         _clock = clock ?? SystemClock.Instance;
         _resume = resume;
         _playlistResume = playlistResume;
+        _torrentResume = torrentResume;
         _options = options ?? new DownloadOptions();
         _maxConcurrent = Math.Max(1, maxConcurrent);
         _globalLimit = new TokenBucket(globalSpeedLimit, _clock.UtcNow);
@@ -245,9 +249,20 @@ public sealed class DownloadEngine : IAsyncDisposable
     /// no length to range over and no single request to make, so it gets a
     /// different job rather than a special case inside the ranged one.
     /// </summary>
-    private ITransferJob JobFor(DownloadItem item) => PlaylistUrl.IsPlaylist(item.Url)
-        ? new PlaylistJob(item, _transport, _sinks, _clock, _options, _playlistResume, _globalLimit)
-        : new DownloadJob(item, _transport, _sinks, _clock, _options, _resume, _globalLimit);
+    private ITransferJob JobFor(DownloadItem item)
+    {
+        // A torrent is neither a file nor a playlist: there is no server to ask
+        // how big it is, no order the bytes arrive in, and for a magnet not
+        // even a file list until a peer has supplied one.
+        if (TorrentUrl.IsTorrent(item.Url))
+        {
+            return new TorrentJob(item, _transport, _sinks, _clock, _options, resume: _torrentResume);
+        }
+
+        return PlaylistUrl.IsPlaylist(item.Url)
+            ? new PlaylistJob(item, _transport, _sinks, _clock, _options, _playlistResume, _globalLimit)
+            : new DownloadJob(item, _transport, _sinks, _clock, _options, _resume, _globalLimit);
+    }
 
     /// <summary>Starts queued tasks while there are free slots, highest priority first.</summary>
     private void Pump()

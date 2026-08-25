@@ -65,6 +65,12 @@ public class TorrentJobTests
         // Every piece was checked against the torrent's own SHA-1 on the way
         // in, which is stronger than hashing the file afterwards.
         Assert.Equal(FileHash.Verified, world.Item.Checksum);
+
+        // The BT-only rows are what the inspector shows instead of 校验, and a
+        // null there is the dash it was showing before any of this was written.
+        Assert.NotNull(world.Item.Ratio);
+        Assert.NotNull(world.Item.Seeds);
+        Assert.NotNull(world.Item.Peers);
     }
 
     [Fact]

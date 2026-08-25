@@ -23,6 +23,7 @@ public sealed class TorrentJob : ITransferJob
     private readonly TorrentResumeStore? _resume;
 
     private readonly SpeedMeter _meter;
+    private readonly SpeedMeter _uploadMeter;
     private readonly object _pauseGate = new();
 
     private CancellationTokenSource? _cancellation;
@@ -31,6 +32,7 @@ public sealed class TorrentJob : ITransferJob
     private TorrentSwarm? _swarm;
     private PiecePicker? _picker;
     private long _lastDone;
+    private long _lastUploaded;
 
     public TorrentJob(
         DownloadItem item,
@@ -49,6 +51,7 @@ public sealed class TorrentJob : ITransferJob
         _connector = connector ?? new TcpPeerConnector();
         _resume = resume;
         _meter = new SpeedMeter(_options.Window);
+        _uploadMeter = new SpeedMeter(_options.Window);
     }
 
     public DownloadItem Item { get; }
@@ -308,6 +311,13 @@ public sealed class TorrentJob : ITransferJob
 
         if (delta > 0) _meter.Record((int)Math.Min(delta, int.MaxValue), now);
 
+        // Upload is metered the same way, so 上传 is a rate rather than a
+        // running total the eye cannot read.
+        long sent = Math.Max(0, progress.Uploaded - _lastUploaded);
+        _lastUploaded = progress.Uploaded;
+
+        if (sent > 0) _uploadMeter.Record((int)Math.Min(sent, int.MaxValue), now);
+
         Item.Done = progress.Downloaded;
         Item.Size = progress.Total;
         Item.Connections = progress.ConnectedPeers;
@@ -315,6 +325,16 @@ public sealed class TorrentJob : ITransferJob
         Item.Blocks = PlaylistJob.BlockMap(progress.TotalPieces, progress.Pieces, 96);
         Item.Speed = _meter.BytesPerSecond(now);
         Item.PeakSpeed = Math.Max(Item.PeakSpeed, Item.Speed);
+        Item.UploadSpeed = _uploadMeter.BytesPerSecond(now);
+
+        if (_swarm is { } swarm)
+        {
+            // Written even at 0.00: a torrent that has shared nothing yet is a
+            // fact worth showing, where the dash means "not a torrent".
+            Item.Ratio = swarm.Ratio;
+            Item.Seeds = swarm.Seeders;
+            Item.Peers = swarm.Leechers ?? progress.KnownPeers;
+        }
     }
 
     private async Task PersistAsync()

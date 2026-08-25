@@ -81,6 +81,20 @@ public sealed class TorrentSwarm
     /// <summary>When to stop seeding. Unlimited until a caller says otherwise.</summary>
     public SeedingLimits SeedingLimits { get; set; } = SeedingLimits.Forever;
 
+    /// <summary>
+    /// How often the seeding limit is looked at while peers are being served.
+    ///
+    /// Short enough that a ratio limit is honoured within a few blocks of being
+    /// met, long enough not to be a spin loop.
+    /// </summary>
+    public TimeSpan SeedingCheckInterval { get; set; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>Seeders the tracker last reported, or null before the first answer.</summary>
+    public int? Seeders { get; private set; }
+
+    /// <summary>Leechers the tracker last reported, or null before the first answer.</summary>
+    public int? Leechers { get; private set; }
+
     /// <summary>When the download finished, which is when the seeding clock starts.</summary>
     public DateTimeOffset? SeedingSince { get; private set; }
 
@@ -215,37 +229,79 @@ public sealed class TorrentSwarm
 
         Say(SeedingLimits.IsUnlimited ? "开始做种" : $"开始做种，限制：{SeedingLimits.Describe()}");
 
+        // Serving peers is cancelled by the limit as well as by the caller: a
+        // ratio is reached in the middle of a transfer, not politely between
+        // two of them.
+        using var seeding = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
         var sessions = new List<Task>();
 
-        while (!cancellationToken.IsCancellationRequested)
+        try
         {
-            if (SeedingLimitReached(_now.UtcNow))
+            while (!cancellationToken.IsCancellationRequested)
             {
-                Say($"已达到做种限制（分享率 {Ratio:0.00}），停止做种");
-                break;
-            }
-
-            while (sessions.Count < MaxPeers && TryTakePeer(out var peer))
-            {
-                sessions.Add(TalkToAsync(peer, cancellationToken));
-            }
-
-            if (sessions.Count == 0)
-            {
-                // Nobody to serve. Re-announce on the tracker's own interval
-                // rather than spinning, and let the limit be checked each time.
-                await AnnounceAsync(AnnounceEvent.None, cancellationToken).ConfigureAwait(false);
-
-                if (sessions.Count == 0 && !TryPeek())
+                if (SeedingLimitReached(_now.UtcNow))
                 {
-                    await Task.Delay(_trackers.Interval, cancellationToken).ConfigureAwait(false);
+                    Say($"已达到做种限制（分享率 {Ratio:0.00}），停止做种");
+                    break;
                 }
 
-                continue;
-            }
+                while (sessions.Count < MaxPeers && TryTakePeer(out var peer))
+                {
+                    sessions.Add(TalkToAsync(peer, seeding.Token));
+                }
 
-            var finished = await Task.WhenAny(sessions).ConfigureAwait(false);
-            sessions.Remove(finished);
+                if (sessions.Count == 0)
+                {
+                    // Nobody to serve. Re-announce on the tracker's own interval
+                    // rather than spinning, and let the limit be checked each time.
+                    await AnnounceAsync(AnnounceEvent.None, cancellationToken).ConfigureAwait(false);
+
+                    if (!TryPeek())
+                    {
+                        await DelayAsync(_trackers.Interval, cancellationToken).ConfigureAwait(false);
+                    }
+
+                    continue;
+                }
+
+                // The limit is checked on a clock of its own rather than only
+                // when a peer leaves. One leech that stays connected for hours
+                // is the ordinary case on a private tracker, and waiting for it
+                // to hang up before looking at the ratio is how a limit gets
+                // blown past by a wide margin.
+                var tick = DelayAsync(SeedingCheckInterval, cancellationToken);
+
+                await Task.WhenAny(sessions.Append(tick)).ConfigureAwait(false);
+
+                sessions.RemoveAll(session => session.IsCompleted);
+
+                // Nothing lands while seeding, so without this the row's
+                // upload figures would freeze at whatever they were when the
+                // last piece arrived.
+                Progressed?.Invoke(this, Progress);
+            }
+        }
+        finally
+        {
+            // Whatever is still being served is hung up on, but given a moment
+            // to write out the block it is in the middle of.
+            seeding.Cancel();
+
+            await Task.WhenAny(Task.WhenAll(sessions), Task.Delay(TimeSpan.FromSeconds(5), CancellationToken.None))
+                .ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>A delay that ends quietly when it is cancelled, so it can be raced against work.</summary>
+    private static async Task DelayAsync(TimeSpan delay, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
         }
     }
 
@@ -306,6 +362,9 @@ public sealed class TorrentSwarm
 
                 _known = _attempted.Count;
             }
+
+            Seeders = response.Seeders;
+            Leechers = response.Leechers;
 
             Say($"通告完成：{response.Seeders} 个做种、{response.Leechers} 个下载，新增 {added} 个 peer");
         }

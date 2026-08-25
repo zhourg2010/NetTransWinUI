@@ -40,6 +40,19 @@ public class SeedingLimitTests
     }
 
     [Fact]
+    public async Task A_peer_that_never_hangs_up_does_not_hold_the_limit_open()
+    {
+        // The limit used to be looked at only when a session ended, so one
+        // leech that stayed connected -- which on a private tracker is most of
+        // them -- could take as much as it liked.
+        var world = new World { Limits = SeedingLimits.Ratio(0.5), Linger = true };
+
+        await world.RunAsync();
+
+        Assert.Contains(world.Said, line => line.Contains("停止做种"));
+    }
+
+    [Fact]
     public async Task Seeding_stops_once_the_time_is_up()
     {
         var clock = new SteppingClock(TimeSpan.FromMinutes(45));
@@ -138,6 +151,12 @@ public class SeedingLimitTests
 
         public IClockNow? Now { get; init; }
 
+        /// <summary>Whether the peer stays connected after it has everything.</summary>
+        public bool Linger { get; init; }
+
+        /// <summary>Short, so a limit reached mid-transfer shows up inside the test's patience.</summary>
+        public TimeSpan CheckInterval { get; init; } = TimeSpan.FromMilliseconds(50);
+
         public List<string> Said { get; } = new();
 
         public TorrentSwarm Swarm { get; private set; } = null!;
@@ -148,7 +167,7 @@ public class SeedingLimitTests
             leech.Wants.AddRange(Enumerable.Range(0, Torrent.PieceCount));
 
             var peer = new IPEndPoint(IPAddress.Parse("10.0.0.9"), 6881);
-            var connector = new LeechConnector(Torrent.InfoHash, peer, leech);
+            var connector = new LeechConnector(Torrent.InfoHash, peer, leech, Linger);
 
             var trackers = new TrackerPool(new StaticTracker(peer));
 
@@ -156,6 +175,7 @@ public class SeedingLimitTests
             {
                 Seed = Seed,
                 SeedingLimits = Limits,
+                SeedingCheckInterval = CheckInterval,
                 MaxPeers = 1,
             };
 
@@ -180,12 +200,14 @@ public class SeedingLimitTests
         private readonly byte[] _infoHash;
         private readonly IPEndPoint _peer;
         private readonly FakeLeech _leech;
+        private readonly bool _linger;
 
-        public LeechConnector(byte[] infoHash, IPEndPoint peer, FakeLeech leech)
+        public LeechConnector(byte[] infoHash, IPEndPoint peer, FakeLeech leech, bool linger)
         {
             _infoHash = infoHash;
             _peer = peer;
             _leech = leech;
+            _linger = linger;
         }
 
         public Task<Stream> ConnectAsync(IPEndPoint peer, CancellationToken cancellationToken)
@@ -193,7 +215,24 @@ public class SeedingLimitTests
             if (!peer.Equals(_peer)) return Task.FromException<Stream>(new PeerException("no"));
 
             var (ours, theirs) = DuplexPipe.Create();
-            _ = Task.Run(() => _leech.LeechAsync(theirs, _infoHash, cancellationToken), CancellationToken.None);
+
+            _ = Task.Run(
+                async () =>
+                {
+                    try
+                    {
+                        await _leech.LeechAsync(theirs, _infoHash, cancellationToken);
+                    }
+                    finally
+                    {
+                        // A real peer's socket closes when it has what it came
+                        // for. A leech that keeps the connection open instead is
+                        // the ordinary private-tracker case, and the one where a
+                        // limit checked only between peers is never checked.
+                        if (!_linger) theirs.Dispose();
+                    }
+                },
+                CancellationToken.None);
 
             return Task.FromResult(ours);
         }

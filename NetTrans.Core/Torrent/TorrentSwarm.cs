@@ -3,6 +3,15 @@ using NetTrans.Download;
 
 namespace NetTrans.Torrent;
 
+/// <summary>
+/// What one peer connection is doing, for the inspector's 连接 tab.
+/// </summary>
+/// <param name="Peer">The address, as the tracker gave it.</param>
+/// <param name="Down">Bytes per second arriving from this peer.</param>
+/// <param name="Up">Bytes per second going out to it.</param>
+/// <param name="Interested">Whether it wants something we have.</param>
+public sealed record PeerRate(IPEndPoint Peer, double Down, double Up, bool Interested);
+
 /// <summary>How a torrent is going, for the row and the inspector.</summary>
 /// <param name="Downloaded">Bytes of verified pieces.</param>
 /// <param name="Total">Bytes the torrent holds.</param>
@@ -43,6 +52,8 @@ public sealed class TorrentSwarm
     private readonly HashSet<string> _attempted = new(StringComparer.Ordinal);
     private readonly Queue<IPEndPoint> _pool = new();
 
+    private readonly Dictionary<string, PeerMeter> _rates = new(StringComparer.Ordinal);
+
     private int _connected;
     private int _known;
     private long _uploaded;
@@ -64,6 +75,9 @@ public sealed class TorrentSwarm
         _peerId = peerId ?? TrackerProtocol.NewPeerId();
         _now = now ?? SystemNow.Instance;
     }
+
+    /// <summary>The window each peer's rate is averaged over.</summary>
+    public TimeSpan RateWindow { get; set; } = TimeSpan.FromSeconds(5);
 
     /// <summary>How many peers to talk to at once.</summary>
     public int MaxPeers { get; set; } = 8;
@@ -123,6 +137,26 @@ public sealed class TorrentSwarm
     /// that kind has to consult before it is added.
     /// </summary>
     public bool PeerDiscoveryAllowed => !_torrent.IsPrivate;
+
+    /// <summary>
+    /// A rate per live peer, newest connection last.
+    ///
+    /// A torrent's 连接 tab is per-peer in every client worth copying: one slow
+    /// peer among seven fast ones is the thing you are looking at the tab to
+    /// find, and a single total cannot show it.
+    /// </summary>
+    public IReadOnlyList<PeerRate> PeerRates
+    {
+        get
+        {
+            var now = _now.UtcNow;
+
+            lock (_gate)
+            {
+                return _rates.Values.Select(meter => meter.Rate(now)).ToArray();
+            }
+        }
+    }
 
     /// <summary>Raised whenever a piece lands, so progress can be shown without polling.</summary>
     public event EventHandler<SwarmProgress>? Progressed;
@@ -387,8 +421,19 @@ public sealed class TorrentSwarm
             lock (_gate) _connected++;
 
             var session = new PeerSession(stream, _torrent, _picker, _store, peer) { Seed = Seed };
+            var meter = new PeerMeter(peer, session, RateWindow);
+
+            lock (_gate) _rates[peer.ToString()] = meter;
+
             session.PieceCompleted += (_, _) => Progressed?.Invoke(this, Progress);
-            session.BlockServed += (_, bytes) => Interlocked.Add(ref _uploaded, bytes);
+
+            session.BlockServed += (_, bytes) =>
+            {
+                Interlocked.Add(ref _uploaded, bytes);
+                meter.Sent(bytes, _now.UtcNow);
+            };
+
+            session.BlockReceived += (_, bytes) => meter.Got(bytes, _now.UtcNow);
 
             await session.RunAsync(_torrent.InfoHash, _peerId, cancellationToken).ConfigureAwait(false);
 
@@ -405,6 +450,8 @@ public sealed class TorrentSwarm
         }
         finally
         {
+            lock (_gate) _rates.Remove(peer.ToString());
+
             if (stream is not null)
             {
                 lock (_gate) _connected--;
@@ -543,6 +590,48 @@ public sealed class TorrentResumeStore
         catch (Exception)
         {
             // A stale sidecar is harmless: the next run revalidates it.
+        }
+    }
+
+    /// <summary>
+    /// One peer's two rates.
+    ///
+    /// <see cref="SpeedMeter"/> is not built for two threads, and here one
+    /// records while the shell reads, so every touch goes through the same
+    /// lock.
+    /// </summary>
+    private sealed class PeerMeter
+    {
+        private readonly IPEndPoint _peer;
+        private readonly PeerSession _session;
+        private readonly SpeedMeter _down;
+        private readonly SpeedMeter _up;
+        private readonly object _gate = new();
+
+        public PeerMeter(IPEndPoint peer, PeerSession session, TimeSpan window)
+        {
+            _peer = peer;
+            _session = session;
+            _down = new SpeedMeter(window);
+            _up = new SpeedMeter(window);
+        }
+
+        public void Got(int bytes, DateTimeOffset now)
+        {
+            lock (_gate) _down.Record(bytes, now);
+        }
+
+        public void Sent(int bytes, DateTimeOffset now)
+        {
+            lock (_gate) _up.Record(bytes, now);
+        }
+
+        public PeerRate Rate(DateTimeOffset now)
+        {
+            lock (_gate)
+            {
+                return new PeerRate(_peer, _down.BytesPerSecond(now), _up.BytesPerSecond(now), _session.PeerIsInterested);
+            }
         }
     }
 }

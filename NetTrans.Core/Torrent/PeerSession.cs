@@ -134,6 +134,12 @@ public sealed class PeerSession
     public event EventHandler<int>? BlockServed;
 
     /// <summary>
+    /// Raised with the size of each block that arrives, so this peer's rate can
+    /// be metered as it comes rather than in whole-piece jumps.
+    /// </summary>
+    public event EventHandler<int>? BlockReceived;
+
+    /// <summary>
     /// Runs until the torrent is complete, the peer has nothing left we want,
     /// or the connection ends.
     /// </summary>
@@ -262,6 +268,8 @@ public sealed class PeerSession
                         // A block that does not line up is refused rather than
                         // written at whatever offset the peer named.
                         if (!current.Add(message.BlockOffset, message.Block)) break;
+
+                        BlockReceived?.Invoke(this, message.Block.Length);
 
                         if (!current.IsComplete)
                         {

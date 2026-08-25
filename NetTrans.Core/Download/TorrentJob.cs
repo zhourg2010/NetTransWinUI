@@ -79,8 +79,18 @@ public sealed class TorrentJob : ITransferJob
 
     public double BytesPerSecond => _meter.BytesPerSecond(_clock.UtcNow);
 
-    /// <summary>One rate per peer is not meaningful here; the swarm's own total is.</summary>
-    public double[] ConnectionSpeeds => Array.Empty<double>();
+    /// <summary>
+    /// One rate per connected peer, which for a torrent is what the 连接 tab is
+    /// for: seven peers and one of them stalled is the thing you opened the tab
+    /// to see.
+    ///
+    /// Down and up are added rather than shown apart, because the tab draws one
+    /// bar per connection -- and while seeding, up is all there is.
+    /// </summary>
+    public double[] ConnectionSpeeds =>
+        _swarm is { } swarm
+            ? swarm.PeerRates.Select(rate => rate.Down + rate.Up).ToArray()
+            : Array.Empty<double>();
 
     public void Pause()
     {
@@ -354,15 +364,20 @@ public sealed class TorrentJob : ITransferJob
     private void Idle()
     {
         Item.Speed = 0;
+        Item.UploadSpeed = 0;
         Item.Connections = 0;
+        Item.ConnectionSpeeds = Array.Empty<double>();
         _meter.Reset();
+        _uploadMeter.Reset();
     }
 
     private void Finish(PieceStore store, PiecePicker picker)
     {
         Item.Done = Item.Size;
         Item.Speed = 0;
+        Item.UploadSpeed = 0;
         Item.Connections = 0;
+        Item.ConnectionSpeeds = Array.Empty<double>();
         Item.Status = DownloadStatus.Completed;
         Item.Blocks = Enumerable.Repeat(1, 96).ToArray();
 

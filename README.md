@@ -54,6 +54,7 @@ NetTrans.Core/              No WinUI, no Windows — buildable and testable anyw
     ITransferJob.cs         What the queue drives: a ranged file or a playlist
     DownloadJob.cs          One ranged transfer: probe, plan, fetch, write, resume
     PlaylistJob.cs          One segmented transfer: segments, in order, into files
+    TorrentJob.cs           One torrent, plus resolving a magnet to a metainfo
     SegmentPlan.cs          How a file is split, and the 96-cell chunk map
     ResumeState.cs          The .nettrans sidecar behind 断点续传
     PlaylistResume.cs       The .nettrans-hls sidecar: whole segments, not offsets
@@ -62,6 +63,22 @@ NetTrans.Core/              No WinUI, no Windows — buildable and testable anyw
     SpeedMeter.cs           Sliding-window throughput
     SpeedLimits.cs          Reads "512 KB/s" back into a rate
     IClock.cs               Time, injected, so the loop is testable
+  Torrent/
+    Bencode.cs              The format, with the byte spans an info hash needs
+    TorrentMetainfo.cs      Files, pieces, hashes; a piece can span two files
+    MagnetLink.cs           xt / dn / tr, hex or base32
+    Announce.cs             The tracker request, and raw-byte query escaping
+    HttpTracker.cs          The original announce
+    UdpTracker.cs           BEP 15: connect, then announce
+    TrackerPool.cs          All of them at once; a dead one is normal
+    PeerWire.cs             Handshake and message framing
+    PeerSession.cs          One peer: fetch pieces, and serve them back
+    PiecePicker.cs          Rarest-first, sequential, endgame, file selection
+    PieceStore.cs           Verify before writing; read back to upload
+    TorrentSwarm.cs         Announce, connect, replace peers as they fail
+    MetadataExchange.cs     BEP 9, which is how a magnet gets a file list
+    TorrentOptions.cs       Seeding limits, file selection, force recheck
+
   Media/
     SegmentedStream.cs      What HLS and DASH agree on: ordered segments, a container
     M3U8.cs                 Master and media playlists, keys, byte ranges
@@ -304,10 +321,45 @@ decoration.
   the bare key system-wide, and one another application already owns is
   reported instead of silently failing.
 
-**BitTorrent is not implemented.** The 种子 / 磁力链 sheet says so. A real client
-is the peer wire protocol, DHT and piece scheduling — a project of its own, and
-parsing a `.torrent` well enough to list its contents and then failing to fetch
-them would be worse than being plain about it.
+### BitTorrent
+
+Torrents and magnet links download and **upload**, driven by the same queue as
+everything else.
+
+- **Bencode** records where each value sat in the file, because a torrent's info
+  hash is the SHA-1 of its info dictionary *as written* — re-encoding a
+  non-canonically-ordered torrent, which clients accept, gives a hash no tracker
+  and no peer recognises.
+- **Trackers**: HTTP and BEP 15 UDP, announced to in parallel with the peers
+  pooled. A dead tracker is skipped, since a public torrent routinely lists a
+  dozen with half of them gone. The announce URL's own query is preserved —
+  that is where a private tracker's passkey lives.
+- **Peers**: the wire protocol with an eight-deep request pipeline, rarest-first
+  piece selection with sequential as an option, and an endgame that races the
+  last pieces once every one of them is already assigned. A piece that does not
+  hash is never written, and a peer that sends two bad ones is dropped.
+- **Uploading is real** and reported honestly to the tracker. A finished torrent
+  keeps serving rather than hanging up — that is when it is worth the most to
+  the swarm. 做种限制 stops at a share ratio or a seeding time.
+- **Magnet links** fetch their metainfo from peers (BEP 9) before anything else
+  can happen, and the assembled result is checked against the hash the link
+  named: the pieces come from several peers, so a whole that does not hash means
+  one lied, and the only honest response is to start over.
+- **Resuming** keeps a bitfield rather than an offset, since pieces arrive out
+  of order and each is verified alone. With no sidecar but files on disk, they
+  are hashed instead of fetched again — which is also what makes seeding an
+  already-downloaded torrent work.
+- **选择文件** narrows a multi-file torrent to what was asked for. A piece
+  straddling a wanted and an unwanted file is still fetched, since a piece is
+  the smallest verifiable unit — so the size shown is the piece cost rather than
+  the sum of the file sizes.
+
+**Not implemented, and named in the sheet rather than failed quietly:** DHT and
+PEX, so a magnet with no trackers cannot find peers; MSE/PE encryption; and µTP.
+A private torrent is unaffected by the first of those — it is tracker-only by
+definition — and `PeerDiscoveryAllowed` is the gate any of them has to pass
+before being added. NetTrans is also not on any private tracker's client
+whitelist, which some sites check at announce.
 
 ## Deliberate departures from the handoff
 
@@ -345,6 +397,6 @@ the site:
   (`NetTrans.settings.json`), falling back to `%LOCALAPPDATA%\NetTrans` when that
   directory is read-only — matching the 设置 sheet's promise of no registry writes.
 - Clipboard URL detection is live (`Clipboard.ContentChanged`).
-- Still unimplemented: BitTorrent (磁力链 / 种子), and live streaming for both
-  HLS and DASH. Each is called out in the UI with the reason rather than failing
-  quietly.
+- Still unimplemented: DHT / PEX, BitTorrent transport encryption, and live
+  streaming for HLS and DASH. Each is called out in the UI with the reason
+  rather than failing quietly.

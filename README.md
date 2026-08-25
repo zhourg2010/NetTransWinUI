@@ -243,6 +243,12 @@ which is the only place view models change.
 - **Live detail.** The inspector's 分块, 连接 and 日志 tabs are fed by the real
   transfer: the chunk map comes from segment positions, the per-connection rates
   from a meter per segment.
+- **thunder:// flashget:// qqdl://** are unwrapped wherever a link comes in —
+  typed, pasted, dropped or watched on the clipboard. None of them is a
+  protocol: each is base64 around an ordinary address, and a decade of habit
+  means sites still publish them. Anything that does not decode to a usable
+  address is left exactly as it was, so the sheet's own "无法识别" is still what
+  the user sees.
 - **What the site wants.** Cookies are kept for the life of the transport, so a
   session handed out while sniffing a page is still there when the media URL is
   fetched. The page a link was sniffed from is sent as its `Referer` — plenty of

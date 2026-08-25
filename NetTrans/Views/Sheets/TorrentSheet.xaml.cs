@@ -45,7 +45,8 @@ public sealed partial class TorrentSheet : UserControl
 
     private void OnLinkChanged(object sender, TextChangedEventArgs e)
     {
-        string text = LinkBox.Text.Trim();
+        // A magnet pasted as thunder:// is still a magnet.
+        string text = NetTrans.Net.PrivateLinks.Unwrap(LinkBox.Text);
         bool usable = TorrentUrl.IsTorrent(text);
 
         Host.IsRightEnabled = usable;
@@ -136,7 +137,7 @@ public sealed partial class TorrentSheet : UserControl
 
         var chosen = Chosen();
 
-        Host.IsRightEnabled = chosen.Count > 0 && TorrentUrl.IsTorrent(LinkBox.Text.Trim());
+        Host.IsRightEnabled = chosen.Count > 0 && TorrentUrl.IsTorrent(NetTrans.Net.PrivateLinks.Unwrap(LinkBox.Text));
 
         long bytes = chosen.Count == 0 ? 0 : FileSelection.BytesFor(_metainfo, chosen);
 
@@ -168,7 +169,7 @@ public sealed partial class TorrentSheet : UserControl
 
     private void OnConfirmed(object? sender, EventArgs e)
     {
-        string link = LinkBox.Text.Trim();
+        string link = NetTrans.Net.PrivateLinks.Unwrap(LinkBox.Text);
         if (!TorrentUrl.IsTorrent(link)) return;
 
         var task = _viewModel.Engine.Add(new NewDownloadRequest(

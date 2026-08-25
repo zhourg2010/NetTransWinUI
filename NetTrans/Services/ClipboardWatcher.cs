@@ -33,12 +33,19 @@ public sealed partial class ClipboardWatcher : IClipboardWatcher, IDisposable
             if (!view.Contains(StandardDataFormats.Text)) return;
 
             var text = (await view.GetTextAsync()).Trim();
-            if (text == _lastSeen || !UrlPattern().IsMatch(text)) return;
+            if (text == _lastSeen) return;
+
+            // thunder:// and its cousins are base64 around an ordinary address,
+            // and a site that publishes one is offering a download like any
+            // other -- so the copied text is unwrapped before it is judged.
+            string link = NetTrans.Net.PrivateLinks.Unwrap(text);
+
+            if (!UrlPattern().IsMatch(link) && !link.StartsWith("magnet:", StringComparison.OrdinalIgnoreCase)) return;
 
             _lastSeen = text;
-            if (Uri.TryCreate(text, UriKind.Absolute, out var uri))
+            if (Uri.TryCreate(link, UriKind.Absolute, out var uri))
             {
-                UrlDetected?.Invoke(this, new ClipboardUrlDetected(text, uri.Host, null));
+                UrlDetected?.Invoke(this, new ClipboardUrlDetected(link, uri.IsAbsoluteUri && uri.HostNameType != UriHostNameType.Unknown ? uri.Host : "磁力链", null));
             }
         }
         catch (Exception)

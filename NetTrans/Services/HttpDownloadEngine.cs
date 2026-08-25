@@ -154,6 +154,11 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
 
     public DownloadItemViewModel Add(NewDownloadRequest request)
     {
+        // thunder:// / flashget:// / qqdl:// carry an ordinary address inside a
+        // base64 wrapper. Unwrapping here rather than in each sheet means every
+        // way in -- typed, pasted, dropped, sniffed -- gets it.
+        request = request with { Url = PrivateLinks.Unwrap(request.Url) };
+
         // https://user:pass@host/file.iso is a normal thing to paste. The
         // credentials are lifted out and remembered for the host, and the URL
         // that gets stored and shown is the one without them -- a password does

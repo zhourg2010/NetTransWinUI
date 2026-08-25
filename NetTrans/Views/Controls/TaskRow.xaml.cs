@@ -72,6 +72,16 @@ public sealed partial class TaskRow : UserControl
 
     private void OnItemPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => ApplyState();
 
+    /// <summary>
+    /// Re-reads every brush this row caches. Called when 主题 changes, which is
+    /// the one moment the colours move without the data moving.
+    /// </summary>
+    public void Repaint()
+    {
+        ApplyState();
+        ApplyBackground();
+    }
+
     private void ApplyState()
     {
         if (Item is null) return;

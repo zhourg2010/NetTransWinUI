@@ -150,6 +150,17 @@ public sealed partial class MainShell : UserControl
         row.RowContextRequested += (_, request) => ShowContextMenu(request);
     }
 
+    /// <summary>Re-reads the theme brushes every row caches.</summary>
+    public void Repaint()
+    {
+        int count = Rows.ItemsSourceView?.Count ?? 0;
+
+        for (int i = 0; i < count; i++)
+        {
+            if (Rows.TryGetElement(i) is TaskRow row) row.Repaint();
+        }
+    }
+
     private void RefreshRowDensity()
     {
         int count = Rows.ItemsSourceView?.Count ?? 0;
@@ -208,6 +219,19 @@ public sealed partial class MainShell : UserControl
                     Invoke: () => { ViewModel.SetSortCommand.Execute(key); ShowViewMenu("view"); },
                     KeepOpen: true));
                 first = false;
+            }
+
+            bool firstTheme = true;
+            foreach (var (key, label) in new[] { ("auto", "跟随系统"), ("light", "浅色"), ("dark", "深色") })
+            {
+                items.Add(new PopoverItem(
+                    label,
+                    IsChecked: ViewModel.Theme == key,
+                    SeparatorBefore: firstTheme,
+                    Invoke: () => { ViewModel.SetThemeCommand.Execute(key); ShowViewMenu("view"); },
+                    KeepOpen: true));
+
+                firstTheme = false;
             }
 
             items.Add(new PopoverItem("分类筛选", Glyph("IconChevron"), SeparatorBefore: true,

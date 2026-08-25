@@ -302,6 +302,12 @@ public sealed class TorrentJob : ITransferJob
         finally
         {
             await PersistAsync().ConfigureAwait(false);
+
+            // Tell the trackers we are going, however this ended. A client that
+            // never sends it leaves a ghost of itself in the peer list for a
+            // whole interval, and on a private tracker that is a session other
+            // people are handed and cannot connect to.
+            await swarm.StopAsync().ConfigureAwait(false);
         }
 
         if (!picker.IsComplete) throw new IOException("下载未完成。");

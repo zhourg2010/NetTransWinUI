@@ -52,6 +52,7 @@ public sealed partial class ShellViewModel : ObservableObject
         Settings = settings ?? settingsStore.Load();
 
         _denseRows = Settings.DenseRows;
+        _theme = Settings.Theme;
         _sortKey = Settings.SortKey;
         _sortDirection = Settings.SortDirection;
         _showInspector = Settings.ShowInspector;
@@ -83,6 +84,9 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty] private string _sortKey;               // added | name | size | progress | speed
     [ObservableProperty] private string _sortDirection;         // asc | desc
     [ObservableProperty] private bool _denseRows;
+
+    /// <summary>跟随系统 | 浅色 | 深色, as auto | light | dark.</summary>
+    [ObservableProperty] private string _theme;
     [ObservableProperty] private bool _isListExpanded;
 
     [ObservableProperty] private int _hiddenCount;
@@ -200,6 +204,12 @@ public sealed partial class ShellViewModel : ObservableObject
 
     [RelayCommand]
     private void SetDense(bool dense) => DenseRows = dense;
+
+    [RelayCommand]
+    private void SetTheme(string theme) => Theme = theme is "light" or "dark" ? theme : "auto";
+
+    /// <summary>Raised when 主题 changes, so each window can re-theme itself.</summary>
+    public event EventHandler<string>? ThemeChanged;
 
     /// <summary>Click selects; Ctrl-click extends, exactly like the handoff's `pick()`.</summary>
     public void Select(int id, bool additive)
@@ -536,6 +546,16 @@ public sealed partial class ShellViewModel : ObservableObject
     partial void OnSortDirectionChanged(string value) { Settings.SortDirection = value; Persist(); Rebuild(); }
     partial void OnIsListExpandedChanged(bool value) { Rebuild(); OnPropertyChanged(nameof(FoldLabel)); }
     partial void OnDenseRowsChanged(bool value) { Settings.DenseRows = value; Persist(); }
+
+    partial void OnThemeChanged(string value)
+    {
+        Settings.Theme = value;
+        Persist();
+
+        // The windows watch this one: a theme that only took effect on the next
+        // start would be the kind of setting nobody trusts.
+        ThemeChanged?.Invoke(this, value);
+    }
     partial void OnShowInspectorChanged(bool value) { Settings.ShowInspector = value; Persist(); OnPropertyChanged(nameof(InspectorTooltip)); }
     partial void OnShowIslandChanged(bool value) { Settings.ShowIsland = value; Persist(); }
     partial void OnEdgeHideChanged(bool value) { Settings.EdgeHide = value; Persist(); }

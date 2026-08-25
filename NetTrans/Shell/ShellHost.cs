@@ -79,8 +79,47 @@ public sealed class ShellHost : IDisposable
         _mainChrome.HotKeyPressed += OnHotKey;
         ApplyBossHotKey();
 
+        _viewModel.ThemeChanged += (_, theme) => ApplyTheme(theme);
+        ApplyTheme(_viewModel.Theme);
+
         _mainWindow.Activate();
         if (_viewModel.EdgeHide) ScheduleEdgeHide();
+    }
+
+    /// <summary>
+    /// 主题, applied to every window rather than only to the one in front.
+    ///
+    /// A window's theme is a property of its root element, so each frame is set
+    /// separately -- and the brush cache that view models read from is told as
+    /// well, or half the app would keep the colours of the theme that was in
+    /// force when it started.
+    /// </summary>
+    private void ApplyTheme(string theme)
+    {
+        var requested = theme switch
+        {
+            "light" => ElementTheme.Light,
+            "dark" => ElementTheme.Dark,
+            _ => ElementTheme.Default,
+        };
+
+        foreach (var element in new FrameworkElement?[] { _mainShell, _inspectorShell, _island })
+        {
+            if (element is not null) element.RequestedTheme = requested;
+        }
+
+        ThemeBrushes.SetTheme(requested switch
+        {
+            ElementTheme.Light => ApplicationTheme.Light,
+            ElementTheme.Dark => ApplicationTheme.Dark,
+            _ => Application.Current.RequestedTheme,
+        });
+
+        // Everything that caches a brush re-reads it on its next refresh, and
+        // the rows are the one thing that would otherwise wait for a transfer
+        // to move before repainting.
+        _mainShell?.Repaint();
+        _inspectorShell?.Repaint();
     }
 
     // ── frames ────────────────────────────────────────────────────────────

@@ -327,6 +327,10 @@ decoration.
 - **剪贴板监听**, **完成提示** and **贴边隐藏** drive the clipboard watcher, the
   completion banner and the edge-hide behaviour. The clipboard switch starts and
   stops the live subscription immediately, not at the next launch.
+- **主题** is in the 显示与排序 menu: 跟随系统 / 浅色 / 深色, applied to all three
+  windows the moment it is picked. The brush cache view models read from is told
+  as well — half the app keeping the old palette until restart is what "the
+  setting does nothing" looks like from the outside.
 - **默认位置**, **计划时段** and **老板键** — the three rows with a chevron — are
   editable: a folder picker, a pair of 24-hour time pickers, and a key capture
   that re-registers the global hotkey as soon as it is pressed. A combination

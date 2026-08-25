@@ -23,7 +23,9 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Test NetTrans.Core
-        run: dotnet test NetTrans.Core.Tests/NetTrans.Core.Tests.csproj -c Release --logger "console;verbosity=normal"
+        # minimal prints failures and the summary, and nothing for the ~800
+        # tests that passed -- which is what anyone reading a red run wants.
+        run: dotnet test NetTrans.Core.Tests/NetTrans.Core.Tests.csproj -c Release --logger "console;verbosity=minimal"
 
   build:
     runs-on: windows-latest

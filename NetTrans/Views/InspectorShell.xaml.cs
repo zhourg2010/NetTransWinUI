@@ -67,9 +67,14 @@ public sealed partial class InspectorShell : UserControl
 
     public void AttachChrome(WindowChrome chrome) => _chrome = chrome;
 
+    /// <summary>The dock state the chip is showing, so it can be repainted without asking.</summary>
+    private bool _docked;
+
     /// <summary>Reflects the current dock state on the 已吸附 / 已分离 chip.</summary>
     public void SetDocked(bool docked)
     {
+        _docked = docked;
+
         AttachLabel.Text = docked ? "已吸附" : "已分离";
         AttachGlyph.Visibility = docked ? Visibility.Visible : Visibility.Collapsed;
         AttachChip.Background = ThemeBrushes.Get(docked ? "BlueWash12Brush" : "FillBrush");
@@ -131,6 +136,13 @@ public sealed partial class InspectorShell : UserControl
     }
 
     private void OnItemPropertyChanged(object? sender, PropertyChangedEventArgs e) => Refresh();
+
+    /// <summary>Re-reads the theme brushes this window caches.</summary>
+    public void Repaint()
+    {
+        SetDocked(_docked);
+        Refresh();
+    }
 
     private void Refresh()
     {

@@ -69,6 +69,49 @@ public class TorrentOptionsTests
 
     // ── file selection ────────────────────────────────────────────────────
 
+    [Theory]
+    [InlineData("release/movie.bin")]
+    [InlineData("movie.bin")]
+    [InlineData("release\\movie.bin")]
+    public void A_chosen_name_is_matched_however_the_caller_kept_it(string chosen)
+    {
+        // The paths in a multi-file torrent start with the torrent's own name
+        // and use whichever separator the platform builds; a caller that kept
+        // only what it displayed still means this file.
+        var torrent = TwoFiles();
+
+        var picked = FileSelection.Choose(torrent, new[] { chosen });
+
+        Assert.Equal("movie.bin", Path.GetFileName(Assert.Single(picked).Path));
+    }
+
+    [Fact]
+    public void A_name_that_is_in_no_torrent_matches_nothing() =>
+        Assert.Empty(FileSelection.Choose(TwoFiles(), new[] { "somethingelse.bin" }));
+
+    [Theory]
+    [InlineData(null, null, false)]
+    [InlineData(1.0, null, false)]
+    [InlineData(null, 60.0, false)]
+    [InlineData(null, 0.0, true)]
+    public void 下完即停_is_told_apart_from_a_limit(double? ratio, double? minutes, bool immediate)
+    {
+        var limits = new SeedingLimits(ratio, minutes is { } m ? TimeSpan.FromMinutes(m) : null);
+
+        Assert.Equal(immediate, limits.StopsImmediately);
+    }
+
+    /// <summary>A two-file torrent whose paths carry the torrent's name.</summary>
+    private static TorrentMetainfo TwoFiles()
+    {
+        var builder = new TorrentBuilder { Name = "release", PieceLength = 256 };
+
+        builder.Add("movie.bin", new byte[700]);
+        builder.Add("sample.bin", new byte[300]);
+
+        return TorrentMetainfo.Parse(builder.Build());
+    }
+
     [Fact]
     public void A_files_pieces_are_the_ones_its_bytes_fall_in()
     {

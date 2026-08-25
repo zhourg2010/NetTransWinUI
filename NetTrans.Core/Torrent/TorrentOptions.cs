@@ -17,6 +17,14 @@ public sealed record SeedingLimits(double? MaxRatio = null, TimeSpan? MaxSeeding
     public bool IsUnlimited => MaxRatio is null && MaxSeedingTime is null;
 
     /// <summary>
+    /// 下完即停: no seeding at all, rather than seeding until a limit is met.
+    ///
+    /// Worth telling apart, because it also means a peer session should let go
+    /// the moment there is nothing left to fetch instead of staying to serve.
+    /// </summary>
+    public bool StopsImmediately => MaxSeedingTime == TimeSpan.Zero || MaxRatio <= 0;
+
+    /// <summary>
     /// The share ratio. A torrent downloaded from nothing -- one seeded from
     /// files already on disk -- has no denominator, so its ratio is reported as
     /// infinite rather than as a division by zero.
@@ -50,6 +58,33 @@ public sealed record SeedingLimits(double? MaxRatio = null, TimeSpan? MaxSeeding
 /// </summary>
 public static class FileSelection
 {
+    /// <summary>
+    /// The files a list of chosen names refers to.
+    ///
+    /// A multi-file torrent's paths carry the torrent's own name as their first
+    /// element and the platform's separator between the rest, and a caller has
+    /// usually kept whichever form it displayed. Both are accepted, and so is
+    /// either separator: refusing a name over a backslash would silently
+    /// download everything.
+    /// </summary>
+    public static IReadOnlyList<TorrentEntry> Choose(TorrentMetainfo torrent, IEnumerable<string> chosen)
+    {
+        var names = new HashSet<string>(chosen.Select(Normalise), StringComparer.OrdinalIgnoreCase);
+
+        return torrent.Files.Where(file => Matches(file, names)).ToList();
+    }
+
+    private static bool Matches(TorrentEntry file, HashSet<string> names)
+    {
+        string path = Normalise(file.Path);
+        if (names.Contains(path)) return true;
+
+        int slash = path.IndexOf('/');
+        return slash >= 0 && names.Contains(path[(slash + 1)..]);
+    }
+
+    private static string Normalise(string path) => path.Replace('\\', '/').Trim().TrimStart('/');
+
     /// <summary>The pieces a file's bytes fall in, inclusive of both ends.</summary>
     public static IEnumerable<int> PiecesOf(TorrentMetainfo torrent, TorrentEntry file)
     {

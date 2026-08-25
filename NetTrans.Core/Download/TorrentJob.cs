@@ -222,9 +222,7 @@ public sealed class TorrentJob : ITransferJob
     {
         if (WantedFiles is not { Count: > 0 } wanted) return;
 
-        var chosen = torrent.Files
-            .Where(file => wanted.Contains(file.Path, StringComparer.OrdinalIgnoreCase))
-            .ToList();
+        var chosen = FileSelection.Choose(torrent, wanted);
 
         if (chosen.Count == 0 || chosen.Count == torrent.Files.Count) return;
 
@@ -280,6 +278,10 @@ public sealed class TorrentJob : ITransferJob
         {
             MaxPeers = Math.Clamp(Item.RequestedConnections > 0 ? Item.RequestedConnections : 8, 1, 50),
             SeedingLimits = SeedingLimits,
+
+            // 下完即停 means the peers are let go as soon as there is nothing
+            // left to fetch, rather than being served until a limit is checked.
+            Seed = !SeedingLimits.StopsImmediately,
             DownloadGate = _downloadGate,
             UploadGate = _uploadGate,
         };

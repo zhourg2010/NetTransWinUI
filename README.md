@@ -243,6 +243,13 @@ which is the only place view models change.
 - **Live detail.** The inspector's 分块, 连接 and 日志 tabs are fed by the real
   transfer: the chunk map comes from segment positions, the per-connection rates
   from a meter per segment.
+- **What the site wants.** Cookies are kept for the life of the transport, so a
+  session handed out while sniffing a page is still there when the media URL is
+  fetched. The page a link was sniffed from is sent as its `Referer` — plenty of
+  sites 403 anything else. `https://user:pass@host/file.iso` authenticates with
+  Basic rather than dropping the credentials; the stored and displayed URL is the
+  one without them. 代理 is 系统代理 by default and can be pointed at a
+  `host:port`; changing it reaches transfers already running.
 
 Running the app with `--demo` swaps the real engine for `StubDownloadEngine`,
 which replays the handoff's seed data. That is how the UI is worked on without a
@@ -340,7 +347,14 @@ everything else.
   hash is never written, and a peer that sends two bad ones is dropped.
 - **Uploading is real** and reported honestly to the tracker. A finished torrent
   keeps serving rather than hanging up — that is when it is worth the most to
-  the swarm. 做种限制 stops at a share ratio or a seeding time.
+  the swarm. 做种限制 stops at a share ratio or a seeding time, checked on its
+  own clock rather than only when a peer leaves: one leech that stays connected
+  for hours is the ordinary case, and waiting for it to hang up is how a limit
+  gets blown past.
+- **限速 covers torrents too.** 全局限速 and the per-task cap are one budget for
+  the whole swarm rather than one per connection, applied in both directions —
+  上传限速 is a row on the 种子 sheet. The inspector's 连接 tab shows a rate per
+  peer, which is where one stalled peer among eight is visible.
 - **Magnet links** fetch their metainfo from peers (BEP 9) before anything else
   can happen, and the assembled result is checked against the hash the link
   named: the pieces come from several peers, so a whole that does not hash means

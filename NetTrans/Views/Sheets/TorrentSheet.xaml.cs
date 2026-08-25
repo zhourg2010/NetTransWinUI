@@ -99,7 +99,7 @@ public sealed partial class TorrentSheet : UserControl
     private double UploadLimit() => SpeedLimits.Parse(UploadLimitBox.SelectedItem as string);
 
     /// <summary>The 做种限制 dropdown as the engine's own type.</summary>
-    private SeedingLimits Limits() => SeedingBox.SelectedItem as string switch
+    private SeedingLimits Limits() => (SeedingBox.SelectedItem as string) switch
     {
         "分享率 1.0" => SeedingLimits.Ratio(1.0),
         "分享率 2.0" => SeedingLimits.Ratio(2.0),

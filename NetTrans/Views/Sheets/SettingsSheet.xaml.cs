@@ -43,6 +43,7 @@ public sealed partial class SettingsSheet : UserControl
 
         Select(ConcurrencyBox, settings.MaxSimultaneousDownloads.ToString());
         Select(GlobalLimitBox, settings.GlobalSpeedLimit);
+        Select(ProxyBox, settings.Proxy);
         Select(RetryBox, settings.RetryPolicy);
         Select(AfterBox, settings.WhenAllComplete);
 
@@ -98,6 +99,9 @@ public sealed partial class SettingsSheet : UserControl
 
     private void OnGlobalLimitChanged(object sender, SelectionChangedEventArgs e) =>
         Update(s => s.GlobalSpeedLimit = GlobalLimitBox.SelectedItem as string ?? "不限");
+
+    private void OnProxyChanged(object sender, SelectionChangedEventArgs e) =>
+        Update(s => s.Proxy = ProxyBox.SelectedItem as string ?? "系统代理");
 
     private void OnRetryChanged(object sender, SelectionChangedEventArgs e) =>
         Update(s => s.RetryPolicy = RetryBox.SelectedItem as string ?? "3 次");

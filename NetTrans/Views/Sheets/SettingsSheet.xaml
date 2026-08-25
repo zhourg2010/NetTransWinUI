@@ -63,6 +63,13 @@
                         <TimePicker Grid.Column="2" x:Name="OffPeakEndPicker" ClockIdentifier="24HourClock" SelectedTimeChanged="OnScheduleChanged"/>
                     </Grid>
 
+                    <controls:FormRow Label="代理">
+                        <ComboBox x:Name="ProxyBox" Style="{StaticResource FormSelectStyle}" SelectionChanged="OnProxyChanged">
+                            <x:String>系统代理</x:String>
+                            <x:String>不使用代理</x:String>
+                        </ComboBox>
+                    </controls:FormRow>
+
                     <controls:FormRow Label="失败自动重试">
                         <ComboBox x:Name="RetryBox" Style="{StaticResource FormSelectStyle}" SelectionChanged="OnRetryChanged">
                             <x:String>不重试</x:String>

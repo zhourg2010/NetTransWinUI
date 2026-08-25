@@ -30,6 +30,10 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
     private readonly double[] _speedHistory = new double[IslandSamples];
     private readonly AppSettings _settings;
 
+    /// <summary>Per-site Referer / Cookie / 账号密码, and the 代理 dropdown.</summary>
+    private readonly RequestProfiles _profiles = new();
+    private readonly LiveProxy _proxy = new();
+
     private readonly Dictionary<int, (bool Sequential, NetTrans.Torrent.SeedingLimits Limits, double UploadLimit)> _torrentOptions = new();
 
     private int _nextId = 1;
@@ -38,7 +42,8 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
     {
         _settings = settings;
         _dispatcher = DispatcherQueue.GetForCurrentThread();
-        _transport = new HttpTransport(userAgent: "NetTrans/1.0");
+        _proxy.Set(settings.Proxy);
+        _transport = new HttpTransport(userAgent: "NetTrans/1.0", profiles: _profiles, proxy: _proxy);
 
         _engine = new CoreEngine(
             _transport,
@@ -88,6 +93,10 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
         foreach (int id in ids.ToList())
         {
             _engine.Remove(id);
+
+            // A task deleted before it ever ran leaves its BT settings behind,
+            // and nothing would ever come to collect them.
+            _torrentOptions.Remove(id);
 
             if (Tasks.FirstOrDefault(task => task.Id == id) is { } removed) Tasks.Remove(removed);
         }
@@ -141,6 +150,20 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
 
     public DownloadItemViewModel Add(NewDownloadRequest request)
     {
+        // https://user:pass@host/file.iso is a normal thing to paste. The
+        // credentials are lifted out and remembered for the host, and the URL
+        // that gets stored and shown is the one without them -- a password does
+        // not belong in a list row or a resume file.
+        string url = request.Url;
+
+        if (Uri.TryCreate(url, UriKind.Absolute, out var absolute) &&
+            RequestProfile.FromUserInfo(absolute) is { } credentials)
+        {
+            _profiles.Set(absolute, credentials);
+            url = RequestProfile.WithoutUserInfo(absolute).AbsoluteUri;
+            request = request with { Url = url };
+        }
+
         // 按分类建子文件夹, then a name that is not already spoken for -- by a
         // file on disk or by another task in this queue heading for the same
         // place, which the disk cannot tell us about yet.
@@ -195,8 +218,11 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
         }
     }
 
+    public void RememberReferer(Uri url, Uri page) => _profiles.SetReferer(url, page);
+
     public void ApplySettings(AppSettings settings)
     {
+        _proxy.Set(settings.Proxy);
         _engine.MaxConcurrent = Math.Max(1, settings.MaxSimultaneousDownloads);
         _engine.Options = _engine.Options with { MaxRetries = SettingsRules.Retries(settings.RetryPolicy) };
         ApplySpeedLimit(settings);

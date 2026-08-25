@@ -16,16 +16,33 @@ public sealed class HttpTransport : IHttpTransport, IDisposable
 {
     private readonly HttpClient _client;
     private readonly bool _ownsClient;
+    private readonly RequestProfiles? _profiles;
 
-    public HttpTransport(HttpClient? client = null, string? userAgent = null)
+    public HttpTransport(
+        HttpClient? client = null,
+        string? userAgent = null,
+        RequestProfiles? profiles = null,
+        IWebProxy? proxy = null)
     {
         _ownsClient = client is null;
+        _profiles = profiles;
+
         _client = client ?? new HttpClient(new SocketsHttpHandler
         {
             AllowAutoRedirect = true,
             AutomaticDecompression = DecompressionMethods.None, // ranges and encoded bodies do not mix
             MaxConnectionsPerServer = 32,
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+
+            // Kept for the life of the transport, so a session cookie handed
+            // out by a login redirect is still there for the file itself.
+            UseCookies = true,
+            CookieContainer = Cookies,
+
+            // The 代理 dropdown, if the caller passed one. A LiveProxy answers
+            // "no proxy" for 不使用代理, so the handler never has to be rebuilt
+            // when the setting changes.
+            Proxy = proxy,
         })
         {
             Timeout = Timeout.InfiniteTimeSpan, // per-read cancellation is handled by the caller
@@ -36,6 +53,12 @@ public sealed class HttpTransport : IHttpTransport, IDisposable
             _client.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent);
         }
     }
+
+    /// <summary>
+    /// Cookies picked up along the way, and where a cookie copied out of a
+    /// browser is put.
+    /// </summary>
+    public CookieContainer Cookies { get; } = new();
 
     public async Task<RemoteFileInfo> ProbeAsync(Uri url, CancellationToken cancellationToken)
     {
@@ -55,6 +78,7 @@ public sealed class HttpTransport : IHttpTransport, IDisposable
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Range = new RangeHeaderValue(0, 0);
+            Decorate(request, url);
 
             using var response = await _client
                 .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
@@ -87,6 +111,7 @@ public sealed class HttpTransport : IHttpTransport, IDisposable
     {
         var request = new HttpRequestMessage(HttpMethod.Get, url);
         if (from > 0 || to is not null) request.Headers.Range = new RangeHeaderValue(from, to);
+        Decorate(request, url);
 
         var response = await _client
             .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
@@ -118,6 +143,7 @@ public sealed class HttpTransport : IHttpTransport, IDisposable
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Head, url);
+            Decorate(request, url);
             var response = await _client
                 .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
                 .ConfigureAwait(false);
@@ -131,6 +157,41 @@ public sealed class HttpTransport : IHttpTransport, IDisposable
         {
             // Plenty of servers simply refuse HEAD; fall through to the range GET.
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Puts the site's own requirements on a request: the Referer it insists
+    /// on, the cookie that says we are logged in, the credentials it asks for.
+    ///
+    /// Basic auth is sent up front rather than after a 401. Waiting for the
+    /// challenge doubles every request, and a server that did not want it
+    /// ignores the header.
+    /// </summary>
+    private void Decorate(HttpRequestMessage request, Uri url)
+    {
+        if (_profiles?.For(url) is not { } profile) return;
+
+        if (!string.IsNullOrWhiteSpace(profile.Referer) &&
+            Uri.TryCreate(profile.Referer, UriKind.Absolute, out var referer))
+        {
+            request.Headers.Referrer = referer;
+        }
+
+        if (!string.IsNullOrWhiteSpace(profile.Cookie))
+        {
+            request.Headers.TryAddWithoutValidation("Cookie", profile.Cookie);
+        }
+
+        if (!string.IsNullOrWhiteSpace(profile.UserAgent))
+        {
+            request.Headers.UserAgent.Clear();
+            request.Headers.TryAddWithoutValidation("User-Agent", profile.UserAgent);
+        }
+
+        if (profile.BasicHeader() is { } authorization)
+        {
+            request.Headers.TryAddWithoutValidation("Authorization", authorization);
         }
     }
 

@@ -114,8 +114,14 @@ public sealed partial class SniffSheet : UserControl
         // alike.
         var queued = picked;
 
+        // The page the links were found on. Many sites will not serve the media
+        // URL without it, and this is the one moment we know what it was.
+        Uri.TryCreate(PageBox.Text.Trim(), UriKind.Absolute, out var page);
+
         foreach (var source in queued)
         {
+            if (page is not null) _viewModel.Engine.RememberReferer(source.Url, page);
+
             _viewModel.Engine.Add(new NewDownloadRequest(
                 source.Url.AbsoluteUri,
                 _viewModel.Settings.DefaultSavePath,

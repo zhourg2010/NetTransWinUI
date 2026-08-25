@@ -53,10 +53,21 @@ public interface IDownloadEngine
     void ApplySettings(AppSettings settings);
 
     /// <summary>
-    /// The two torrent settings that cannot sensibly be global: 顺序下载, and
-    /// when to stop seeding. Ignored for a task that is not a torrent.
+    /// The torrent settings that cannot sensibly be global: 顺序下载, when to
+    /// stop seeding, and what to hold the upload to. Ignored for a task that is
+    /// not a torrent.
     /// </summary>
-    void ApplyTorrentOptions(int id, bool sequential, NetTrans.Torrent.SeedingLimits limits);
+    void ApplyTorrentOptions(int id, bool sequential, NetTrans.Torrent.SeedingLimits limits, double uploadLimit = 0);
+
+    /// <summary>
+    /// Remembers the page a link came from, so later requests to that host
+    /// carry it as the Referer.
+    ///
+    /// Plenty of sites serve a media URL only to a request that says which page
+    /// it was on, and 403 anything else -- which is exactly why a link works in
+    /// the browser and not here.
+    /// </summary>
+    void RememberReferer(Uri url, Uri page);
 
     /// <summary>Where a task's bytes are, or will be.</summary>
     string? PathOf(int id);

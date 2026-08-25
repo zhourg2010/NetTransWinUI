@@ -24,6 +24,9 @@ public sealed class AppSettings
     /// <summary>无操作 | 退出程序 | 休眠 | 关机</summary>
     public string WhenAllComplete { get; set; } = "无操作";
 
+    /// <summary>系统代理 | 不使用代理 | host:port. Read once, when the transport is built.</summary>
+    public string Proxy { get; set; } = "系统代理";
+
     // 行为
     public bool WatchClipboard { get; set; } = true;
     public bool NotifyOnCompletion { get; set; } = true;

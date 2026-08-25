@@ -213,7 +213,12 @@ public class PeerSessionTests
                 () => Seed.ServeAsync(theirs, Torrent.InfoHash, cancellation.Token),
                 CancellationToken.None);
 
-            Session = new PeerSession(ours, Torrent, Picker, Store, new IPEndPoint(IPAddress.Loopback, 6881));
+            // Seeding is covered by SeedingTests; these are about fetching, and
+            // leaving it on would make each of them wait out its own deadline.
+            Session = new PeerSession(ours, Torrent, Picker, Store, new IPEndPoint(IPAddress.Loopback, 6881))
+            {
+                Seed = false,
+            };
 
             try
             {

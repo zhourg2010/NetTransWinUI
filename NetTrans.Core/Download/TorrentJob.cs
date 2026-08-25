@@ -117,7 +117,18 @@ public sealed class TorrentJob : ITransferJob
             bool paused;
             lock (_pauseGate) paused = _pauseRequested;
 
-            if (!paused) return JobOutcome.Failed;
+            if (!paused)
+            {
+                // Stopped from outside rather than paused. A torrent can sit
+                // for a long time with nothing to talk to, so the row has to
+                // say which of the two happened rather than going blank.
+                Item.ErrorMessage = _swarm is { } swarm && swarm.Progress.ConnectedPeers == 0
+                    ? "没有连接到任何 peer"
+                    : "已停止";
+
+                Item.Log.Add(new LogEntry(Stamp(), Item.ErrorMessage, IsError: true));
+                return JobOutcome.Failed;
+            }
 
             Item.Status = DownloadStatus.Paused;
             Item.Log.Add(new LogEntry(Stamp(), Progressed()));
@@ -255,23 +266,26 @@ public sealed class TorrentJob : ITransferJob
         PieceStore store,
         CancellationToken cancellationToken)
     {
-        if (_resume is null || TargetPath is null) return;
-
-        var saved = await _resume.LoadAsync(TargetPath, cancellationToken).ConfigureAwait(false);
-
-        if (saved?.BitfieldFor(torrent) is { } bits)
+        // The sidecar is the cheap path and needs a store to have been given.
+        if (_resume is not null && TargetPath is not null)
         {
-            picker.Restore(bits);
+            var saved = await _resume.LoadAsync(TargetPath, cancellationToken).ConfigureAwait(false);
 
-            Item.Log.Add(new LogEntry(Stamp(), $"续传：已有 {picker.CompletedCount} / {torrent.PieceCount} 个分片"));
-            Record(new SwarmProgress(0, torrent.TotalLength, picker.CompletedCount, torrent.PieceCount, 0, 0));
+            if (saved?.BitfieldFor(torrent) is { } bits)
+            {
+                picker.Restore(bits);
 
-            return;
+                Item.Log.Add(new LogEntry(Stamp(), $"续传：已有 {picker.CompletedCount} / {torrent.PieceCount} 个分片"));
+                Record(new SwarmProgress(0, torrent.TotalLength, picker.CompletedCount, torrent.PieceCount, 0, 0));
+
+                return;
+            }
         }
 
-        // No usable sidecar but files already there: hash them rather than
-        // fetching what is already on disk. This is also what makes seeding
-        // something already downloaded work at all.
+        // Files already there with no usable sidecar: hash them rather than
+        // fetch what is already on disk. This has nothing to do with the resume
+        // store -- it is also how seeding an already-downloaded torrent starts,
+        // and gating it on the sidecar meant re-downloading a complete folder.
         if (!torrent.Files.Any(file => _sinks.Exists(store.PathOf(file)))) return;
 
         Item.Log.Add(new LogEntry(Stamp(), "发现已有文件，正在校验…"));

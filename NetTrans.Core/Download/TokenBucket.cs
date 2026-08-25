@@ -3,10 +3,16 @@ namespace NetTrans.Download;
 /// <summary>
 /// The 全局限速 and per-task 速度上限 dropdowns, as a token bucket. A rate of
 /// zero or less means 不限 and never delays.
+///
+/// Thread-safe, because the global bucket is shared: several HTTP transfers and
+/// every peer of a torrent take from the same one at the same time, and the
+/// refill timestamp is not a value that survives being written by two threads
+/// at once.
 /// </summary>
 public sealed class TokenBucket
 {
     private readonly double _burstSeconds;
+    private readonly object _gate = new();
     private double _tokens;
     private DateTimeOffset _lastRefill;
     private double _bytesPerSecond;
@@ -21,17 +27,25 @@ public sealed class TokenBucket
         _tokens = IsUnlimited ? 0 : bytesPerSecond * burstSeconds;
     }
 
-    public bool IsUnlimited => _bytesPerSecond <= 0;
+    public bool IsUnlimited
+    {
+        get { lock (_gate) return _bytesPerSecond <= 0; }
+    }
 
     /// <summary>Capacity, in bytes per second. Changing it takes effect on the next take.</summary>
     public double BytesPerSecond
     {
-        get => _bytesPerSecond;
+        get { lock (_gate) return _bytesPerSecond; }
+
         set
         {
-            _bytesPerSecond = value;
-            if (IsUnlimited) return;
-            _tokens = Math.Min(_tokens, value * _burstSeconds);
+            lock (_gate)
+            {
+                _bytesPerSecond = value;
+                if (value <= 0) return;
+
+                _tokens = Math.Min(_tokens, value * _burstSeconds);
+            }
         }
     }
 
@@ -42,13 +56,18 @@ public sealed class TokenBucket
     /// </summary>
     public TimeSpan Take(long bytes, DateTimeOffset now)
     {
-        if (IsUnlimited || bytes <= 0) return TimeSpan.Zero;
+        if (bytes <= 0) return TimeSpan.Zero;
 
-        Refill(now);
-        _tokens -= bytes;
+        lock (_gate)
+        {
+            if (_bytesPerSecond <= 0) return TimeSpan.Zero;
 
-        if (_tokens >= 0) return TimeSpan.Zero;
-        return TimeSpan.FromSeconds(-_tokens / _bytesPerSecond);
+            Refill(now);
+            _tokens -= bytes;
+
+            if (_tokens >= 0) return TimeSpan.Zero;
+            return TimeSpan.FromSeconds(-_tokens / _bytesPerSecond);
+        }
     }
 
     private void Refill(DateTimeOffset now)

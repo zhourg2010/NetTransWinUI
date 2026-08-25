@@ -32,6 +32,16 @@
                         <controls:IosSwitch x:Name="SequentialSwitch"/>
                     </controls:FormRow>
 
+                    <controls:FormRow Label="上传限速">
+                        <ComboBox x:Name="UploadLimitBox" Style="{StaticResource FormSelectStyle}">
+                            <x:String>不限</x:String>
+                            <x:String>128 KB/s</x:String>
+                            <x:String>512 KB/s</x:String>
+                            <x:String>1 MB/s</x:String>
+                            <x:String>4 MB/s</x:String>
+                        </ComboBox>
+                    </controls:FormRow>
+
                     <controls:FormRow Label="做种限制">
                         <ComboBox x:Name="SeedingBox" Style="{StaticResource FormSelectStyle}">
                             <x:String>一直做种</x:String>

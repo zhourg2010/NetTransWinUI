@@ -256,7 +256,7 @@ public sealed class DownloadEngine : IAsyncDisposable
         // even a file list until a peer has supplied one.
         if (TorrentUrl.IsTorrent(item.Url))
         {
-            return new TorrentJob(item, _transport, _sinks, _clock, _options, resume: _torrentResume);
+            return new TorrentJob(item, _transport, _sinks, _clock, _options, resume: _torrentResume, globalLimit: _globalLimit);
         }
 
         return PlaylistUrl.IsPlaylist(item.Url)

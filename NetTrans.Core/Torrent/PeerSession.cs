@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using NetTrans.Download;
 
 namespace NetTrans.Torrent;
 
@@ -108,6 +109,14 @@ public sealed class PeerSession
     /// download from this peer.
     /// </summary>
     public bool Seed { get; set; } = true;
+
+    /// <summary>
+    /// The 限速 caps, shared with every other peer of this torrent. Null means
+    /// 不限, which is what a session built without them gets.
+    /// </summary>
+    public IRateGate? DownloadGate { get; set; }
+
+    public IRateGate? UploadGate { get; set; }
 
     /// <summary>Whether this peer wants something we have. Shown in the inspector's 连接 tab.</summary>
     public bool PeerIsInterested { get; private set; }
@@ -271,6 +280,15 @@ public sealed class PeerSession
 
                         BlockReceived?.Invoke(this, message.Block.Length);
 
+                        // The cap is applied between blocks rather than mid-read:
+                        // waiting here delays the next request, which is the only
+                        // lever a downloader actually has over how fast a peer
+                        // sends.
+                        if (DownloadGate is { } gate)
+                        {
+                            await gate.PassAsync(message.Block.Length, cancellationToken).ConfigureAwait(false);
+                        }
+
                         if (!current.IsComplete)
                         {
                             await RequestAsync(current, cancellationToken).ConfigureAwait(false);
@@ -331,6 +349,8 @@ public sealed class PeerSession
             .ConfigureAwait(false);
 
         if (block is null) return;
+
+        if (UploadGate is { } gate) await gate.PassAsync(block.Length, cancellationToken).ConfigureAwait(false);
 
         await SendAsync(
             PeerMessage.Piece(request.PieceIndex, request.BlockOffset, block),

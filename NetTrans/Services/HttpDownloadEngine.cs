@@ -30,7 +30,7 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
     private readonly double[] _speedHistory = new double[IslandSamples];
     private readonly AppSettings _settings;
 
-    private readonly Dictionary<int, (bool Sequential, NetTrans.Torrent.SeedingLimits Limits)> _torrentOptions = new();
+    private readonly Dictionary<int, (bool Sequential, NetTrans.Torrent.SeedingLimits Limits, double UploadLimit)> _torrentOptions = new();
 
     private int _nextId = 1;
 
@@ -181,16 +181,17 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
         Tasks.Any(task => string.Equals(
             System.IO.Path.Combine(task.SavePath, task.Name), path, StringComparison.OrdinalIgnoreCase));
 
-    public void ApplyTorrentOptions(int id, bool sequential, NetTrans.Torrent.SeedingLimits limits)
+    public void ApplyTorrentOptions(int id, bool sequential, NetTrans.Torrent.SeedingLimits limits, double uploadLimit = 0)
     {
         // Held until the job starts: a queued task has no job yet, and a
         // running one has already read them.
-        _torrentOptions[id] = (sequential, limits);
+        _torrentOptions[id] = (sequential, limits, uploadLimit);
 
         if (_engine.JobFor(id) is TorrentJob job)
         {
             job.Sequential = sequential;
             job.SeedingLimits = limits;
+            job.UploadLimit = uploadLimit;
         }
     }
 
@@ -291,6 +292,7 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
                 {
                     torrent.Sequential = options.Sequential;
                     torrent.SeedingLimits = options.Limits;
+                    torrent.UploadLimit = options.UploadLimit;
                 }
 
                 task.Model.ConnectionSpeeds = job.ConnectionSpeeds;

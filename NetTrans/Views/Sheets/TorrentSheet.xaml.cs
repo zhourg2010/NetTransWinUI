@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using NetTrans.Download;
 using NetTrans.Models;
 using NetTrans.Services;
 using NetTrans.Torrent;
@@ -11,10 +12,10 @@ namespace NetTrans.Views.Sheets;
 /// 种子 / 磁力链.
 ///
 /// A magnet or a .torrent goes into the queue like any other task; the engine
-/// gives it a BitTorrent transfer rather than an HTTP one. The two settings
-/// here are the ones that cannot sensibly be global: whether to fetch in order
-/// (for previewing a video) and when to stop seeding, which is the rule a
-/// private tracker's account is actually measured by.
+/// gives it a BitTorrent transfer rather than an HTTP one. The settings here
+/// are the ones that cannot sensibly be global: whether to fetch in order (for
+/// previewing a video), what to hold the upload to, and when to stop seeding --
+/// the rule a private tracker's account is actually measured by.
 /// </summary>
 public sealed partial class TorrentSheet : UserControl
 {
@@ -30,6 +31,7 @@ public sealed partial class TorrentSheet : UserControl
         _saveTo = viewModel.Settings.DefaultSavePath;
         SavePathRow.Value = _saveTo;
         SeedingBox.SelectedIndex = 0;
+        UploadLimitBox.SelectedIndex = 0;
 
         // Whatever is on the clipboard is usually why the sheet was opened.
         if (TorrentUrl.IsTorrent(viewModel.PendingUrl)) LinkBox.Text = viewModel.PendingUrl;
@@ -87,11 +89,14 @@ public sealed partial class TorrentSheet : UserControl
         task.Model.Name = TorrentUrl.Describe(link);
         task.Refresh();
 
-        _viewModel.Engine.ApplyTorrentOptions(task.Id, SequentialSwitch.IsOn, Limits());
+        _viewModel.Engine.ApplyTorrentOptions(task.Id, SequentialSwitch.IsOn, Limits(), UploadLimit());
         _viewModel.Say(TorrentUrl.IsMagnet(link) ? "已加入，正在向 peer 索取元数据…" : "已加入下载队列");
 
         _viewModel.ActiveSheet = null;
     }
+
+    /// <summary>The 上传限速 dropdown in bytes per second; zero is 不限.</summary>
+    private double UploadLimit() => SpeedLimits.Parse(UploadLimitBox.SelectedItem as string);
 
     /// <summary>The 做种限制 dropdown as the engine's own type.</summary>
     private SeedingLimits Limits() => SeedingBox.SelectedItem as string switch

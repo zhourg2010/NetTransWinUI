@@ -76,6 +76,14 @@ public sealed class TorrentSwarm
         _now = now ?? SystemNow.Instance;
     }
 
+    /// <summary>
+    /// The 限速 caps, handed to every peer session so the whole swarm shares one
+    /// budget rather than one per connection.
+    /// </summary>
+    public IRateGate? DownloadGate { get; set; }
+
+    public IRateGate? UploadGate { get; set; }
+
     /// <summary>The window each peer's rate is averaged over.</summary>
     public TimeSpan RateWindow { get; set; } = TimeSpan.FromSeconds(5);
 
@@ -420,7 +428,12 @@ public sealed class TorrentSwarm
 
             lock (_gate) _connected++;
 
-            var session = new PeerSession(stream, _torrent, _picker, _store, peer) { Seed = Seed };
+            var session = new PeerSession(stream, _torrent, _picker, _store, peer)
+            {
+                Seed = Seed,
+                DownloadGate = DownloadGate,
+                UploadGate = UploadGate,
+            };
             var meter = new PeerMeter(peer, session, RateWindow);
 
             lock (_gate) _rates[peer.ToString()] = meter;
@@ -501,6 +514,48 @@ public sealed class TorrentSwarm
     }
 
     private void Say(string message) => Said?.Invoke(this, message);
+
+    /// <summary>
+    /// One peer's two rates.
+    ///
+    /// <see cref="SpeedMeter"/> is not built for two threads, and here one
+    /// records while the shell reads, so every touch goes through the same
+    /// lock.
+    /// </summary>
+    private sealed class PeerMeter
+    {
+        private readonly IPEndPoint _peer;
+        private readonly PeerSession _session;
+        private readonly SpeedMeter _down;
+        private readonly SpeedMeter _up;
+        private readonly object _gate = new();
+
+        public PeerMeter(IPEndPoint peer, PeerSession session, TimeSpan window)
+        {
+            _peer = peer;
+            _session = session;
+            _down = new SpeedMeter(window);
+            _up = new SpeedMeter(window);
+        }
+
+        public void Got(int bytes, DateTimeOffset now)
+        {
+            lock (_gate) _down.Record(bytes, now);
+        }
+
+        public void Sent(int bytes, DateTimeOffset now)
+        {
+            lock (_gate) _up.Record(bytes, now);
+        }
+
+        public PeerRate Rate(DateTimeOffset now)
+        {
+            lock (_gate)
+            {
+                return new PeerRate(_peer, _down.BytesPerSecond(now), _up.BytesPerSecond(now), _session.PeerIsInterested);
+            }
+        }
+    }
 }
 
 /// <summary>
@@ -590,48 +645,6 @@ public sealed class TorrentResumeStore
         catch (Exception)
         {
             // A stale sidecar is harmless: the next run revalidates it.
-        }
-    }
-
-    /// <summary>
-    /// One peer's two rates.
-    ///
-    /// <see cref="SpeedMeter"/> is not built for two threads, and here one
-    /// records while the shell reads, so every touch goes through the same
-    /// lock.
-    /// </summary>
-    private sealed class PeerMeter
-    {
-        private readonly IPEndPoint _peer;
-        private readonly PeerSession _session;
-        private readonly SpeedMeter _down;
-        private readonly SpeedMeter _up;
-        private readonly object _gate = new();
-
-        public PeerMeter(IPEndPoint peer, PeerSession session, TimeSpan window)
-        {
-            _peer = peer;
-            _session = session;
-            _down = new SpeedMeter(window);
-            _up = new SpeedMeter(window);
-        }
-
-        public void Got(int bytes, DateTimeOffset now)
-        {
-            lock (_gate) _down.Record(bytes, now);
-        }
-
-        public void Sent(int bytes, DateTimeOffset now)
-        {
-            lock (_gate) _up.Record(bytes, now);
-        }
-
-        public PeerRate Rate(DateTimeOffset now)
-        {
-            lock (_gate)
-            {
-                return new PeerRate(_peer, _down.BytesPerSecond(now), _up.BytesPerSecond(now), _session.PeerIsInterested);
-            }
         }
     }
 }

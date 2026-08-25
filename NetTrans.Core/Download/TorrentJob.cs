@@ -21,6 +21,7 @@ public sealed class TorrentJob : ITransferJob
     private readonly DownloadOptions _options;
     private readonly IPeerConnector _connector;
     private readonly TorrentResumeStore? _resume;
+    private readonly TokenBucket? _globalLimit;
 
     private readonly SpeedMeter _meter;
     private readonly SpeedMeter _uploadMeter;
@@ -33,6 +34,10 @@ public sealed class TorrentJob : ITransferJob
     private PiecePicker? _picker;
     private long _lastDone;
     private long _lastUploaded;
+    private double _speedLimit;
+    private double _uploadLimit;
+    private RateGate? _downloadGate;
+    private RateGate? _uploadGate;
 
     public TorrentJob(
         DownloadItem item,
@@ -41,7 +46,8 @@ public sealed class TorrentJob : ITransferJob
         IClock clock,
         DownloadOptions? options = null,
         IPeerConnector? connector = null,
-        TorrentResumeStore? resume = null)
+        TorrentResumeStore? resume = null,
+        TokenBucket? globalLimit = null)
     {
         Item = item;
         _transport = transport;
@@ -50,6 +56,7 @@ public sealed class TorrentJob : ITransferJob
         _options = options ?? new DownloadOptions();
         _connector = connector ?? new TcpPeerConnector();
         _resume = resume;
+        _globalLimit = globalLimit;
         _meter = new SpeedMeter(_options.Window);
         _uploadMeter = new SpeedMeter(_options.Window);
     }
@@ -69,13 +76,37 @@ public sealed class TorrentJob : ITransferJob
     public bool Sequential { get; set; }
 
     /// <summary>
-    /// A per-task cap. Honoured for what it can be: a torrent's bytes come from
-    /// many peers at once, so the cap is applied to the whole swarm rather than
-    /// to any one connection.
+    /// A per-task cap, in bytes per second. A torrent's bytes come from many
+    /// peers at once, so the cap is one budget for the whole swarm rather than
+    /// one per connection -- and it can be moved while the transfer runs, from
+    /// the inspector.
     /// </summary>
-    public double SpeedLimit { get; set; }
+    public double SpeedLimit
+    {
+        get => _speedLimit;
+        set
+        {
+            _speedLimit = value;
+            if (_downloadGate is { } gate) gate.BytesPerSecond = value;
+        }
+    }
 
-    public double EffectiveSpeedLimit => SpeedLimit;
+    /// <summary>
+    /// A cap on what goes out, which HTTP transfers have no use for and a
+    /// torrent very much does: an upload that saturates the line is what makes
+    /// everything else on the machine feel broken.
+    /// </summary>
+    public double UploadLimit
+    {
+        get => _uploadLimit;
+        set
+        {
+            _uploadLimit = value;
+            if (_uploadGate is { } gate) gate.BytesPerSecond = value;
+        }
+    }
+
+    public double EffectiveSpeedLimit => _downloadGate?.BytesPerSecond ?? SpeedLimit;
 
     public double BytesPerSecond => _meter.BytesPerSecond(_clock.UtcNow);
 
@@ -193,10 +224,17 @@ public sealed class TorrentJob : ITransferJob
 
         await RestoreAsync(torrent, picker, store, cancellationToken).ConfigureAwait(false);
 
+        // The caps are the swarm's, not any one peer's: ten peers under a
+        // 1 MB/s cap share the megabyte instead of taking one each.
+        _downloadGate = new RateGate(SpeedLimit, _clock, _globalLimit);
+        _uploadGate = new RateGate(UploadLimit, _clock);
+
         var swarm = new TorrentSwarm(torrent, _connector, trackers, store, picker, peerId)
         {
             MaxPeers = Math.Clamp(Item.RequestedConnections > 0 ? Item.RequestedConnections : 8, 1, 50),
             SeedingLimits = SeedingLimits,
+            DownloadGate = _downloadGate,
+            UploadGate = _uploadGate,
         };
 
         _swarm = swarm;

@@ -125,7 +125,7 @@ public sealed class TorrentMetainfo
         // and no peer recognises.
         var infoHash = SHA1.HashData(data.AsSpan(info.Start, info.Length));
 
-        return FromInfo(info, infoHash, Trackers(root));
+        return FromInfo(info, infoHash, ReadTrackers(root));
     }
 
     /// <summary>
@@ -242,7 +242,7 @@ public sealed class TorrentMetainfo
         return files;
     }
 
-    private static IReadOnlyList<Uri> Trackers(BDictionary root)
+    private static IReadOnlyList<Uri> ReadTrackers(BDictionary root)
     {
         var trackers = new List<Uri>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

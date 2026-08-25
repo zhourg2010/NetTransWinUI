@@ -102,10 +102,10 @@ public class HlsDecryptorTests
         Assert.Contains("16 字节", error.Message);
     }
 
-    private static HlsSegment Segment(long sequence, byte[]? iv) => new(
+    private static StreamSegment Segment(long sequence, byte[]? iv) => new(
         new Uri("https://cdn.test/hls/seg.ts"),
-        Duration: 4,
         SequenceNumber: sequence,
+        Duration: 4,
         Key: new HlsKey(HlsEncryption.Aes128, KeyUri, iv));
 
     /// <summary>Serves one key and counts how often it was asked for.</summary>

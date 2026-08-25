@@ -109,12 +109,10 @@ public sealed partial class SniffSheet : UserControl
         var picked = _rows.Where(entry => entry.Row.IsChecked).Select(entry => entry.Source).ToList();
         if (picked.Count == 0) return;
 
-        // An HLS playlist goes into the queue like anything else -- the engine
-        // gives it a segment transfer rather than a ranged one. DASH is
-        // recognised but not yet fetchable, so it is left out here rather than
-        // queued to fail later.
-        var dash = picked.Where(source => PlaylistUrl.IsDash(source.Url.AbsoluteUri)).ToList();
-        var queued = picked.Except(dash).ToList();
+        // A playlist goes into the queue like anything else -- the engine gives
+        // it a segment transfer rather than a ranged one, for HLS and DASH
+        // alike.
+        var queued = picked;
 
         foreach (var source in queued)
         {
@@ -129,9 +127,10 @@ public sealed partial class SniffSheet : UserControl
                 StartNow: true));
         }
 
-        _viewModel.Say(
-            queued.Count == 0 ? "MPEG-DASH（.mpd）暂不支持下载"
-            : dash.Count > 0 ? $"已加入 {queued.Count} 个，.mpd 暂不支持"
+        // A split DASH manifest turns into two files under one task, which is
+        // worth saying before it happens rather than after.
+        _viewModel.Say(queued.Any(source => PlaylistUrl.IsDash(source.Url.AbsoluteUri))
+            ? "已加入下载队列（DASH 若音视频分离会保存为两个文件）"
             : "已加入下载队列");
 
         _viewModel.ActiveSheet = null;

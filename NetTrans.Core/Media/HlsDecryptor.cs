@@ -18,7 +18,7 @@ public sealed class HlsDecryptor : IDisposable
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     /// <summary>The IV for a segment: the explicit one, or its sequence number.</summary>
-    public static byte[] InitialisationVector(HlsSegment segment)
+    public static byte[] InitialisationVector(StreamSegment segment)
     {
         if (segment.Key?.Iv is { Length: 16 } explicitIv) return explicitIv;
 

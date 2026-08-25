@@ -5,15 +5,21 @@ using NetTrans.Net;
 namespace NetTrans.Download;
 
 /// <summary>
-/// An HLS transfer: fetch every segment of a media playlist and write them into
-/// one file, in order.
+/// A segmented transfer: fetch every segment a manifest lists and write them
+/// into one file, in order. HLS and DASH both arrive here, as
+/// <see cref="SegmentedStream"/>s.
 ///
 /// There is no remuxing here and there does not need to be. MPEG-TS segments
 /// concatenate into a playable .ts by design -- that is what a TS stream is --
-/// and fMP4 segments concatenate onto their #EXT-X-MAP init segment into a
-/// playable .mp4. Anything beyond that (a real MP4 rebuild, SAMPLE-AES, a live
-/// edge) is refused up front by <see cref="HlsPlaylistLoader"/> rather than
-/// attempted badly.
+/// and fMP4 segments concatenate onto their init segment into a playable .mp4.
+/// Anything beyond that (a real MP4 rebuild, SAMPLE-AES, a live edge) is
+/// refused up front by the loaders rather than attempted badly.
+///
+/// One task can produce more than one file. DASH usually keeps video and audio
+/// in separate Representations, and interleaving those into a single MP4 is a
+/// muxer, not a downloader. So both are fetched, side by side, and the log says
+/// what landed -- which is honest, where a silent file labelled as the video
+/// would not be.
 ///
 /// The shape differs from a ranged download in one way that matters: the total
 /// size is not known until the last segment lands, so progress is counted in
@@ -39,9 +45,10 @@ public sealed class PlaylistJob : ITransferJob
     private double _speedLimit;
     private TokenBucket? _perTaskLimit;
 
-    private HlsPlaylist? _playlist;
+    private IReadOnlyList<SegmentedStream> _streams = Array.Empty<SegmentedStream>();
     private int _segmentsDone;
-    private long _written;
+    private int _segmentsTotal;
+    private long _bytesTotal;
 
     public PlaylistJob(
         DownloadItem item,
@@ -64,10 +71,14 @@ public sealed class PlaylistJob : ITransferJob
 
     public DownloadItem Item { get; }
 
+    /// <summary>The first file written, which is the one the row is named after.</summary>
     public string? TargetPath { get; private set; }
 
-    /// <summary>The rendition being fetched. Null until the playlist has been read.</summary>
-    public HlsPlaylist? Playlist => _playlist;
+    /// <summary>Every file this task produced. More than one only when a DASH manifest split its tracks.</summary>
+    public IReadOnlyList<string> Files { get; private set; } = Array.Empty<string>();
+
+    /// <summary>The streams being fetched. Empty until the manifest has been read.</summary>
+    public IReadOnlyList<SegmentedStream> Streams => _streams;
 
     public double SpeedLimit
     {
@@ -127,7 +138,6 @@ public sealed class PlaylistJob : ITransferJob
         }
         catch (OperationCanceledException)
         {
-            await PersistAsync().ConfigureAwait(false);
             Idle();
 
             bool paused;
@@ -136,12 +146,11 @@ public sealed class PlaylistJob : ITransferJob
             if (!paused) return JobOutcome.Failed;
 
             Item.Status = DownloadStatus.Paused;
-            Item.Log.Add(new LogEntry(Stamp(), $"已暂停（已完成 {_segmentsDone} / {_playlist?.SegmentCount ?? 0} 分片）"));
+            Item.Log.Add(new LogEntry(Stamp(), $"已暂停（已完成 {_segmentsDone} / {_segmentsTotal} 分片）"));
             return JobOutcome.Paused;
         }
         catch (Exception exception)
         {
-            await PersistAsync().ConfigureAwait(false);
             Idle();
 
             Item.ErrorMessage = DownloadJob.Describe(exception);
@@ -162,56 +171,38 @@ public sealed class PlaylistJob : ITransferJob
         Item.Status = DownloadStatus.Downloading;
         Item.ErrorMessage = null;
 
-        // Recognised, but an MPD is a different format with its own segment
-        // addressing; saying which one it is beats failing as "no segments".
-        if (PlaylistUrl.IsDash(Item.Url))
+        _streams = await new StreamLoader(_transport).LoadAsync(url, cancellationToken).ConfigureAwait(false);
+
+        _segmentsTotal = _streams.Sum(stream => stream.SegmentCount);
+        _bytesTotal = 0;
+        _segmentsDone = 0;
+
+        Item.Log.Add(new LogEntry(Stamp(), $"已解析清单：{_segmentsTotal} 个分片 · {_streams[0].Quality}"));
+
+        if (_streams.Count > 1)
         {
-            throw new NotSupportedException("MPEG-DASH（.mpd）暂不支持，目前只能下载 HLS（.m3u8）。");
+            // Worth saying plainly and early: the row is about to produce more
+            // than one file, and neither is the whole thing on its own.
+            Item.Log.Add(new LogEntry(
+                Stamp(),
+                $"该清单音视频分离，将分别下载 {_streams.Count} 个文件（需自行合并）"));
         }
 
-        var playlist = await new HlsPlaylistLoader(_transport)
-            .LoadAsync(url, preferred: null, cancellationToken)
-            .ConfigureAwait(false);
+        long estimate = _streams.Sum(stream => stream.EstimatedBytes);
+        if (estimate > 0) Item.Size = estimate;
 
-        _playlist = playlist;
-
-        Item.Log.Add(new LogEntry(Stamp(), $"已解析播放列表：{playlist.SegmentCount} 个分片 · {playlist.Quality}"));
-        if (playlist.EstimatedBytes > 0) Item.Size = playlist.EstimatedBytes;
-
-        TargetPath = Path.Combine(Item.SavePath, NameFor(playlist));
+        var names = NamesFor(_streams);
+        TargetPath = names[0];
+        Files = names;
         Item.Name = Path.GetFileName(TargetPath);
-
         Item.Checksum ??= FileHash.Pending;
 
-        // How far a previous run got, if the playlist is still the same one.
-        var resumed = await ResumeAsync(playlist, cancellationToken).ConfigureAwait(false);
-        _segmentsDone = resumed.SegmentsDone;
-        _written = resumed.BytesWritten;
+        _perTaskLimit = new TokenBucket(SpeedLimit, _clock.UtcNow);
 
-        if (_segmentsDone > 0)
-        {
-            Item.Log.Add(new LogEntry(Stamp(), $"从第 {_segmentsDone + 1} 个分片继续"));
-        }
-
-        if (_segmentsDone >= playlist.SegmentCount)
-        {
-            Finish();
-            return JobOutcome.Completed;
-        }
-
-        // The length is not known ahead of time, so the sink is opened
-        // unsized and grows as segments land.
-        await using var sink = await _sinks.OpenAsync(TargetPath, -1, cancellationToken).ConfigureAwait(false);
-
-        // Whatever the file held past this point belonged to a run we are not
-        // continuing, and leaving it there would put an old tail behind the new
-        // bytes rather than simply making the file too long.
-        await sink.TruncateAsync(_written, cancellationToken).ConfigureAwait(false);
-
-        var limit = _perTaskLimit = new TokenBucket(SpeedLimit, _clock.UtcNow);
-        using var decryptor = new HlsDecryptor();
-
-        int lanes = Math.Clamp(Item.RequestedConnections > 0 ? Item.RequestedConnections : _options.Connections, 1, 8);
+        int lanes = Math.Clamp(
+            Item.RequestedConnections > 0 ? Item.RequestedConnections : _options.Connections,
+            1,
+            8);
 
         lock (_gate)
         {
@@ -221,75 +212,97 @@ public sealed class PlaylistJob : ITransferJob
 
         Item.Connections = lanes;
 
-        // The init segment is part of the file, before everything else, and is
-        // only written on a fresh start.
-        if (playlist.Media.InitSegment is { } init && _segmentsDone == 0)
+        using var decryptor = new HlsDecryptor();
+
+        for (int i = 0; i < _streams.Count; i++)
         {
-            var bytes = await FetchAsync(init, null, null, limit, lane: 0, cancellationToken).ConfigureAwait(false);
-            await sink.WriteAsync(_written, bytes, cancellationToken).ConfigureAwait(false);
-            _written += bytes.Length;
+            await FetchStreamAsync(_streams[i], names[i], decryptor, lanes, cancellationToken).ConfigureAwait(false);
         }
 
-        await PumpSegmentsAsync(playlist, sink, decryptor, limit, lanes, cancellationToken).ConfigureAwait(false);
-
-        // The last segment decides the length; anything beyond it is left over
-        // from a longer earlier attempt.
-        await sink.TruncateAsync(_written, cancellationToken).ConfigureAwait(false);
-        await sink.FlushAsync(cancellationToken).ConfigureAwait(false);
-        Finish();
-
+        Finish(names);
         return JobOutcome.Completed;
     }
 
-    /// <summary>
-    /// Fetches up to <paramref name="lanes"/> segments at once but writes them
-    /// strictly in order: a concatenated stream is only playable if the pieces
-    /// arrive in the order the playlist listed them, and a lane that finishes
-    /// early waits its turn rather than writing past its neighbour.
-    /// </summary>
-    private async Task PumpSegmentsAsync(
-        HlsPlaylist playlist,
-        IFileSink sink,
+    /// <summary>One stream into one file.</summary>
+    private async Task FetchStreamAsync(
+        SegmentedStream stream,
+        string path,
         HlsDecryptor decryptor,
-        TokenBucket limit,
         int lanes,
         CancellationToken cancellationToken)
     {
-        var segments = playlist.Media.Segments;
-        var inFlight = new Dictionary<int, Task<byte[]>>();
+        var resumed = await ResumeAsync(stream, path, cancellationToken).ConfigureAwait(false);
 
-        int next = _segmentsDone;
+        int done = resumed.SegmentsDone;
+        long written = resumed.BytesWritten;
+
+        if (done > 0) Item.Log.Add(new LogEntry(Stamp(), $"{Path.GetFileName(path)} 从第 {done + 1} 个分片继续"));
+
+        // Segments finished in an earlier run still count towards the bar.
+        _segmentsDone += done;
+        _bytesTotal += written;
+
+        if (done >= stream.SegmentCount) return;
+
+        // The length is not known ahead of time, so the sink is opened unsized
+        // and grows as segments land.
+        await using var sink = await _sinks.OpenAsync(path, -1, cancellationToken).ConfigureAwait(false);
+
+        // Whatever the file held past this point belonged to a run we are not
+        // continuing; leaving it would put an old tail behind the new bytes.
+        await sink.TruncateAsync(written, cancellationToken).ConfigureAwait(false);
+
+        if (stream.InitSegment is { } init && done == 0)
+        {
+            var bytes = await FetchAsync(init, null, null, lane: 0, cancellationToken).ConfigureAwait(false);
+            await sink.WriteAsync(written, bytes, cancellationToken).ConfigureAwait(false);
+            written += bytes.Length;
+            _bytesTotal += bytes.Length;
+        }
+
+        var inFlight = new Dictionary<int, Task<byte[]>>();
+        int next = done;
 
         try
         {
-            while (_segmentsDone < segments.Count)
+            while (done < stream.SegmentCount)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 // Top up the window.
-                while (inFlight.Count < lanes && next < segments.Count)
+                while (inFlight.Count < lanes && next < stream.SegmentCount)
                 {
                     int index = next++;
                     int lane = index % lanes;
-                    inFlight[index] = FetchSegmentAsync(segments[index], decryptor, limit, lane, cancellationToken);
+                    inFlight[index] = FetchSegmentAsync(stream.Segments[index], decryptor, lane, cancellationToken);
                 }
 
                 // Only the next one in order can be written, however early the
-                // others finish.
-                var bytes = await inFlight[_segmentsDone].ConfigureAwait(false);
-                inFlight.Remove(_segmentsDone);
+                // others finish: a concatenated stream is only playable if the
+                // pieces land in the order the manifest listed them.
+                var bytes = await inFlight[done].ConfigureAwait(false);
+                inFlight.Remove(done);
 
-                await sink.WriteAsync(_written, bytes, cancellationToken).ConfigureAwait(false);
+                await sink.WriteAsync(written, bytes, cancellationToken).ConfigureAwait(false);
 
-                _written += bytes.Length;
+                written += bytes.Length;
+                _bytesTotal += bytes.Length;
+                done++;
                 _segmentsDone++;
 
-                Record(playlist);
+                Record();
 
                 // Persisting per segment would be a write per second; this is
                 // the same cadence the ranged transfers use.
-                if (_segmentsDone % 20 == 0) await PersistAsync().ConfigureAwait(false);
+                if (done % 20 == 0) await PersistAsync(stream, path, done, written).ConfigureAwait(false);
             }
+        }
+        catch (Exception)
+        {
+            // Whatever went wrong, what is on disk is whole segments, and the
+            // next run should start after them rather than at the beginning.
+            await PersistAsync(stream, path, done, written).ConfigureAwait(false);
+            throw;
         }
         finally
         {
@@ -300,20 +313,25 @@ public sealed class PlaylistJob : ITransferJob
                 .ContinueWith(static _ => { }, TaskScheduler.Default)
                 .ConfigureAwait(false);
         }
+
+        // The last segment decides the length; anything beyond it is left over
+        // from a longer earlier attempt.
+        await sink.TruncateAsync(written, cancellationToken).ConfigureAwait(false);
+        await sink.FlushAsync(cancellationToken).ConfigureAwait(false);
+
+        _resume?.Delete(path);
     }
 
     private async Task<byte[]> FetchSegmentAsync(
-        HlsSegment segment,
+        StreamSegment segment,
         HlsDecryptor decryptor,
-        TokenBucket limit,
         int lane,
         CancellationToken cancellationToken)
     {
         var bytes = await FetchAsync(
             segment.Url,
-            segment.ByteRangeOffset,
-            segment.ByteRangeLength,
-            limit,
+            segment.RangeOffset,
+            segment.RangeLength,
             lane,
             cancellationToken).ConfigureAwait(false);
 
@@ -332,7 +350,6 @@ public sealed class PlaylistJob : ITransferJob
         Uri url,
         long? rangeOffset,
         long? rangeLength,
-        TokenBucket limit,
         int lane,
         CancellationToken cancellationToken)
     {
@@ -355,14 +372,15 @@ public sealed class PlaylistJob : ITransferJob
                     int read = await stream.ReadAsync(chunk, cancellationToken).ConfigureAwait(false);
                     if (read == 0) break;
 
-                    await ThrottleAsync(limit, read, cancellationToken).ConfigureAwait(false);
+                    await ThrottleAsync(read, cancellationToken).ConfigureAwait(false);
                     buffer.Write(chunk, 0, read);
 
-                    _meter.Record(read, _clock.UtcNow);
+                    var now = _clock.UtcNow;
+                    _meter.Record(read, now);
 
                     lock (_gate)
                     {
-                        if (lane < _connectionMeters.Count) _connectionMeters[lane].Record(read, _clock.UtcNow);
+                        if (lane < _connectionMeters.Count) _connectionMeters[lane].Record(read, now);
                     }
                 }
 
@@ -393,10 +411,10 @@ public sealed class PlaylistJob : ITransferJob
         }
     }
 
-    private async Task ThrottleAsync(TokenBucket perTask, int bytes, CancellationToken cancellationToken)
+    private async Task ThrottleAsync(int bytes, CancellationToken cancellationToken)
     {
         var now = _clock.UtcNow;
-        var wait = perTask.Take(bytes, now);
+        var wait = _perTaskLimit?.Take(bytes, now) ?? TimeSpan.Zero;
 
         if (_globalLimit is not null)
         {
@@ -407,22 +425,21 @@ public sealed class PlaylistJob : ITransferJob
         if (wait > TimeSpan.Zero) await _clock.DelayAsync(wait, cancellationToken).ConfigureAwait(false);
     }
 
-    private void Record(HlsPlaylist playlist)
+    private void Record()
     {
         var now = _clock.UtcNow;
 
-        Item.Done = _written;
+        Item.Done = _bytesTotal;
 
-        // The playlist never says how big the file is, so the estimate is what
+        // The manifest never says how big the file is, so the estimate is what
         // has arrived scaled by how much of the list is left. It is wrong early
         // on and right by the end, which is the honest shape for this.
         if (_segmentsDone > 0)
         {
-            Item.Size = Math.Max(_written, (long)(_written / (double)_segmentsDone * playlist.SegmentCount));
+            Item.Size = Math.Max(_bytesTotal, (long)(_bytesTotal / (double)_segmentsDone * _segmentsTotal));
         }
 
-        // One block per segment, capped to the map the inspector draws.
-        Item.Blocks = BlockMap(playlist.SegmentCount, _segmentsDone, 96);
+        Item.Blocks = BlockMap(_segmentsTotal, _segmentsDone, 96);
         Item.ConnectionSpeeds = ConnectionSpeeds;
 
         Item.Speed = _meter.BytesPerSecond(now);
@@ -446,34 +463,34 @@ public sealed class PlaylistJob : ITransferJob
         return map;
     }
 
-    private async Task<PlaylistResumeState> ResumeAsync(HlsPlaylist playlist, CancellationToken cancellationToken)
+    private async Task<PlaylistResumeState> ResumeAsync(SegmentedStream stream, string path, CancellationToken cancellationToken)
     {
-        var empty = new PlaylistResumeState(Item.Url, playlist.SegmentCount, 0, 0);
+        var empty = new PlaylistResumeState(Item.Url, stream.SegmentCount, 0, 0);
 
-        if (_resume is null || TargetPath is null) return empty;
-        if (!_sinks.Exists(TargetPath)) return empty;
+        if (_resume is null) return empty;
+        if (!_sinks.Exists(path)) return empty;
 
-        var saved = await _resume.LoadAsync(TargetPath, cancellationToken).ConfigureAwait(false);
+        var saved = await _resume.LoadAsync(path, cancellationToken).ConfigureAwait(false);
         if (saved is null) return empty;
 
-        // A playlist that has changed length is a different stream, or the same
+        // A manifest that has changed length is a different stream, or the same
         // one re-cut; either way the bytes already written no longer line up.
-        if (saved.SegmentCount != playlist.SegmentCount || !string.Equals(saved.Url, Item.Url, StringComparison.Ordinal))
+        if (saved.SegmentCount != stream.SegmentCount || !string.Equals(saved.Url, Item.Url, StringComparison.Ordinal))
         {
-            Item.Log.Add(new LogEntry(Stamp(), "播放列表已变化，重新开始"));
+            Item.Log.Add(new LogEntry(Stamp(), "清单已变化，重新开始"));
             return empty;
         }
 
         return saved;
     }
 
-    internal async Task PersistAsync()
+    private async Task PersistAsync(SegmentedStream stream, string path, int done, long written)
     {
-        if (_resume is null || TargetPath is null || _playlist is null) return;
+        if (_resume is null) return;
 
         await _resume.SaveAsync(
-            TargetPath,
-            new PlaylistResumeState(Item.Url, _playlist.SegmentCount, _segmentsDone, _written),
+            path,
+            new PlaylistResumeState(Item.Url, stream.SegmentCount, done, written),
             CancellationToken.None).ConfigureAwait(false);
     }
 
@@ -484,43 +501,66 @@ public sealed class PlaylistJob : ITransferJob
         _meter.Reset();
     }
 
-    private void Finish()
+    private void Finish(IReadOnlyList<string> files)
     {
-        Item.Done = _written;
-        Item.Size = _written;
+        Item.Done = _bytesTotal;
+        Item.Size = _bytesTotal;
         Item.Speed = 0;
         Item.Connections = 0;
         Item.Status = DownloadStatus.Completed;
         Item.ConnectionSpeeds = Array.Empty<double>();
         Item.Blocks = Enumerable.Repeat(1, 96).ToArray();
+
         Item.Log.Add(new LogEntry(Stamp(), $"下载完成，共 {_segmentsDone} 个分片"));
 
-        if (_resume is not null && TargetPath is not null) _resume.Delete(TargetPath);
+        if (files.Count > 1)
+        {
+            foreach (string file in files) Item.Log.Add(new LogEntry(Stamp(), $"已保存 {Path.GetFileName(file)}"));
+        }
 
         _meter.Reset();
     }
 
     /// <summary>
-    /// The file name.
+    /// One file name per stream.
     ///
-    /// A playlist URL ends in .m3u8, which is not what the file is, so the
-    /// extension comes from the container and the stem from whatever the task
-    /// was named. That means the queue could not have picked a non-colliding
-    /// name when the task was added -- it did not know the extension yet -- so
-    /// it is picked here instead, skipping anything that is already there and
-    /// is not a transfer of ours to continue.
+    /// A manifest URL ends in .m3u8 or .mpd, which is not what the file is, so
+    /// the extension comes from the container and the stem from whatever the
+    /// task was named. That means the queue could not have picked a
+    /// non-colliding name when the task was added -- it did not know the
+    /// extension yet -- so it is picked here, skipping anything already there
+    /// that is not a transfer of ours to continue.
     /// </summary>
-    private string NameFor(HlsPlaylist playlist)
+    private IReadOnlyList<string> NamesFor(IReadOnlyList<SegmentedStream> streams)
     {
         string stem = Path.GetFileNameWithoutExtension(Item.Name);
 
-        // "index", "master", "playlist" say nothing; the host does better.
-        if (stem.Length == 0 || stem is "index" or "master" or "playlist" or "未命名下载")
+        // "index", "master", "playlist", "manifest" say nothing; the host does better.
+        if (stem.Length == 0 || stem is "index" or "master" or "playlist" or "manifest" or "未命名下载")
         {
             stem = new Uri(Item.Url).Host.Replace('.', '-');
         }
 
-        return Services.SavePathPlanner.UniqueName(Item.SavePath, $"{stem}.{playlist.Container}", Taken);
+        var claimed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var names = new List<string>(streams.Count);
+
+        foreach (var stream in streams)
+        {
+            // The suffix is what keeps a split manifest's two tracks apart; it
+            // is empty for the usual single muxed stream.
+            string wanted = $"{stem}{(streams.Count > 1 ? stream.NameSuffix : "")}.{stream.Container}";
+
+            string name = Services.SavePathPlanner.UniqueName(
+                Item.SavePath,
+                wanted,
+                path => claimed.Contains(path) || Taken(path));
+
+            string full = Path.Combine(Item.SavePath, name);
+            claimed.Add(full);
+            names.Add(full);
+        }
+
+        return names;
     }
 
     /// <summary>

@@ -196,9 +196,9 @@ public class M3U8Tests
 
         var segments = M3U8.ParseMedia(text, Playlist).Segments;
 
-        Assert.Equal((0L, 1000L), (segments[0].ByteRangeOffset, segments[0].ByteRangeLength));
-        Assert.Equal((1000L, 2000L), (segments[1].ByteRangeOffset, segments[1].ByteRangeLength));
-        Assert.Equal((9000L, 500L), (segments[2].ByteRangeOffset, segments[2].ByteRangeLength));
+        Assert.Equal(((long?)0, (long?)1000), (segments[0].ByteRangeOffset, segments[0].ByteRangeLength));
+        Assert.Equal(((long?)1000, (long?)2000), (segments[1].ByteRangeOffset, segments[1].ByteRangeLength));
+        Assert.Equal(((long?)9000, (long?)500), (segments[2].ByteRangeOffset, segments[2].ByteRangeLength));
     }
 
     [Fact]

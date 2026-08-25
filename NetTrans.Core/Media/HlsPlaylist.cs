@@ -20,6 +20,28 @@ public sealed record HlsPlaylist(Uri Url, HlsMedia Media, string Quality, string
     /// a byte count, and guessing one badly is worse than showing none.
     /// </summary>
     public long EstimatedBytes { get; init; }
+
+    /// <summary>
+    /// The form the transfer works in. An HLS rendition is muxed in practice --
+    /// a variant is one playable stream, audio included -- which is the whole
+    /// reason concatenating its segments gives a file that plays.
+    /// </summary>
+    public SegmentedStream AsStream() => new(
+        Url,
+        Media.Segments
+            .Select(segment => new StreamSegment(
+                segment.Url,
+                segment.SequenceNumber,
+                segment.Duration,
+                segment.ByteRangeOffset,
+                segment.ByteRangeLength,
+                segment.Key))
+            .ToList(),
+        Media.InitSegment,
+        Quality,
+        Container,
+        TrackKind.Muxed,
+        EstimatedBytes);
 }
 
 /// <summary>

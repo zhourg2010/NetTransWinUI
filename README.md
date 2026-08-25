@@ -53,7 +53,7 @@ NetTrans.Core/              No WinUI, no Windows — buildable and testable anyw
     DownloadEngine.cs       The queue: concurrency, priority, global rate cap
     ITransferJob.cs         What the queue drives: a ranged file or a playlist
     DownloadJob.cs          One ranged transfer: probe, plan, fetch, write, resume
-    PlaylistJob.cs          One HLS transfer: segments, in order, into one file
+    PlaylistJob.cs          One segmented transfer: segments, in order, into files
     SegmentPlan.cs          How a file is split, and the 96-cell chunk map
     ResumeState.cs          The .nettrans sidecar behind 断点续传
     PlaylistResume.cs       The .nettrans-hls sidecar: whole segments, not offsets
@@ -63,10 +63,14 @@ NetTrans.Core/              No WinUI, no Windows — buildable and testable anyw
     SpeedLimits.cs          Reads "512 KB/s" back into a rate
     IClock.cs               Time, injected, so the loop is testable
   Media/
+    SegmentedStream.cs      What HLS and DASH agree on: ordered segments, a container
     M3U8.cs                 Master and media playlists, keys, byte ranges
     HlsPlaylist.cs          Follows a master to a rendition; refuses what it cannot do
+    Mpd.cs                  DASH: SegmentTemplate / Timeline / List / Base, $Number$
+    DashManifest.cs         Prefers a muxed track; otherwise video + audio
+    StreamLoader.cs         Picks the reader by manifest kind
     HlsDecryptor.cs         AES-128 segments, with the key fetched once
-    PlaylistUrl.cs          Whether a URL is a playlist, and which kind
+    PlaylistUrl.cs          Whether a URL is a manifest, and which kind
   Services/
     FormatHelpers.cs        mb() / spd() / eta() from the handoff
     TaskPresenter.cs        Every string the design derives from a task
@@ -239,19 +243,25 @@ network or real files.
 - **视频嗅探** works from the page's own markup, since the portable build injects
   nothing into a browser: `<source>` elements with their labels, and the media
   URLs that players leave in script blobs. Best quality first, audio last.
-- **HLS (.m3u8) downloads for real.** A playlist gets a segment transfer rather
-  than a ranged one: follow a master playlist to its best rendition, fetch the
-  segments a windowful at a time, and write them into one file strictly in the
-  order the playlist named them. No remuxing is involved and none is needed —
-  MPEG-TS segments concatenate into a playable `.ts` because that is what a TS
-  stream is, and fMP4 segments concatenate onto their `#EXT-X-MAP` init segment
-  into a playable `.mp4`. AES-128 segments are decrypted on the way in, with the
-  key fetched once and the IV taken from the tag or, when it omits one, from the
-  media sequence number. Pausing keeps whole segments and resuming appends;
-  progress is counted in segments, since a playlist never states a byte count.
-  Refused up front, with the reason on the row: a live playlist (no end to
-  download to), SAMPLE-AES (needs the codec, not a key), and MPEG-DASH `.mpd`,
-  which is recognised but not yet fetched.
+- **HLS (`.m3u8`) and DASH (`.mpd`) download for real.** A manifest gets a
+  segment transfer rather than a ranged one: follow it to its best rendition,
+  fetch the segments a windowful at a time, and write them into one file
+  strictly in the order the manifest named them. No remuxing is involved and
+  none is needed — MPEG-TS segments concatenate into a playable `.ts` because
+  that is what a TS stream is, and fMP4 segments concatenate onto their init
+  segment into a playable `.mp4`. AES-128 segments are decrypted on the way in,
+  with the key fetched once and the IV taken from the tag or, when it omits one,
+  from the media sequence number. Pausing keeps whole segments and resuming
+  appends; progress is counted in segments, since a manifest never states a byte
+  count.
+- **DASH splits audio from video, so one task can produce two files.**
+  Interleaving two fMP4 streams into a single MP4 is a muxer, not a downloader.
+  When the manifest offers a muxed Representation it is preferred and there is
+  one file; when it does not, the video and its best audio are both fetched, as
+  `名字-视频.mp4` and `名字-音频.mp4`, and the log says so. A silent file labelled
+  as the video would be the dishonest alternative.
+- Refused up front, with the reason on the row: a live manifest (no end to
+  download to) and SAMPLE-AES (needs the codec, not a key).
 - **新版本** re-probes the URL and compares ETag, then Last-Modified, then length
   against what was recorded when the file was fetched. It runs after every
   completed download and from 检查更新 in the context menu.
@@ -335,5 +345,6 @@ the site:
   (`NetTrans.settings.json`), falling back to `%LOCALAPPDATA%\NetTrans` when that
   directory is read-only — matching the 设置 sheet's promise of no registry writes.
 - Clipboard URL detection is live (`Clipboard.ContentChanged`).
-- Still unimplemented: BitTorrent (磁力链 / 种子), MPEG-DASH (`.mpd`), and live
-  HLS. Each is called out in the UI with the reason rather than failing quietly.
+- Still unimplemented: BitTorrent (磁力链 / 种子), and live streaming for both
+  HLS and DASH. Each is called out in the UI with the reason rather than failing
+  quietly.

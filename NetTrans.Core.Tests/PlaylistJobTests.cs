@@ -144,7 +144,7 @@ public class PlaylistJobTests
         var (job, _) = Build(server);
         await job.RunAsync(CancellationToken.None);
 
-        Assert.Equal("1080p", job.Playlist!.Quality);
+        Assert.Equal("1080p", job.Streams[0].Quality);
         Assert.Contains(server.Requests, url => url.Contains("/1080/", StringComparison.Ordinal));
         Assert.DoesNotContain(server.Requests, url => url.Contains("/480/seg", StringComparison.Ordinal));
     }
@@ -195,15 +195,86 @@ public class PlaylistJobTests
     }
 
     [Fact]
-    public async Task A_dash_manifest_says_which_format_it_is_rather_than_no_segments()
+    public async Task A_manifest_that_is_neither_format_says_so()
     {
         var server = new FakeHlsServer();
-        server.Add(Base + "manifest.mpd", "<MPD/>");
+        server.Add(Base + "manifest.mpd", "<html>not a manifest</html>");
 
         var (job, _) = Build(server, url: Base + "manifest.mpd");
 
         Assert.Equal(JobOutcome.Failed, await job.RunAsync(CancellationToken.None));
         Assert.Contains("DASH", job.Item.ErrorMessage!);
+    }
+
+    [Fact]
+    public async Task A_dash_manifest_downloads_like_a_playlist_does()
+    {
+        var server = new FakeHlsServer();
+        server.Add(Base + "init.mp4", new byte[] { 0xAA });
+
+        for (int i = 1; i <= 4; i++) server.Add($"{Base}seg-{i}.m4s", Enumerable.Repeat((byte)i, 100).ToArray());
+
+        server.Add(Base + "manifest.mpd", """
+            <MPD type="static" mediaPresentationDuration="PT16S">
+              <Period>
+                <AdaptationSet mimeType="video/mp4" codecs="avc1.640028,mp4a.40.2">
+                  <Representation id="v0" bandwidth="800000" width="1920" height="1080">
+                    <SegmentTemplate media="seg-$Number$.m4s" initialization="init.mp4" startNumber="1" duration="4" timescale="1"/>
+                  </Representation>
+                </AdaptationSet>
+              </Period>
+            </MPD>
+            """);
+
+        var (job, sinks) = Build(server, url: Base + "manifest.mpd");
+
+        Assert.Equal(JobOutcome.Completed, await job.RunAsync(CancellationToken.None));
+        Assert.EndsWith(".mp4", job.TargetPath!);
+
+        var expected = new byte[] { 0xAA }
+            .Concat(Enumerable.Range(1, 4).SelectMany(i => Enumerable.Repeat((byte)i, 100)))
+            .ToArray();
+
+        Assert.Equal(expected, sinks.Files.Values.Single().ToArray());
+    }
+
+    [Fact]
+    public async Task A_split_dash_manifest_produces_a_file_per_track_and_says_so()
+    {
+        var server = new FakeHlsServer();
+        server.Add(Base + "v-init.mp4", new byte[] { 0x11 });
+        server.Add(Base + "a-init.mp4", new byte[] { 0x22 });
+        server.Add(Base + "v-1.m4s", Enumerable.Repeat((byte)0xB1, 50).ToArray());
+        server.Add(Base + "a-1.m4s", Enumerable.Repeat((byte)0xA1, 30).ToArray());
+
+        server.Add(Base + "manifest.mpd", """
+            <MPD type="static" mediaPresentationDuration="PT4S">
+              <Period>
+                <AdaptationSet mimeType="video/mp4" codecs="avc1.640028">
+                  <Representation id="v0" bandwidth="800000" width="1920" height="1080">
+                    <SegmentTemplate media="v-$Number$.m4s" initialization="v-init.mp4" startNumber="1" duration="4" timescale="1"/>
+                  </Representation>
+                </AdaptationSet>
+                <AdaptationSet mimeType="audio/mp4" codecs="mp4a.40.2">
+                  <Representation id="a0" bandwidth="128000">
+                    <SegmentTemplate media="a-$Number$.m4s" initialization="a-init.mp4" startNumber="1" duration="4" timescale="1"/>
+                  </Representation>
+                </AdaptationSet>
+              </Period>
+            </MPD>
+            """);
+
+        var (job, sinks) = Build(server, url: Base + "manifest.mpd");
+
+        Assert.Equal(JobOutcome.Completed, await job.RunAsync(CancellationToken.None));
+
+        // Two files, named apart, and the log says why: neither is the whole
+        // thing on its own, and a silent file labelled as the video would lie.
+        Assert.Equal(2, job.Files.Count);
+        Assert.Equal(2, sinks.Files.Count);
+        Assert.Contains("-视频", job.Files[0]);
+        Assert.Contains("-音频", job.Files[1]);
+        Assert.Contains(job.Item.Log, entry => entry.Message.Contains("音视频分离"));
     }
 
     [Fact]
@@ -326,6 +397,8 @@ public class PlaylistJobTests
         Name = "index.m3u8",
         Host = "cdn.test",
         Kind = FileKind.Film,
+        // A playlist never states a byte count; the transfer works it out.
+        Size = 0,
         Category = "video",
         Url = url,
         SavePath = savePath ?? Path.Combine(Path.GetTempPath(), "nettrans-hls"),

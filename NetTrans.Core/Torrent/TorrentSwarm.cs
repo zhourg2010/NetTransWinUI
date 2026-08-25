@@ -75,6 +75,28 @@ public sealed class TorrentSwarm
     /// </summary>
     public bool Seed { get; set; } = true;
 
+    /// <summary>When to stop seeding. Unlimited until a caller says otherwise.</summary>
+    public SeedingLimits SeedingLimits { get; set; } = SeedingLimits.Forever;
+
+    /// <summary>When the download finished, which is when the seeding clock starts.</summary>
+    public DateTimeOffset? SeedingSince { get; private set; }
+
+    /// <summary>The share ratio as a tracker would compute it.</summary>
+    public double Ratio => SeedingLimits.RatioOf(
+        Volatile.Read(ref _uploaded),
+        DownloadedBytes(_picker.CompletedCount));
+
+    /// <summary>
+    /// Whether seeding has met the configured limit. Checked by the caller that
+    /// owns the lifetime, since stopping is its decision rather than ours.
+    /// </summary>
+    public bool SeedingLimitReached(DateTimeOffset now) =>
+        SeedingSince is { } since &&
+        SeedingLimits.Reached(
+            Volatile.Read(ref _uploaded),
+            DownloadedBytes(_picker.CompletedCount),
+            now - since);
+
     /// <summary>
     /// Whether peers may be found by any means other than the trackers.
     ///
@@ -117,6 +139,10 @@ public sealed class TorrentSwarm
         var sessions = new List<Task>();
         bool announcedStart = false;
 
+        // Racing the last few pieces is what stops a torrent hanging on one
+        // slow peer while everything else waits.
+        _picker.Endgame = true;
+
         while (!cancellationToken.IsCancellationRequested && !_picker.IsComplete)
         {
             if (NeedsPeers())
@@ -157,6 +183,8 @@ public sealed class TorrentSwarm
 
         if (_picker.IsComplete)
         {
+            SeedingSince = DateTimeOffset.UtcNow;
+
             // Telling the tracker is what makes the completion count, and it
             // costs one request.
             await AnnounceAsync(AnnounceEvent.Completed, CancellationToken.None).ConfigureAwait(false);

@@ -15,13 +15,44 @@ public sealed class PiecePicker
     private readonly object _gate = new();
     private readonly bool[] _done;
     private readonly bool[] _assigned;
+    private readonly bool[] _wanted;
     private readonly int[] _availability;
 
     public PiecePicker(int pieces)
     {
         _done = new bool[pieces];
         _assigned = new bool[pieces];
+        _wanted = new bool[pieces];
         _availability = new int[pieces];
+
+        Array.Fill(_wanted, true);
+    }
+
+    /// <summary>
+    /// 顺序下载. Rarest-first is better for the swarm; sequential is what makes
+    /// a partly-downloaded video playable, which is the only reason to want it.
+    /// </summary>
+    public bool Sequential { get; set; }
+
+    /// <summary>
+    /// The classic way a torrent stalls: the last piece is with one slow peer
+    /// and everybody waits on it.
+    ///
+    /// With this on, once every piece still wanted has been handed to someone,
+    /// it may be handed to another peer as well and whoever answers first wins.
+    /// The condition is deliberately "nothing unassigned left" rather than a
+    /// count of remaining pieces: a threshold of four would put a four-piece
+    /// torrent in the endgame from the first request, duplicating everything.
+    /// </summary>
+    public bool Endgame { get; set; }
+
+    /// <summary>Whether duplicate requests are being handed out right now.</summary>
+    public bool InEndgame
+    {
+        get
+        {
+            lock (_gate) return Endgame && Remaining() > 0 && !AnythingUnassigned();
+        }
     }
 
     public int Count => _done.Length;
@@ -34,12 +65,72 @@ public sealed class PiecePicker
         }
     }
 
+    /// <summary>Whether any wanted piece is still free to hand out. Called under the lock.</summary>
+    private bool AnythingUnassigned()
+    {
+        for (int i = 0; i < _done.Length; i++)
+        {
+            if (_wanted[i] && !_done[i] && !_assigned[i]) return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>Wanted and not yet had. Called under the lock.</summary>
+    private int Remaining()
+    {
+        int remaining = 0;
+
+        for (int i = 0; i < _done.Length; i++)
+        {
+            if (_wanted[i] && !_done[i]) remaining++;
+        }
+
+        return remaining;
+    }
+
+    /// <summary>
+    /// Whether everything still wanted has landed. A deselected file's pieces
+    /// do not hold this back -- that is the point of deselecting it.
+    /// </summary>
     public bool IsComplete
     {
         get
         {
-            lock (_gate) return _done.All(done => done);
+            lock (_gate) return Remaining() == 0;
         }
+    }
+
+    /// <summary>How many wanted pieces are still missing.</summary>
+    public int RemainingCount
+    {
+        get
+        {
+            lock (_gate) return Remaining();
+        }
+    }
+
+    /// <summary>
+    /// Narrows the download to the pieces these cover -- 选择文件, for the
+    /// multi-file torrents where half the content is extras nobody asked for.
+    ///
+    /// A piece that straddles a selected and a deselected file is still
+    /// wanted: it cannot be had in halves.
+    /// </summary>
+    public void WantOnly(IEnumerable<int> pieces)
+    {
+        var keep = new HashSet<int>(pieces);
+
+        lock (_gate)
+        {
+            for (int i = 0; i < _wanted.Length; i++) _wanted[i] = keep.Contains(i);
+        }
+    }
+
+    /// <summary>Whether a piece is wanted at all.</summary>
+    public bool IsWanted(int index)
+    {
+        lock (_gate) return index >= 0 && index < _wanted.Length && _wanted[index];
     }
 
     /// <summary>Whether a piece is already verified and written.</summary>
@@ -117,13 +208,27 @@ public sealed class PiecePicker
     {
         lock (_gate)
         {
+            // Only once there is nothing unassigned left to hand out: then a
+            // duplicate request costs one piece of bandwidth and saves waiting
+            // out the slowest peer in the swarm.
+            bool endgame = Endgame && !AnythingUnassigned();
+
             int best = -1;
             int rarity = int.MaxValue;
 
             for (int i = 0; i < _done.Length; i++)
             {
-                if (_done[i] || _assigned[i]) continue;
+                if (_done[i] || !_wanted[i]) continue;
+                if (_assigned[i] && !endgame) continue;
                 if (!PeerWire.HasPiece(peerBitfield, i)) continue;
+
+                // Sequential takes the first one it can, so a partly-downloaded
+                // file is playable from the front.
+                if (Sequential)
+                {
+                    best = i;
+                    break;
+                }
 
                 // Availability of zero means no connected peer claims it, which
                 // for a piece this peer has means our count is stale; treat it
@@ -173,7 +278,7 @@ public sealed class PiecePicker
         {
             for (int i = 0; i < _done.Length; i++)
             {
-                if (!_done[i] && PeerWire.HasPiece(peerBitfield, i)) return true;
+                if (!_done[i] && _wanted[i] && PeerWire.HasPiece(peerBitfield, i)) return true;
             }
 
             return false;

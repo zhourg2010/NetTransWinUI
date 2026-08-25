@@ -104,7 +104,7 @@ public class BencodeTests
     {
         // Some torrents in the wild are not canonically ordered. Re-encoding
         // would sort them and change the hash; the span does not.
-        byte[] data = Raw("d4:infod4:name4:file6:lengthi1e6:aardvarki2eee");
+        byte[] data = Raw("d4:infod4:name4:file6:lengthi1e4:aardi2eee");
         var info = Bencode.DecodeDictionary(data).Dictionary("info")!;
 
         string raw = Encoding.ASCII.GetString(data, info.Start, info.Length);

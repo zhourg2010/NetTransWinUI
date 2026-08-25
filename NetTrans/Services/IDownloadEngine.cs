@@ -52,6 +52,12 @@ public interface IDownloadEngine
     /// <summary>Re-reads the 同时下载 and 全局限速 settings after the sheet changes them.</summary>
     void ApplySettings(AppSettings settings);
 
+    /// <summary>
+    /// The two torrent settings that cannot sensibly be global: 顺序下载, and
+    /// when to stop seeding. Ignored for a task that is not a torrent.
+    /// </summary>
+    void ApplyTorrentOptions(int id, bool sequential, NetTrans.Torrent.SeedingLimits limits);
+
     /// <summary>Where a task's bytes are, or will be.</summary>
     string? PathOf(int id);
 

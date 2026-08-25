@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using NetTrans.Download;
+using NetTrans.Torrent;
 using NetTrans.Models;
 using NetTrans.Net;
 using NetTrans.ViewModels;
@@ -29,6 +30,8 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
     private readonly double[] _speedHistory = new double[IslandSamples];
     private readonly AppSettings _settings;
 
+    private readonly Dictionary<int, (bool Sequential, NetTrans.Torrent.SeedingLimits Limits)> _torrentOptions = new();
+
     private int _nextId = 1;
 
     public HttpDownloadEngine(AppSettings settings)
@@ -47,7 +50,8 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
             new DownloadOptions(Connections: 8, MaxRetries: SettingsRules.Retries(settings.RetryPolicy)),
             Math.Max(1, settings.MaxSimultaneousDownloads),
             SettingsRules.SpeedLimitAt(settings, DateTimeOffset.Now),
-            PlaylistResumeStore.Instance);
+            PlaylistResumeStore.Instance,
+            TorrentResumeStore.Instance);
 
         _engine.Completed += OnCoreCompleted;
         _engine.Failed += OnCoreStatusChanged;
@@ -177,6 +181,19 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
         Tasks.Any(task => string.Equals(
             System.IO.Path.Combine(task.SavePath, task.Name), path, StringComparison.OrdinalIgnoreCase));
 
+    public void ApplyTorrentOptions(int id, bool sequential, NetTrans.Torrent.SeedingLimits limits)
+    {
+        // Held until the job starts: a queued task has no job yet, and a
+        // running one has already read them.
+        _torrentOptions[id] = (sequential, limits);
+
+        if (_engine.JobFor(id) is TorrentJob job)
+        {
+            job.Sequential = sequential;
+            job.SeedingLimits = limits;
+        }
+    }
+
     public void ApplySettings(AppSettings settings)
     {
         _engine.MaxConcurrent = Math.Max(1, settings.MaxSimultaneousDownloads);
@@ -268,6 +285,14 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
             // Per-connection rates only exist while a job is live.
             if (_engine.JobFor(task.Id) is { } job)
             {
+                // A torrent job reads these once, when it starts, so they are
+                // pushed on the first tick that finds it running.
+                if (job is TorrentJob torrent && _torrentOptions.Remove(task.Id, out var options))
+                {
+                    torrent.Sequential = options.Sequential;
+                    torrent.SeedingLimits = options.Limits;
+                }
+
                 task.Model.ConnectionSpeeds = job.ConnectionSpeeds;
 
                 // 单任务限速 can be changed from the inspector while the transfer

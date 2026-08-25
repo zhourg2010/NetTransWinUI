@@ -188,6 +188,11 @@ public sealed class StubDownloadEngine : IDownloadEngine
     }
 
     /// <summary>Nothing to apply: the stub ignores concurrency and rate limits.</summary>
+    /// <summary>The demo engine has no torrents to configure.</summary>
+    public void ApplyTorrentOptions(int id, bool sequential, NetTrans.Torrent.SeedingLimits limits)
+    {
+    }
+
     public void ApplySettings(AppSettings settings)
     {
     }

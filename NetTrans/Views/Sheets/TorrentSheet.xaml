@@ -10,24 +10,58 @@
         RightLabel="下载"
         IsRightEnabled="False"
         Cancelled="OnCancelled"
-        Confirmed="OnCancelled">
+        Confirmed="OnConfirmed">
 
         <StackPanel>
             <Border Style="{StaticResource CardStyle}">
-                <controls:FormRow Label="" ShowSeparator="False">
-                    <TextBox x:Name="LinkBox" Width="420" Style="{StaticResource FormTextBoxLeftStyle}"
-                             PlaceholderText="magnet:?xt=urn:btih:… 或种子文件路径"/>
-                </controls:FormRow>
+                <StackPanel>
+                    <controls:FormRow Label="" ShowSeparator="False">
+                        <TextBox
+                            x:Name="LinkBox"
+                            Width="420"
+                            Style="{StaticResource FormTextBoxLeftStyle}"
+                            PlaceholderText="magnet:?xt=urn:btih:… 或种子文件路径"
+                            TextChanged="OnLinkChanged"/>
+                    </controls:FormRow>
+
+                    <controls:FormRow x:Name="FileRow" Label="种子文件" ShowChevron="True" Tapped="OnPickFileTapped"/>
+
+                    <controls:FormRow x:Name="SavePathRow" Label="保存到" ShowChevron="True" Tapped="OnSavePathTapped"/>
+
+                    <controls:FormRow Label="顺序下载">
+                        <controls:IosSwitch x:Name="SequentialSwitch"/>
+                    </controls:FormRow>
+
+                    <controls:FormRow Label="做种限制">
+                        <ComboBox x:Name="SeedingBox" Style="{StaticResource FormSelectStyle}">
+                            <x:String>一直做种</x:String>
+                            <x:String>分享率 1.0</x:String>
+                            <x:String>分享率 2.0</x:String>
+                            <x:String>做种 60 分钟</x:String>
+                            <x:String>下完即停</x:String>
+                        </ComboBox>
+                    </controls:FormRow>
+                </StackPanel>
             </Border>
 
-            <Border Margin="0,16,0,0" Style="{StaticResource NoticeStyle}"
-                    Background="{ThemeResource Fill2Brush}">
+            <TextBlock
+                x:Name="Summary"
+                Margin="4,10,4,0"
+                Style="{StaticResource NoteTextStyle}"
+                Text="磁力链需要先向 peer 索取元数据，文件列表会在开始后出现。"/>
+
+            <Border
+                Margin="0,16,0,0"
+                Style="{StaticResource NoticeStyle}"
+                Background="{ThemeResource Fill2Brush}">
                 <StackPanel Spacing="6">
-                    <TextBlock Style="{StaticResource NoticeTitleTextStyle}" Text="BT 下载尚未实现"/>
-                    <TextBlock Style="{StaticResource NoteTextStyle}"
-                               Text="NetTrans 目前只做 HTTP / HTTPS 传输。BT 需要 peer wire 协议、DHT 与分片调度，是一整块独立的工作，与其做一半不如先说清楚。"/>
-                    <TextBlock Style="{StaticResource NoteTextStyle}"
-                               Text="种子里的文件通常也有 HTTP 镜像，可以用「新建下载」直接添加。"/>
+                    <TextBlock Style="{StaticResource NoticeTitleTextStyle}" Text="关于 DHT 与私有种子"/>
+                    <TextBlock
+                        Style="{StaticResource NoteTextStyle}"
+                        Text="DHT 与 PEX 尚未实现，所以没有 tracker 的磁力链暂时无法找到 peer。私有种子本来就只走 tracker，不受影响。"/>
+                    <TextBlock
+                        Style="{StaticResource NoteTextStyle}"
+                        Text="上传是真实统计并上报 tracker 的。PT 站还需要把客户端加入白名单，NetTrans 目前不在任何站点的名单里。"/>
                 </StackPanel>
             </Border>
         </StackPanel>

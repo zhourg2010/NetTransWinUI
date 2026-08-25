@@ -47,3 +47,35 @@ public static class FolderPrompt
         }
     }
 }
+
+/// <summary>The open dialog behind 种子文件, with the same HWND caveat.</summary>
+public static class FilePrompt
+{
+    /// <summary>Returns the chosen .torrent, or null when the user cancelled.</summary>
+    public static async Task<string?> PickTorrentAsync()
+    {
+        if (App.MainAppWindow is not { } window) return null;
+
+        try
+        {
+            var picker = new Windows.Storage.Pickers.FileOpenPicker
+            {
+                SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.Downloads,
+                ViewMode = Windows.Storage.Pickers.PickerViewMode.List,
+            };
+
+            picker.FileTypeFilter.Add(".torrent");
+
+            WinRT.Interop.InitializeWithWindow.Initialize(
+                picker,
+                WinRT.Interop.WindowNative.GetWindowHandle(window));
+
+            var file = await picker.PickSingleFileAsync();
+            return file?.Path;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+}

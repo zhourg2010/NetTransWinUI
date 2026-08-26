@@ -189,7 +189,8 @@ public class FtpTests
     public async Task A_whole_transfer_runs_through_the_queue_over_ftp()
     {
         var sinks = new MemoryFileSinkFactory();
-        var transport = new SchemeTransport(new FakeHttpTransport(Array.Empty<byte>()), new FtpTransport(Server()));
+        var server = Server();
+        var transport = new SchemeTransport(new FakeHttpTransport(Array.Empty<byte>()), new FtpTransport(server));
 
         var item = new DownloadItem
         {
@@ -208,10 +209,13 @@ public class FtpTests
 
         Assert.Equal(JobOutcome.Completed, await job.RunAsync(CancellationToken.None));
 
-        // Four connections, four sessions, four REST offsets -- the whole point
-        // of knowing the size before starting.
         Assert.Equal(Content, sinks.Files.Values.Single().ToArray());
-        Assert.Equal(4, item.Connections);
+
+        // Four segments means four sessions of its own plus the probe's -- the
+        // whole point of learning the size first. (The row's connection count is
+        // back to zero by now: the transfer has finished.)
+        Assert.True(server.Sessions >= 4, $"sessions: {server.Sessions}");
+        Assert.Contains(server.Commands, command => command.StartsWith("REST ", StringComparison.Ordinal));
     }
 
     [Theory]

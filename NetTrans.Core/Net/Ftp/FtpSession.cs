@@ -243,7 +243,13 @@ public sealed class FtpSession : IAsyncDisposable
         SupportsRestart = Features.Any(line => line.StartsWith("REST", StringComparison.OrdinalIgnoreCase));
     }
 
-    /// <summary>227 Entering Passive Mode (h1,h2,h3,h4,p1,p2).</summary>
+    /// <summary>
+    /// 227 Entering Passive Mode (h1,h2,h3,h4,p1,p2).
+    ///
+    /// The last six comma-separated numbers are the answer, wherever they sit:
+    /// the brackets are conventional rather than required, and servers have been
+    /// known to write the sentence without them.
+    /// </summary>
     internal static bool TryReadPassive(string text, out string? host, out int port)
     {
         host = null;
@@ -260,7 +266,11 @@ public sealed class FtpSession : IAsyncDisposable
 
         for (int i = 0; i < 6; i++)
         {
-            if (!int.TryParse(parts[^(6 - i)], NumberStyles.None, CultureInfo.InvariantCulture, out numbers[i])) return false;
+            // The first of the six can still carry the sentence in front of it
+            // ("Entering Passive Mode 10"), so only the digits at its end count.
+            string field = TrailingDigits(parts[^(6 - i)]);
+
+            if (!int.TryParse(field, NumberStyles.None, CultureInfo.InvariantCulture, out numbers[i])) return false;
             if (numbers[i] is < 0 or > 255) return false;
         }
 
@@ -268,6 +278,15 @@ public sealed class FtpSession : IAsyncDisposable
         port = numbers[4] * 256 + numbers[5];
 
         return port > 0;
+    }
+
+    private static string TrailingDigits(string field)
+    {
+        int start = field.Length;
+
+        while (start > 0 && char.IsAsciiDigit(field[start - 1])) start--;
+
+        return field[start..];
     }
 
     /// <summary>229 Entering Extended Passive Mode (|||port|).</summary>

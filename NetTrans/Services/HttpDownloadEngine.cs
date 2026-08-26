@@ -24,7 +24,7 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
     private const int IslandSamples = 26;
 
     private readonly CoreEngine _engine;
-    private readonly HttpTransport _transport;
+    private readonly SchemeTransport _transport;
     private readonly DispatcherQueue _dispatcher;
     private readonly DispatcherTimer _timer;
     private readonly double[] _speedHistory = new double[IslandSamples];
@@ -46,7 +46,12 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
         _settings = settings;
         _dispatcher = DispatcherQueue.GetForCurrentThread();
         _proxy.Set(settings.Proxy);
-        _transport = new HttpTransport(userAgent: "NetTrans/1.0", profiles: _profiles, proxy: _proxy);
+
+        // ftp:// and ftps:// go to their own transport; everything above this
+        // is written against the one interface and never learns the difference.
+        _transport = new SchemeTransport(
+            new HttpTransport(userAgent: "NetTrans/1.0", profiles: _profiles, proxy: _proxy),
+            new NetTrans.Net.Ftp.FtpTransport(profiles: _profiles));
 
         _engine = new CoreEngine(
             _transport,

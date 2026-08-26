@@ -243,6 +243,18 @@ which is the only place view models change.
 - **Live detail.** The inspector's 分块, 连接 and 日志 tabs are fed by the real
   transfer: the chunk map comes from segment positions, the per-connection rates
   from a meter per segment.
+- **FTP and FTPS** arrive as another implementation of the same transport
+  interface, so segmenting, resume, retries and the rate limiter treat a mirror
+  exactly like a web server. The client is written out rather than taken from
+  the obsolete `FtpWebRequest`: EPSV with a PASV fallback, `SIZE` for the length,
+  `MDTM` standing in for Last-Modified, and `REST` for both resume and splitting
+  — a server that refuses `REST` gets one connection from the start rather than
+  a silently corrupted file. One session per data transfer, because a segment
+  stops reading when its range is full and FTP has no way to say "enough" other
+  than hanging up. FTPS is explicit `AUTH TLS`, with `PROT P` so the file itself
+  is encrypted too. Credentials come from the URL; otherwise it logs in
+  anonymously. Uploads and directory listing are not implemented; SFTP is a
+  different protocol over SSH and is not here.
 - **thunder:// flashget:// qqdl://** are unwrapped wherever a link comes in —
   typed, pasted, dropped or watched on the clipboard. None of them is a
   protocol: each is base64 around an ordinary address, and a decade of habit

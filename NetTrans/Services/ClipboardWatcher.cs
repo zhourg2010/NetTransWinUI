@@ -54,7 +54,7 @@ public sealed partial class ClipboardWatcher : IClipboardWatcher, IDisposable
         }
     }
 
-    [GeneratedRegex(@"^https?://\S+\.\S+")]
+    [GeneratedRegex(@"^(https?|ftps?)://\S+\.\S+")]
     private static partial Regex UrlPattern();
 
     public void Dispose() => Stop();

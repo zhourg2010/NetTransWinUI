@@ -1,0 +1,1261 @@
+<title>Claire & Grace's Lab</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap">
+<style>
+/* ============ 主题令牌 ============ */
+:root{
+  --bg:#F5F5F7;
+  --surface:#FFFFFF;
+  --surface-2:rgba(120,120,128,.10);
+  --surface-3:rgba(120,120,128,.16);
+  --ink:#1D1D1F;
+  --ink-2:#6E6E73;
+  --ink-3:#AEAEB2;
+  --hairline:rgba(60,60,67,.12);
+  --accent:#0A84FF;
+  --phys:#0A84FF;
+  --chem:#BF5AF2;
+  --bio:#30D158;
+  --warn:#FF9F0A;
+  --danger:#FF453A;
+  --glass:rgba(245,245,247,.72);
+  --sheet:#FFFFFF;
+  --shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.07);
+  --shadow-lift:0 2px 4px rgba(0,0,0,.05),0 16px 40px rgba(0,0,0,.12);
+  --bench:#EFEFF2;
+  --glow:#FFD60A;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#000000;
+    --surface:#1C1C1E;
+    --surface-2:rgba(120,120,128,.20);
+    --surface-3:rgba(120,120,128,.30);
+    --ink:#F5F5F7;
+    --ink-2:#98989D;
+    --ink-3:#636366;
+    --hairline:rgba(84,84,88,.5);
+    --accent:#0A84FF;
+    --glass:rgba(18,18,20,.72);
+    --sheet:#1C1C1E;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.5);
+    --shadow-lift:0 2px 4px rgba(0,0,0,.5),0 16px 40px rgba(0,0,0,.6);
+    --bench:#2C2C2E;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#000000;
+  --surface:#1C1C1E;
+  --surface-2:rgba(120,120,128,.20);
+  --surface-3:rgba(120,120,128,.30);
+  --ink:#F5F5F7;
+  --ink-2:#98989D;
+  --ink-3:#636366;
+  --hairline:rgba(84,84,88,.5);
+  --accent:#0A84FF;
+  --glass:rgba(18,18,20,.72);
+  --sheet:#1C1C1E;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.5);
+  --shadow-lift:0 2px 4px rgba(0,0,0,.5),0 16px 40px rgba(0,0,0,.6);
+  --bench:#2C2C2E;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","PingFang SC","Noto Sans SC","Helvetica Neue",sans-serif;
+  line-height:1.5;
+  min-height:100vh;
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:focus-visible,[tabindex]:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+
+/* ============ 顶栏 ============ */
+.nav{
+  position:sticky;top:0;z-index:40;
+  background:var(--glass);
+  -webkit-backdrop-filter:blur(20px) saturate(1.8);
+  backdrop-filter:blur(20px) saturate(1.8);
+  border-bottom:1px solid var(--hairline);
+}
+.nav-inner{
+  max-width:1060px;margin:0 auto;padding:10px 20px;
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-mark{
+  width:34px;height:34px;border-radius:9px;flex:none;
+  background:linear-gradient(145deg,#5AC8FA,#0A84FF 55%,#BF5AF2);
+  display:grid;place-items:center;color:#fff;
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.4),0 2px 6px rgba(10,132,255,.35);
+}
+.logo-mark svg{width:20px;height:20px}
+.logo-name{font-weight:800;font-size:16px;letter-spacing:-.02em;white-space:nowrap}
+.logo-sub{font-size:11px;color:var(--ink-2);letter-spacing:.02em;white-space:nowrap}
+.seg{
+  margin-left:auto;
+  display:flex;position:relative;
+  background:var(--surface-2);
+  border-radius:10px;padding:2px;gap:2px;
+}
+.seg button{
+  position:relative;z-index:1;
+  padding:6px 16px;border-radius:8px;
+  font-size:13.5px;font-weight:500;color:var(--ink-2);
+  transition:color .2s;white-space:nowrap;
+}
+.seg button.on{color:var(--ink)}
+.seg-thumb{
+  position:absolute;top:2px;bottom:2px;border-radius:8px;
+  background:var(--surface);
+  box-shadow:0 1px 3px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04);
+  transition:left .28s cubic-bezier(.3,1.3,.4,1),width .28s cubic-bezier(.3,1.3,.4,1);
+}
+
+/* ============ 页面骨架 ============ */
+.page{max-width:1060px;margin:0 auto;padding:36px 20px 80px}
+.view{display:none}
+.view.on{display:block;animation:fadeUp .35s cubic-bezier(.2,.9,.3,1)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+.hero h1{
+  font-size:clamp(28px,5vw,40px);font-weight:900;letter-spacing:-.03em;
+  text-wrap:balance;line-height:1.15;
+}
+.hero p{color:var(--ink-2);margin-top:6px;max-width:34em}
+.hero{margin-bottom:26px}
+
+/* 筛选行 */
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:20px}
+.chip{
+  padding:6px 14px;border-radius:999px;font-size:13.5px;font-weight:500;
+  background:var(--surface-2);color:var(--ink-2);
+  transition:transform .15s,background .2s,color .2s;
+}
+.chip:active{transform:scale(.95)}
+.chip.on{color:#fff}
+.chip.on[data-sub="all"]{background:var(--ink)}
+:root[data-theme="dark"] .chip.on[data-sub="all"]{color:#000}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .chip.on[data-sub="all"]{color:#000}
+}
+.chip.on[data-sub="phys"]{background:var(--phys)}
+.chip.on[data-sub="chem"]{background:var(--chem)}
+.chip.on[data-sub="bio"]{background:var(--bio)}
+.filters .sep{width:1px;height:20px;background:var(--hairline)}
+.chip.grade.on{background:var(--accent)}
+
+/* 卡片网格 */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+.card{
+  background:var(--surface);border-radius:18px;padding:18px;
+  box-shadow:var(--shadow);text-align:left;
+  display:flex;flex-direction:column;gap:10px;
+  transition:transform .2s cubic-bezier(.2,.9,.3,1),box-shadow .2s;
+  border:1px solid var(--hairline);
+}
+.card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lift)}
+.card:active{transform:scale(.98)}
+.card-top{display:flex;align-items:center;gap:8px}
+.tag{
+  font-size:11px;font-weight:700;letter-spacing:.06em;
+  padding:3px 9px;border-radius:999px;color:#fff;
+}
+.tag.phys{background:var(--phys)}.tag.chem{background:var(--chem)}.tag.bio{background:var(--bio)}
+.tag.grade{background:var(--surface-2);color:var(--ink-2)}
+.done-badge{margin-left:auto;color:var(--bio);font-size:18px;line-height:1}
+.card h3{font-size:16.5px;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+.card .desc{font-size:13px;color:var(--ink-2);flex:1}
+.card .go{
+  align-self:flex-start;font-size:13.5px;font-weight:600;color:var(--accent);
+  display:flex;align-items:center;gap:4px;
+}
+.card .icon{font-size:26px;line-height:1}
+
+/* 沙盒台选择卡 */
+.bench-pick{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.bench-pick .card{padding:24px}
+.bench-pick .icon{font-size:40px}
+
+/* 挑战卡 */
+.q-card h3{font-size:15.5px}
+.q-card .stars{color:var(--warn);font-size:13px;letter-spacing:2px}
+.q-text{font-size:13.5px;color:var(--ink-2);background:var(--surface-2);border-radius:12px;padding:10px 12px}
+
+/* ============ Sheet（实验界面） ============ */
+.sheet-wrap{position:fixed;inset:0;z-index:100;display:none}
+.sheet-wrap.on{display:block}
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.4);opacity:0;transition:opacity .3s}
+.sheet-wrap.show .scrim{opacity:1}
+.sheet{
+  position:absolute;left:0;right:0;bottom:0;top:max(18px,3vh);
+  background:var(--sheet);border-radius:20px 20px 0 0;
+  box-shadow:0 -8px 60px rgba(0,0,0,.3);
+  transform:translateY(100%);transition:transform .38s cubic-bezier(.25,1,.3,1);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.sheet-wrap.show .sheet{transform:none}
+.sheet-head{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 20px;border-bottom:1px solid var(--hairline);flex:none;
+}
+.sheet-head .grabber{position:absolute;top:7px;left:50%;transform:translateX(-50%);width:38px;height:5px;border-radius:3px;background:var(--surface-3)}
+.sheet-head h2{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.sheet-head .sub{font-size:12px;color:var(--ink-2)}
+.btn-close{
+  margin-left:auto;width:30px;height:30px;border-radius:50%;flex:none;
+  background:var(--surface-2);color:var(--ink-2);
+  display:grid;place-items:center;font-size:14px;font-weight:700;
+}
+.sheet-body{
+  flex:1;overflow:auto;padding:20px;
+  display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start;
+}
+@media (max-width:860px){.sheet-body{grid-template-columns:1fr}}
+
+/* 实验台通用 */
+.bench{
+  background:var(--bench);border-radius:16px;padding:18px;
+  border:1px solid var(--hairline);
+  display:flex;flex-direction:column;gap:14px;min-height:420px;
+}
+.shelf{
+  display:flex;gap:8px;flex-wrap:wrap;
+  background:var(--surface);border-radius:12px;padding:10px;
+  border:1px solid var(--hairline);
+}
+.shelf-label{width:100%;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--ink-3);text-transform:uppercase}
+.item-chip{
+  display:flex;align-items:center;gap:6px;
+  padding:7px 12px;border-radius:10px;
+  background:var(--surface-2);font-size:13.5px;font-weight:500;
+  transition:transform .15s,background .2s;
+}
+.item-chip:hover{background:var(--surface-3)}
+.item-chip:active{transform:scale(.93)}
+.item-chip.used{opacity:.35;pointer-events:none}
+.item-chip .em{font-size:17px;line-height:1}
+.stage{flex:1;display:grid;place-items:center;position:relative;min-height:280px}
+.bench-actions{display:flex;gap:10px;justify-content:center}
+.btn{
+  padding:9px 20px;border-radius:12px;font-size:14px;font-weight:600;
+  background:var(--surface-2);color:var(--ink);
+  transition:transform .15s,filter .2s;
+}
+.btn:active{transform:scale(.96)}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+
+/* 侧栏面板 */
+.panel{background:var(--surface);border-radius:16px;border:1px solid var(--hairline);padding:18px;display:flex;flex-direction:column;gap:14px}
+.panel h4{font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--ink-3);text-transform:uppercase}
+.steps{display:flex;flex-direction:column;gap:2px;counter-reset:step}
+.step{
+  display:flex;gap:10px;padding:9px 10px;border-radius:10px;
+  font-size:13.5px;color:var(--ink-3);align-items:flex-start;
+}
+.step .n{
+  width:20px;height:20px;border-radius:50%;flex:none;font-size:11px;font-weight:700;
+  display:grid;place-items:center;background:var(--surface-2);color:var(--ink-3);margin-top:1px;
+}
+.step.now{background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--ink)}
+.step.now .n{background:var(--accent);color:#fff}
+.step.ok{color:var(--ink-2)}
+.step.ok .n{background:var(--bio);color:#fff}
+.progress{height:5px;border-radius:3px;background:var(--surface-2);overflow:hidden}
+.progress i{display:block;height:100%;border-radius:3px;background:var(--accent);width:0;transition:width .4s cubic-bezier(.2,.9,.3,1)}
+.obs-log{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto}
+.obs-log .line{
+  font-size:13px;background:var(--surface-2);border-radius:10px;padding:8px 11px;
+  animation:fadeUp .3s;
+}
+.obs-log .line b{font-weight:700}
+.knowledge{
+  font-size:13px;background:color-mix(in srgb,var(--warn) 12%,transparent);
+  border-radius:12px;padding:11px 13px;color:var(--ink);
+}
+.knowledge b{color:var(--warn)}
+.q-panel-text{font-size:14px;line-height:1.65}
+.result-banner{
+  border-radius:12px;padding:12px 14px;font-size:13.5px;line-height:1.6;
+  animation:fadeUp .3s;
+}
+.result-banner.win{background:color-mix(in srgb,var(--bio) 14%,transparent)}
+.result-banner.miss{background:color-mix(in srgb,var(--danger) 12%,transparent)}
+.result-banner b{display:block;margin-bottom:2px}
+
+/* 完成庆祝 */
+.finish{
+  text-align:center;padding:20px 10px;display:flex;flex-direction:column;gap:8px;align-items:center;
+  animation:pop .45s cubic-bezier(.2,1.4,.4,1);
+}
+@keyframes pop{from{transform:scale(.7);opacity:0}to{transform:none;opacity:1}}
+.finish .big{font-size:46px;line-height:1}
+.finish h3{font-size:18px;font-weight:800}
+.finish p{font-size:13px;color:var(--ink-2)}
+
+/* ============ 化学台 ============ */
+.beaker-zone{display:flex;flex-direction:column;align-items:center;gap:10px}
+.beaker{
+  width:170px;height:190px;position:relative;
+  border:4px solid color-mix(in srgb,var(--ink) 28%,transparent);
+  border-top:none;border-radius:0 0 26px 26px;
+  background:color-mix(in srgb,var(--surface) 55%,transparent);
+  overflow:hidden;
+  transition:transform .2s;
+}
+.beaker.drop-hint{transform:scale(1.04);border-color:var(--accent)}
+.liquid{
+  position:absolute;left:0;right:0;bottom:0;height:0;
+  background:rgba(190,205,215,.55);
+  transition:height .5s cubic-bezier(.2,.9,.3,1),background 1s;
+}
+.liquid::after{
+  content:"";position:absolute;top:0;left:-8%;right:-8%;height:10px;
+  background:inherit;filter:brightness(1.15);border-radius:50%;
+}
+.beaker .solids{position:absolute;bottom:6px;left:0;right:0;text-align:center;font-size:22px;letter-spacing:6px}
+.bubble{
+  position:absolute;bottom:8px;width:8px;height:8px;border-radius:50%;
+  background:rgba(255,255,255,.75);border:1px solid rgba(255,255,255,.9);
+  animation:rise 1.6s linear infinite;
+}
+@keyframes rise{
+  from{transform:translateY(0) scale(.6);opacity:.9}
+  to{transform:translateY(-150px) scale(1.15);opacity:0}
+}
+.precip{
+  position:absolute;bottom:0;left:0;right:0;height:0;transition:height 1.2s;
+  background:repeating-linear-gradient(45deg,rgba(80,140,255,.55) 0 4px,rgba(80,140,255,.35) 4px 8px);
+}
+.beaker-caption{font-size:12.5px;color:var(--ink-2);min-height:1.4em;text-align:center}
+
+/* ============ 电路台 ============ */
+.circuit{width:min(420px,100%)}
+.circuit svg{width:100%;height:auto;display:block}
+.socket{
+  fill:var(--surface);stroke:var(--ink-3);stroke-width:2;stroke-dasharray:5 4;
+  cursor:pointer;transition:stroke .2s;
+}
+.socket.filled{stroke-dasharray:none;stroke:var(--ink-2)}
+.socket:hover{stroke:var(--accent)}
+.wire{stroke:var(--ink-2);stroke-width:4;fill:none;stroke-linecap:round}
+.wire.live{stroke:var(--warn);filter:drop-shadow(0 0 3px var(--warn))}
+.slot-label{font-size:11px;fill:var(--ink-3);text-anchor:middle;font-family:inherit}
+.slot-item{font-size:26px;text-anchor:middle;dominant-baseline:central;cursor:pointer}
+.bulb-glow{fill:var(--glow);opacity:0;transition:opacity .3s;filter:blur(6px)}
+.bulb-glow.on{opacity:.85}
+.switch-hint{font-size:11px;fill:var(--accent);text-anchor:middle;cursor:pointer;font-weight:600;font-family:inherit}
+.ammeter-needle{stroke:var(--danger);stroke-width:2;transform-origin:0 0;transition:transform .5s cubic-bezier(.3,1.4,.4,1)}
+
+/* ============ 显微镜台 ============ */
+.micro-zone{display:flex;flex-direction:column;align-items:center;gap:14px;width:100%}
+.scope-view{
+  width:min(270px,80vw);aspect-ratio:1;border-radius:50%;
+  background:#0b0e12;position:relative;overflow:hidden;
+  box-shadow:inset 0 0 0 10px #23262b,inset 0 0 40px rgba(0,0,0,.9),var(--shadow);
+}
+.scope-view .field{
+  position:absolute;inset:0;display:grid;place-items:center;
+  transition:filter .3s,transform .5s;
+}
+.scope-view .empty-hint{color:#5a6472;font-size:12.5px;text-align:center;padding:0 30px}
+.scope-view svg{width:100%;height:100%}
+.micro-tools{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.focus-row{display:flex;align-items:center;gap:10px;width:min(300px,100%);font-size:12.5px;color:var(--ink-2)}
+.focus-row input{flex:1;accent-color:var(--accent)}
+
+/* MC 小问题 */
+.mc{display:flex;flex-direction:column;gap:8px}
+.mc button{
+  text-align:left;padding:10px 13px;border-radius:11px;font-size:13.5px;
+  background:var(--surface-2);transition:background .2s;
+}
+.mc button:hover{background:var(--surface-3)}
+.mc button.right{background:color-mix(in srgb,var(--bio) 20%,transparent)}
+.mc button.wrong{background:color-mix(in srgb,var(--danger) 16%,transparent)}
+
+.empty-note{color:var(--ink-3);font-size:14px;text-align:center;padding:40px 0}
+footer{max-width:1060px;margin:0 auto;padding:0 20px 40px;color:var(--ink-3);font-size:12px;text-align:center}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
+}
+</style>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="logo">
+      <span class="logo-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 2v6.5L4.7 17a3 3 0 0 0 2.6 4.5h9.4a3 3 0 0 0 2.6-4.5L14 8.5V2"/>
+          <path d="M8.5 2h7"/><path d="M7.5 13h9"/>
+        </svg>
+      </span>
+      <span>
+        <div class="logo-name">Claire &amp; Grace's Lab</div>
+        <div class="logo-sub">克莱尔和格蕾丝的科学实验室</div>
+      </span>
+    </div>
+    <div class="seg" role="tablist" aria-label="模式">
+      <span class="seg-thumb" aria-hidden="true"></span>
+      <button role="tab" data-mode="guided" class="on">跟课本做</button>
+      <button role="tab" data-mode="sandbox">自由探索</button>
+      <button role="tab" data-mode="challenge">还原挑战</button>
+    </div>
+  </div>
+</nav>
+
+<main class="page">
+
+  <!-- ===== 模式一：跟课本做 ===== -->
+  <section class="view on" id="view-guided">
+    <div class="hero">
+      <h1>打开课本，动手做实验</h1>
+      <p>选一个实验，跟着步骤一步一步来。每完成一步都会亮起绿色的勾，全部完成还有小惊喜。</p>
+    </div>
+    <div class="filters" id="guided-filters">
+      <button class="chip on" data-sub="all">全部</button>
+      <button class="chip" data-sub="phys">物理</button>
+      <button class="chip" data-sub="chem">化学</button>
+      <button class="chip" data-sub="bio">生物</button>
+      <span class="sep"></span>
+      <button class="chip grade on" data-grade="all">全部年级</button>
+      <button class="chip grade" data-grade="junior">初中</button>
+      <button class="chip grade" data-grade="senior">高中</button>
+    </div>
+    <div class="grid" id="guided-grid"></div>
+  </section>
+
+  <!-- ===== 模式二：自由探索 ===== -->
+  <section class="view" id="view-sandbox">
+    <div class="hero">
+      <h1>没有说明书的实验台</h1>
+      <p>这里没有步骤、没有对错。把你想到的东西放在一起，看看会发生什么 —— 观察记录会帮你把发现记下来。</p>
+    </div>
+    <div class="bench-pick" id="sandbox-grid"></div>
+  </section>
+
+  <!-- ===== 模式三：还原挑战 ===== -->
+  <section class="view" id="view-challenge">
+    <div class="hero">
+      <h1>读题目，还原实验</h1>
+      <p>题目里描述了一个实验现象。你能用实验台上的器材，把当时的实验场景搭出来吗？搭好后点「提交答案」。</p>
+    </div>
+    <div class="grid" id="challenge-grid"></div>
+  </section>
+
+</main>
+
+<footer>Claire &amp; Grace's Lab · 在家也能做的理化生虚拟实验室</footer>
+
+<!-- ===== 实验 Sheet ===== -->
+<div class="sheet-wrap" id="sheet-wrap" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+  <div class="scrim" id="scrim"></div>
+  <div class="sheet">
+    <div class="sheet-head">
+      <span class="grabber"></span>
+      <div>
+        <h2 id="sheet-title"></h2>
+        <div class="sub" id="sheet-sub"></div>
+      </div>
+      <button class="btn-close" id="btn-close" aria-label="关闭">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div id="bench-slot"></div>
+      <div id="panel-slot"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ================================================================
+   小工具
+================================================================ */
+const $ = (s,el=document)=>el.querySelector(s);
+const $$ = (s,el=document)=>[...el.querySelectorAll(s)];
+const el = (tag,cls,html)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(html!=null)n.innerHTML=html;return n;};
+const store = {
+  get(k,d){ try{ const v=localStorage.getItem("cgl-"+k); return v?JSON.parse(v):d; }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem("cgl-"+k,JSON.stringify(v)); }catch(e){} }
+};
+const SUBJECT = { phys:{name:"物理",cls:"phys"}, chem:{name:"化学",cls:"chem"}, bio:{name:"生物",cls:"bio"} };
+const GRADE = { junior:"初中", senior:"高中" };
+
+/* ================================================================
+   化学试剂与反应规则
+================================================================ */
+const REAGENTS = {
+  water:   {name:"蒸馏水",   em:"💧", liquid:true,  color:"rgba(190,205,215,.5)"},
+  hcl:     {name:"稀盐酸",   em:"🧪", liquid:true,  color:"rgba(200,214,222,.55)"},
+  naoh:    {name:"氢氧化钠溶液", em:"🧴", liquid:true, color:"rgba(200,214,222,.55)"},
+  cuso4:   {name:"硫酸铜溶液", em:"🔵", liquid:true, color:"rgba(60,140,220,.6)"},
+  litmus:  {name:"紫色石蕊",  em:"💜", liquid:true,  color:"rgba(150,110,200,.55)"},
+  phenol:  {name:"无色酚酞",  em:"⚪", liquid:true,  color:"rgba(210,215,220,.4)"},
+  marble:  {name:"大理石",   em:"🪨", solid:"🪨"},
+  ironnail:{name:"铁钉",     em:"📍", solid:"📍"},
+  zinc:    {name:"锌粒",     em:"⬡",  solid:"·"},
+  limewater:{name:"澄清石灰水", em:"🥛", liquid:true, color:"rgba(215,220,225,.45)"},
+};
+/* 规则：need 全部包含即触发（选最具体的），效果依次叠加 */
+const CHEM_RULES = [
+  {need:["hcl","litmus"],  color:"rgba(235,80,90,.6)",  note:"紫色石蕊遇<b>酸</b>变红了！", ev:"litmus-red", know:"酸性溶液能使紫色石蕊试液变红。"},
+  {need:["naoh","litmus"], color:"rgba(70,110,235,.6)", note:"紫色石蕊遇<b>碱</b>变蓝了！", ev:"litmus-blue", know:"碱性溶液能使紫色石蕊试液变蓝。"},
+  {need:["naoh","phenol"], color:"rgba(240,80,140,.6)", note:"无色酚酞变<b>红</b>了！这是碱性溶液。", ev:"phenol-red", know:"酚酞遇碱变红，遇酸不变色。"},
+  {need:["hcl","phenol"],  note:"酚酞在酸里<b>不变色</b>，还是无色的。", ev:"phenol-none", know:"酚酞遇酸和中性溶液都不变色。"},
+  {need:["hcl","naoh","phenol"], color:"rgba(210,215,220,.4)", note:"红色<b>褪去</b>了！酸把碱中和掉了。", ev:"neutralize", know:"酸 + 碱 → 盐 + 水，这叫中和反应。"},
+  {need:["hcl","marble"],  bubbles:true, note:"大理石表面冒出<b>气泡</b>！生成了二氧化碳。", ev:"co2", know:"CaCO₃ + 2HCl → CaCl₂ + H₂O + CO₂↑"},
+  {need:["hcl","zinc"],    bubbles:true, note:"锌粒不断冒出气泡，这是<b>氢气</b>！", ev:"h2", know:"Zn + 2HCl → ZnCl₂ + H₂↑，实验室用它制氢气。"},
+  {need:["cuso4","ironnail"], color:"rgba(120,200,160,.55)", solidTint:"🔶", note:"铁钉表面覆盖了一层<b>红色的铜</b>，蓝色溶液慢慢变浅绿。", ev:"displace", know:"Fe + CuSO₄ → FeSO₄ + Cu，铁比铜活泼，把铜「挤」了出来。"},
+  {need:["cuso4","naoh"],  precip:true, note:"出现了<b>蓝色絮状沉淀</b>！这是氢氧化铜。", ev:"cuoh2", know:"CuSO₄ + 2NaOH → Cu(OH)₂↓ + Na₂SO₄"},
+  {need:["limewater","co2gas"], color:"rgba(230,232,235,.75)", note:"澄清石灰水变<b>浑浊</b>了！说明气体是二氧化碳。", ev:"limewater-milky", know:"CO₂ 能使澄清石灰水变浑浊，这是检验 CO₂ 的方法。"},
+];
+
+/* ================================================================
+   电路元件
+================================================================ */
+const CIRCUIT_ITEMS = {
+  battery:{name:"电池组", em:"🔋", conducts:true,  isPower:true},
+  bulb:   {name:"小灯泡", em:"💡", conducts:true,  isBulb:true},
+  motor:  {name:"小电机", em:"🌀", conducts:true,  isMotor:true},
+  copper: {name:"铜丝",   em:"🥉", conducts:true},
+  pencil: {name:"铅笔芯", em:"✏️", conducts:true},
+  eraser: {name:"橡皮",   em:"🩹", conducts:false},
+  plastic:{name:"塑料尺", em:"📏", conducts:false},
+};
+
+/* ================================================================
+   课程数据（参考 NoBook 式初高中虚拟实验课程）
+================================================================ */
+const EXPERIMENTS = [
+  {
+    id:"circuit-basic", subject:"phys", grade:"junior", engine:"circuit", icon:"💡",
+    title:"连接简单电路，点亮小灯泡",
+    desc:"人教版物理·电流和电路：用电池、开关和导线组成串联电路。",
+    config:{slots:["power","switch","load"], shelf:["battery","bulb","motor"]},
+    steps:[
+      {text:"把电池组放进电源接口", ev:"place-battery"},
+      {text:"把小灯泡放进用电器接口", ev:"place-bulb"},
+      {text:"合上开关，接通电路", ev:"switch-on"},
+      {text:"观察：小灯泡亮了！再断开开关试试", ev:"switch-off"},
+    ],
+    know:["电路要形成闭合回路，电流才能通过。","开关的作用是控制电路的通断。"]
+  },
+  {
+    id:"conductor", subject:"phys", grade:"junior", engine:"circuit", icon:"⚡️",
+    title:"探究：哪些物体是导体？",
+    desc:"在电路中接入不同材料，看小灯泡亮不亮，判断导体和绝缘体。",
+    config:{slots:["power","switch","load","test"], fixed:{power:"battery",load:"bulb"}, shelf:["copper","pencil","eraser","plastic"]},
+    steps:[
+      {text:"把铜丝接入测试口，合上开关", ev:"test-conduct"},
+      {text:"换成橡皮或塑料尺，再试一次", ev:"test-insulate"},
+      {text:"再试试铅笔芯，它会导电吗？", ev:"test-pencil"},
+    ],
+    know:["容易导电的物体叫导体，如金属、石墨。","不容易导电的物体叫绝缘体，如橡胶、塑料。"]
+  },
+  {
+    id:"acid-base", subject:"chem", grade:"junior", engine:"beaker", icon:"🧪",
+    title:"酸碱指示剂的变色",
+    desc:"人教版化学·酸和碱：用石蕊和酚酞检验溶液的酸碱性。",
+    config:{shelf:["hcl","naoh","litmus","phenol","water"]},
+    steps:[
+      {text:"往烧杯里加入稀盐酸", ev:"add-hcl"},
+      {text:"滴入紫色石蕊，观察颜色", ev:"litmus-red"},
+      {text:"倒掉，重新加入氢氧化钠溶液", ev:"add-naoh-fresh"},
+      {text:"滴入无色酚酞，观察颜色", ev:"phenol-red"},
+    ],
+    know:["石蕊：遇酸变红，遇碱变蓝。","酚酞：遇碱变红，遇酸不变色。"]
+  },
+  {
+    id:"co2-make", subject:"chem", grade:"junior", engine:"beaker", icon:"🫧",
+    title:"实验室制取二氧化碳",
+    desc:"大理石和稀盐酸反应，观察气泡，并用澄清石灰水检验气体。",
+    config:{shelf:["marble","hcl","limewater","water"], collectGas:true},
+    steps:[
+      {text:"把大理石放入烧杯", ev:"add-marble"},
+      {text:"倒入稀盐酸，观察气泡", ev:"co2"},
+      {text:"点「收集气体」，把气体通入澄清石灰水", ev:"limewater-milky"},
+    ],
+    know:["CaCO₃ + 2HCl → CaCl₂ + H₂O + CO₂↑","CO₂ 使澄清石灰水变浑浊，可用来检验 CO₂。"]
+  },
+  {
+    id:"displace", subject:"chem", grade:"senior", engine:"beaker", icon:"🥉",
+    title:"铁与硫酸铜的置换反应",
+    desc:"金属活动性顺序：活泼的铁能把铜从盐溶液里置换出来。",
+    config:{shelf:["cuso4","ironnail","water","naoh"]},
+    steps:[
+      {text:"往烧杯里倒入蓝色的硫酸铜溶液", ev:"add-cuso4"},
+      {text:"放入一枚铁钉，耐心观察", ev:"displace"},
+    ],
+    know:["Fe + CuSO₄ → FeSO₄ + Cu","金属活动性：铁 > 铜，活泼金属能置换出不活泼金属。"]
+  },
+  {
+    id:"onion", subject:"bio", grade:"junior", engine:"micro", icon:"🔬",
+    title:"观察洋葱表皮细胞",
+    desc:"人教版生物·细胞：制作临时装片，在显微镜下观察植物细胞。",
+    config:{specimen:"onion"},
+    steps:[
+      {text:"在载玻片中央滴一滴清水", ev:"water"},
+      {text:"撕取洋葱内表皮，浸入水滴展平", ev:"sample"},
+      {text:"盖上盖玻片，避免产生气泡", ev:"cover"},
+      {text:"滴碘液染色，让细胞核更清楚", ev:"stain"},
+      {text:"转动调焦旋钮，直到看清细胞", ev:"focus-ok"},
+    ],
+    know:["植物细胞有细胞壁、细胞膜、细胞质和细胞核。","碘液能把细胞核染成深色，便于观察。"]
+  },
+  {
+    id:"cheek", subject:"bio", grade:"junior", engine:"micro", icon:"👄",
+    title:"观察人的口腔上皮细胞",
+    desc:"用生理盐水制作装片，比较动物细胞和植物细胞的区别。",
+    config:{specimen:"cheek"},
+    steps:[
+      {text:"在载玻片中央滴一滴生理盐水", ev:"water"},
+      {text:"用消毒棉签在口腔内壁轻刮，涂在盐水中", ev:"sample"},
+      {text:"盖上盖玻片", ev:"cover"},
+      {text:"滴碘液染色", ev:"stain"},
+      {text:"调焦，观察细胞", ev:"focus-ok"},
+    ],
+    know:["动物细胞没有细胞壁，形状不规则。","用生理盐水是为了保持细胞的正常形态。"]
+  },
+];
+
+/* ================================================================
+   挑战题
+================================================================ */
+const CHALLENGES = [
+  {
+    id:"q-circuit", subject:"phys", stars:1, engine:"circuit", icon:"💡",
+    title:"让灯亮起来，还要能控制它",
+    q:"小明的房间需要一盏「能开能关」的灯。请在实验台上还原这个电路，并让小灯泡亮起来。",
+    config:{slots:["power","switch","load"], shelf:["battery","bulb","motor","eraser"]},
+    validate:s=> s.lit && s.items.load==="bulb" ? {ok:true} :
+      (!s.items.power ? {ok:false,hint:"电路里还没有电源哦。"} :
+       s.items.load!=="bulb" ? {ok:false,hint:"题目要的是一盏「灯」，用电器选对了吗？"} :
+       !s.closed ? {ok:false,hint:"开关还没合上，电路是断开的。"} :
+       {ok:false,hint:"检查一下每个接口都接好了吗？"}),
+    explain:"电源、开关、小灯泡用导线连成闭合回路：开关合上灯亮，断开灯灭 —— 开关起到控制电路通断的作用。"
+  },
+  {
+    id:"q-phenol", subject:"chem", stars:2, engine:"beaker", icon:"🌸",
+    title:"滴进去就变红的神秘溶液",
+    q:"实验课上，老师往一杯无色溶液里滴了几滴无色酚酞，溶液立刻变成了红色。请还原这个实验，并判断这杯溶液的酸碱性。",
+    config:{shelf:["hcl","naoh","water","phenol","litmus"]},
+    validate:s=> s.has("naoh")&&s.has("phenol") ? {ok:true} :
+      (s.has("hcl")&&s.has("phenol") ? {ok:false,hint:"酚酞滴进去没有变红……说明这杯不是酸就对了吗？再想想。"} :
+       {ok:false,hint:"想一想：酚酞遇到什么才会变红？"}),
+    mc:{q:"这杯溶液是——", opts:["酸性","中性","碱性"], right:2},
+    explain:"酚酞遇碱变红。能让酚酞变红的无色溶液是碱性溶液（如氢氧化钠溶液）。"
+  },
+  {
+    id:"q-co2", subject:"chem", stars:2, engine:"beaker", icon:"🫧",
+    title:"这瓶气体是什么？",
+    q:"一种无色气体能使澄清石灰水变浑浊。请在实验台上先制取这种气体，再完成检验，还原整个实验。",
+    config:{shelf:["marble","hcl","zinc","limewater","water"], collectGas:true},
+    validate:s=> s.events.includes("limewater-milky") ? {ok:true} :
+      (s.events.includes("co2") ? {ok:false,hint:"气体已经制出来了！再用「收集气体」把它通入澄清石灰水。"} :
+       s.events.includes("h2") ? {ok:false,hint:"锌和盐酸生成的是氢气，它不能使石灰水变浑浊哦。"} :
+       {ok:false,hint:"先想想：实验室用什么药品制取二氧化碳？"}),
+    explain:"大理石（CaCO₃）与稀盐酸反应生成 CO₂；CO₂ 通入澄清石灰水变浑浊 —— 这正是检验 CO₂ 的经典方法。"
+  },
+  {
+    id:"q-micro", subject:"bio", stars:3, engine:"micro", icon:"🔬",
+    title:"帮同学找回实验顺序",
+    q:"同学的实验报告被打乱了：滴水、取样、盖片、染色、调焦。请按正确顺序完成「观察洋葱表皮细胞」的全部操作。",
+    config:{specimen:"onion", strictOrder:true},
+    validate:s=>{
+      const want=["water","sample","cover","stain","focus-ok"];
+      const seq=s.seq.filter(e=>want.includes(e));
+      if(JSON.stringify(seq)===JSON.stringify(want)) return {ok:true};
+      if(seq.length===0) return {ok:false,hint:"从「滴清水」开始试试。"};
+      return {ok:false,hint:"顺序不太对：先滴水 → 取样 → 盖片 → 染色 → 最后调焦。点「重做」再来一次。"};
+    },
+    explain:"正确顺序：滴清水 → 取材展平 → 盖盖玻片 → 染色 → 调焦观察。先盖片再染色，可以让碘液从一侧渗入，不产生气泡。"
+  },
+];
+
+/* ================================================================
+   化学台引擎
+================================================================ */
+function BeakerLab(mount, config, emit){
+  const state = {contents:[], events:[], gas:null, has:k=>state.contents.includes(k)};
+  const bench = el("div","bench");
+  const shelf = el("div","shelf",'<span class="shelf-label">试剂架 · 点一下加入烧杯</span>');
+  (config.shelf||Object.keys(REAGENTS)).forEach(id=>{
+    const r=REAGENTS[id];
+    const chip=el("button","item-chip",`<span class="em">${r.em}</span>${r.name}`);
+    chip.addEventListener("click",()=>add(id));
+    shelf.appendChild(chip);
+  });
+  const stage = el("div","stage");
+  const zone = el("div","beaker-zone");
+  const beaker = el("div","beaker",'<div class="precip"></div><div class="liquid"></div><div class="solids"></div>');
+  const caption = el("div","beaker-caption","烧杯是空的，试着加点东西吧");
+  zone.append(beaker,caption); stage.appendChild(zone);
+  const actions = el("div","bench-actions");
+  const btnReset = el("button","btn","倒掉重来");
+  btnReset.addEventListener("click",()=>reset(true));
+  actions.appendChild(btnReset);
+  if(config.collectGas){
+    const btnGas = el("button","btn","收集气体 → 通入石灰水");
+    btnGas.addEventListener("click",()=>{
+      const gas=state.gas;
+      if(gas!=="co2" && gas!=="h2"){ caption.textContent="现在没有气体可以收集，先让反应冒泡吧"; return; }
+      if(!state.has("limewater")){ reset(false); add("limewater"); }
+      if(gas==="co2"){ state.contents.push("co2gas"); applyRules(); }
+      else { caption.textContent="氢气通入石灰水……石灰水没有任何变化"; emit("h2-into-lime"); }
+    });
+    actions.appendChild(btnGas);
+  }
+  bench.append(shelf,stage,actions);
+  mount.appendChild(bench);
+
+  const liquid=$(".liquid",beaker), solids=$(".solids",beaker), precip=$(".precip",beaker);
+  let bubbleTimer=null;
+
+  function reset(announce){
+    state.contents=[]; state.gas=null;
+    liquid.style.height="0"; liquid.style.background="rgba(190,205,215,.5)";
+    solids.textContent=""; precip.style.height="0";
+    stopBubbles();
+    if(announce){ caption.textContent="烧杯洗干净了"; emit("reset"); }
+  }
+  function stopBubbles(){ clearInterval(bubbleTimer); bubbleTimer=null; $$(".bubble",beaker).forEach(b=>b.remove()); }
+  function startBubbles(){
+    if(bubbleTimer) return;
+    bubbleTimer=setInterval(()=>{
+      const b=el("span","bubble"); b.style.left=(20+Math.random()*60)+"%";
+      b.style.animationDuration=(1.2+Math.random()*.8)+"s";
+      beaker.appendChild(b); setTimeout(()=>b.remove(),2000);
+    },220);
+  }
+  function add(id){
+    const r=REAGENTS[id];
+    const freshBase = state.contents.filter(c=>REAGENTS[c]&&REAGENTS[c].liquid).length===0;
+    state.contents.push(id);
+    emit("add-"+id);
+    if(freshBase && r.liquid) emit("add-"+id+"-fresh");
+    if(r.liquid){
+      const cur=parseFloat(liquid.style.height)||0;
+      liquid.style.height=Math.min(cur+ (cur?14:52), 78)+"%";
+      if(freshBase) liquid.style.background=r.color;
+      caption.innerHTML=`加入了 <b>${r.name}</b>`;
+    }else{
+      solids.textContent+=r.solid;
+      caption.innerHTML=`放入了 <b>${r.name}</b>`;
+    }
+    applyRules();
+  }
+  function applyRules(){
+    let matched=null;
+    for(const rule of CHEM_RULES){
+      if(rule.need.every(n=>state.contents.includes(n))){
+        if(!matched || rule.need.length>=matched.need.length) matched=rule;
+      }
+    }
+    stopBubbles();
+    if(!matched) return;
+    if(matched.color) liquid.style.background=matched.color;
+    if(matched.bubbles){ startBubbles(); state.gas = matched.ev==="h2" ? "h2" : "co2"; }
+    if(matched.precip) precip.style.height="26%";
+    if(matched.solidTint) solids.textContent=matched.solidTint;
+    caption.innerHTML=matched.note;
+    if(!state.events.includes(matched.ev)) state.events.push(matched.ev);
+    emit(matched.ev, matched);
+  }
+  return {state, destroy(){stopBubbles();}};
+}
+
+/* ================================================================
+   电路台引擎
+================================================================ */
+function CircuitLab(mount, config, emit){
+  const slots=config.slots||["power","switch","load"];
+  const SLOT_META={power:{x:210,y:40,label:"电源"},switch:{x:380,y:150,label:"开关"},load:{x:210,y:260,label:"用电器"},test:{x:40,y:150,label:"测试口"}};
+  const state={items:{}, closed:false, lit:false, running:false,
+    get filledAll(){ return slots.every(s=>state.items[s]); }};
+  slots.forEach(s=>state.items[s]=null);
+  if(config.fixed) Object.entries(config.fixed).forEach(([s,i])=>state.items[s]=i);
+
+  const bench=el("div","bench");
+  const shelf=el("div","shelf",'<span class="shelf-label">元件盒 · 点一下装进空接口，点电路上的元件可取下</span>');
+  const chips={};
+  (config.shelf||[]).forEach(id=>{
+    const it=CIRCUIT_ITEMS[id];
+    const chip=el("button","item-chip",`<span class="em">${it.em}</span>${it.name}`);
+    chip.addEventListener("click",()=>place(id));
+    chips[id]=chip; shelf.appendChild(chip);
+  });
+  const stage=el("div","stage");
+  const wrap=el("div","circuit");
+  const NS="http://www.w3.org/2000/svg";
+  const svg=document.createElementNS(NS,"svg");
+  svg.setAttribute("viewBox","-15 0 450 300");
+  wrap.appendChild(svg); stage.appendChild(wrap);
+  bench.append(shelf,stage);
+  mount.appendChild(bench);
+
+  const wire=document.createElementNS(NS,"path");
+  wire.setAttribute("class","wire");
+  wire.setAttribute("d","M60 40 H360 Q380 40 380 60 V240 Q380 260 360 260 H60 Q40 260 40 240 V60 Q40 40 60 40 Z");
+  svg.appendChild(wire);
+
+  const nodes={};
+  slots.forEach(s=>{
+    const m=SLOT_META[s], g=document.createElementNS(NS,"g");
+    const rect=document.createElementNS(NS,"rect");
+    rect.setAttribute("class","socket");
+    rect.setAttribute("x",m.x-45);rect.setAttribute("y",m.y-26);
+    rect.setAttribute("width",90);rect.setAttribute("height",52);
+    rect.setAttribute("rx",12);
+    const glow=document.createElementNS(NS,"circle");
+    glow.setAttribute("class","bulb-glow");glow.setAttribute("cx",m.x);glow.setAttribute("cy",m.y);glow.setAttribute("r",26);
+    const item=document.createElementNS(NS,"text");
+    item.setAttribute("class","slot-item");item.setAttribute("x",m.x);item.setAttribute("y",m.y);
+    const label=document.createElementNS(NS,"text");
+    label.setAttribute("class","slot-label");label.setAttribute("x",m.x);label.setAttribute("y",m.y+42);
+    label.textContent=m.label;
+    g.append(rect,glow,item,label); svg.appendChild(g);
+    const clickable = !(config.fixed&&config.fixed[s]) && s!=="switch";
+    if(clickable){
+      rect.addEventListener("click",()=>unplace(s));
+      item.addEventListener("click",()=>unplace(s));
+    }
+    nodes[s]={rect,glow,item};
+  });
+
+  /* 开关：固定自带，点击切换 */
+  state.items["switch"]="_sw";
+  const swm=SLOT_META["switch"];
+  const swHint=document.createElementNS(NS,"text");
+  swHint.setAttribute("class","switch-hint");
+  swHint.setAttribute("x",swm.x);swHint.setAttribute("y",swm.y+58);
+  swHint.textContent="点我合上开关";
+  svg.appendChild(swHint);
+  const toggleSwitch=()=>{
+    state.closed=!state.closed;
+    emit(state.closed?"switch-on":"switch-off");
+    render();
+  };
+  nodes["switch"].rect.addEventListener("click",toggleSwitch);
+  nodes["switch"].item.addEventListener("click",toggleSwitch);
+  swHint.addEventListener("click",toggleSwitch);
+
+  function place(id){
+    const open=slots.find(s=>s!=="switch"&&!state.items[s]&&!(config.fixed&&config.fixed[s]));
+    if(!open) return;
+    state.items[open]=id;
+    chips[id].classList.add("used");
+    emit("place-"+id);
+    render();
+  }
+  function unplace(s){
+    const id=state.items[s];
+    if(!id||id==="_sw") return;
+    state.items[s]=null;
+    if(chips[id]) chips[id].classList.remove("used");
+    render();
+  }
+  function render(){
+    const parts=slots.map(s=>state.items[s]);
+    const complete=parts.every(Boolean);
+    const conducts=complete&&parts.every(p=>p==="_sw"||CIRCUIT_ITEMS[p].conducts);
+    const hasPower=parts.some(p=>p!=="_sw"&&CIRCUIT_ITEMS[p]&&CIRCUIT_ITEMS[p].isPower);
+    state.running=complete&&conducts&&hasPower&&state.closed;
+    state.lit=false;
+    slots.forEach(s=>{
+      const id=state.items[s],n=nodes[s];
+      n.rect.classList.toggle("filled",!!id);
+      if(s==="switch"){ n.item.textContent=state.closed?"🔗":"🔌"; }
+      else n.item.textContent=id?CIRCUIT_ITEMS[id].em:"";
+      const isBulb=id&&id!=="_sw"&&CIRCUIT_ITEMS[id].isBulb;
+      const isMotor=id&&id!=="_sw"&&CIRCUIT_ITEMS[id].isMotor;
+      n.glow.classList.toggle("on",!!(isBulb&&state.running));
+      if(isBulb&&state.running) state.lit=true;
+      n.item.style.transition="transform .3s";
+      n.item.style.transformOrigin=`${n.item.getAttribute("x")}px ${n.item.getAttribute("y")}px`;
+      n.item.style.transform=(isMotor&&state.running)?"rotate(360deg)":"";
+    });
+    swHint.textContent=state.closed?"点我断开开关":"点我合上开关";
+    wire.classList.toggle("live",state.running);
+    if(state.running){
+      emit("current-on");
+      const t=state.items.test;
+      if(t&&CIRCUIT_ITEMS[t]){ emit("test-conduct"); if(t==="pencil") emit("test-pencil"); }
+    }else if(complete&&state.closed&&hasPower&&!conducts){
+      const t=state.items.test;
+      if(t&&!CIRCUIT_ITEMS[t].conducts) emit("test-insulate");
+    }
+  }
+  render();
+  return {state, destroy(){}};
+}
+
+/* ================================================================
+   显微镜台引擎
+================================================================ */
+function MicroLab(mount, config, emit){
+  const state={seq:[], done:{}, focus:0, stained:false};
+  const bench=el("div","bench");
+  const zone=el("div","micro-zone");
+  const view=el("div","scope-view");
+  const field=el("div","field",'<div class="empty-hint">目镜里一片黑……先在下面完成制片吧</div>');
+  view.appendChild(field); zone.appendChild(view);
+
+  const tools=el("div","micro-tools");
+  const TOOLS=[
+    {ev:"water", label:"💧 滴清水"},
+    {ev:"sample", label: config.specimen==="cheek"?"🩹 刮取口腔上皮":"🧅 取洋葱表皮"},
+    {ev:"cover", label:"🔲 盖盖玻片"},
+    {ev:"stain", label:"🟤 滴碘液染色"},
+  ];
+  TOOLS.forEach(t=>{
+    const b=el("button","btn",t.label);
+    b.addEventListener("click",()=>doStep(t.ev,b));
+    tools.appendChild(b);
+  });
+  const focusRow=el("div","focus-row");
+  focusRow.innerHTML='<span>调焦</span>';
+  const slider=document.createElement("input");
+  slider.type="range";slider.min="0";slider.max="100";slider.value="0";
+  slider.setAttribute("aria-label","调焦旋钮");
+  focusRow.appendChild(slider);
+  const focusTip=el("span","", "模糊");
+  focusRow.appendChild(focusTip);
+
+  const redo=el("button","btn","重做装片");
+  redo.addEventListener("click",()=>{
+    state.seq=[];state.done={};state.stained=false;
+    slider.value="0";state.focus=0;
+    delete field.dataset.ready;field.style.filter="";field.style.transform="";
+    $$(".micro-tools .btn",bench).forEach(b=>b.style.background="");
+    field.innerHTML='<div class="empty-hint">目镜里一片黑……先在下面完成制片吧</div>';
+    updateFocus(); emit("redo");
+  });
+  const actions=el("div","bench-actions");
+  actions.appendChild(redo);
+
+  zone.append(tools,focusRow,actions);
+  bench.appendChild(zone);
+  mount.appendChild(bench);
+
+  function doStep(ev,btn){
+    state.seq.push(ev);
+    state.done[ev]=true;
+    btn.style.background="color-mix(in srgb,var(--bio) 20%,transparent)";
+    if(ev==="stain") state.stained=true;
+    if(state.done.water&&state.done.sample&&state.done.cover&&!field.dataset.ready){
+      field.dataset.ready="1";
+      drawCells();
+    }
+    if(state.stained) field.classList.add("stained");
+    tintCells();
+    updateFocus();
+    emit(ev);
+  }
+  function drawCells(){
+    const NS="http://www.w3.org/2000/svg";
+    const svg=document.createElementNS(NS,"svg");
+    svg.setAttribute("viewBox","0 0 270 270");
+    const bgc=document.createElementNS(NS,"rect");
+    bgc.setAttribute("width","270");bgc.setAttribute("height","270");
+    bgc.setAttribute("fill","#e9e4d0");
+    svg.appendChild(bgc);
+    if(config.specimen==="cheek"){
+      for(let i=0;i<14;i++){
+        const g=document.createElementNS(NS,"g");
+        const cx=25+Math.random()*220, cy=25+Math.random()*220;
+        const e=document.createElementNS(NS,"ellipse");
+        e.setAttribute("cx",cx);e.setAttribute("cy",cy);
+        e.setAttribute("rx",22+Math.random()*12);e.setAttribute("ry",16+Math.random()*10);
+        e.setAttribute("transform",`rotate(${Math.random()*360} ${cx} ${cy})`);
+        e.setAttribute("fill","#f0e3c8");e.setAttribute("stroke","#b8a67e");e.setAttribute("stroke-width","1.5");
+        e.setAttribute("opacity",".85");
+        const n=document.createElementNS(NS,"circle");
+        n.setAttribute("class","nuc");
+        n.setAttribute("cx",cx+(Math.random()*10-5));n.setAttribute("cy",cy+(Math.random()*8-4));
+        n.setAttribute("r",5.5);n.setAttribute("fill","#c9b184");
+        g.append(e,n);svg.appendChild(g);
+      }
+    }else{
+      const cw=54,ch=34;
+      for(let r=0;r<9;r++)for(let c=0;c<6;c++){
+        const x=c*cw+(r%2?18:0)-20+Math.random()*4, y=r*ch-6+Math.random()*3;
+        const cell=document.createElementNS(NS,"rect");
+        cell.setAttribute("x",x);cell.setAttribute("y",y);
+        cell.setAttribute("width",cw-3);cell.setAttribute("height",ch-3);
+        cell.setAttribute("rx",10);
+        cell.setAttribute("fill","#efe8cf");cell.setAttribute("stroke","#a89a6a");cell.setAttribute("stroke-width","2");
+        const n=document.createElementNS(NS,"circle");
+        n.setAttribute("class","nuc");
+        n.setAttribute("cx",x+12+Math.random()*(cw-27));n.setAttribute("cy",y+10+Math.random()*(ch-22));
+        n.setAttribute("r",4.5);n.setAttribute("fill","#cbbc8d");
+        svg.append(cell,n);
+      }
+    }
+    field.innerHTML="";field.appendChild(svg);
+  }
+  function tintCells(){
+    if(!state.stained) return;
+    $$(".nuc",field).forEach(n=>n.setAttribute("fill","#6b4a1f"));
+  }
+  function updateFocus(){
+    if(!field.dataset.ready){focusTip.textContent="—";return;}
+    const v=+slider.value;
+    const sweet=Math.abs(v-68)<=10;
+    const blur=sweet?0:Math.min(9,Math.abs(v-68)/6);
+    field.style.filter=`blur(${blur}px)`;
+    field.style.transform=`scale(${.92+v/900})`;
+    focusTip.textContent=sweet?"清晰！":(v<58?"太模糊":"过头了");
+    if(sweet&&!state.done["focus-ok"]){
+      state.done["focus-ok"]=true;state.seq.push("focus-ok");
+      state.focus=v;emit("focus-ok");
+    }
+  }
+  slider.addEventListener("input",updateFocus);
+  return {state, destroy(){}};
+}
+
+/* ================================================================
+   Sheet 与三种模式的编排
+================================================================ */
+const ENGINES={beaker:BeakerLab,circuit:CircuitLab,micro:MicroLab};
+let activeLab=null;
+const sheetWrap=$("#sheet-wrap");
+
+function openSheet(title,sub,build){
+  $("#sheet-title").textContent=title;
+  $("#sheet-sub").textContent=sub;
+  const benchSlot=$("#bench-slot"),panelSlot=$("#panel-slot");
+  benchSlot.innerHTML="";panelSlot.innerHTML="";
+  sheetWrap.classList.add("on");
+  requestAnimationFrame(()=>requestAnimationFrame(()=>sheetWrap.classList.add("show")));
+  build(benchSlot,panelSlot);
+  $("#btn-close").focus();
+}
+function closeSheet(){
+  sheetWrap.classList.remove("show");
+  setTimeout(()=>{
+    sheetWrap.classList.remove("on");
+    if(activeLab){activeLab.destroy();activeLab=null;}
+    $("#bench-slot").innerHTML="";$("#panel-slot").innerHTML="";
+  },380);
+}
+$("#btn-close").addEventListener("click",closeSheet);
+$("#scrim").addEventListener("click",closeSheet);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetWrap.classList.contains("on"))closeSheet();});
+
+/* ---- 模式一：引导实验 ---- */
+function openGuided(exp){
+  openSheet(exp.title, `${SUBJECT[exp.subject].name} · ${GRADE[exp.grade]} · 跟课本做`, (benchSlot,panelSlot)=>{
+    const panel=el("div","panel");
+    panel.innerHTML=`<h4>实验步骤</h4><div class="progress"><i></i></div>`;
+    const stepsBox=el("div","steps");
+    exp.steps.forEach((s,i)=>{
+      stepsBox.appendChild(el("div","step"+(i===0?" now":""),`<span class="n">${i+1}</span><span>${s.text}</span>`));
+    });
+    panel.appendChild(stepsBox);
+    panelSlot.appendChild(panel);
+    const bar=$(".progress i",panel);
+    let cur=0;
+    const finish=()=>{
+      const done=store.get("done",[]);
+      if(!done.includes(exp.id)){done.push(exp.id);store.set("done",done);}
+      const f=el("div","finish",`
+        <span class="big">🎉</span><h3>实验完成！</h3>
+        <p>你已经掌握了这些知识点：</p>`);
+      exp.know.forEach(k=>f.appendChild(el("div","knowledge",`<b>知识点</b> · ${k}`)));
+      panel.appendChild(f);
+      renderGuided();
+    };
+    const onEvent=ev=>{
+      if(cur>=exp.steps.length) return;
+      if(ev===exp.steps[cur].ev){
+        const rows=$$(".step",stepsBox);
+        rows[cur].classList.remove("now");rows[cur].classList.add("ok");
+        cur++;
+        bar.style.width=(cur/exp.steps.length*100)+"%";
+        if(cur<exp.steps.length) rows[cur].classList.add("now");
+        else finish();
+      }
+    };
+    activeLab=ENGINES[exp.engine](benchSlot, exp.config, onEvent);
+  });
+}
+
+/* ---- 模式二：沙盒 ---- */
+const SANDBOX=[
+  {id:"sb-chem",engine:"beaker",icon:"⚗️",title:"化学混合台",desc:"所有试剂随便用。混一混、看一看，记录你观察到的现象。",
+   config:{shelf:Object.keys(REAGENTS),collectGas:true}},
+  {id:"sb-circ",engine:"circuit",icon:"🔌",title:"电学工作台",desc:"电池、灯泡、电机和各种材料，接出你自己的电路。",
+   config:{slots:["power","switch","load","test"],shelf:["battery","bulb","motor","copper","pencil","eraser","plastic"]}},
+  {id:"sb-micro",engine:"micro",icon:"🔬",title:"显微镜台",desc:"自己动手制作装片，练习调焦，看清细胞的样子。",
+   config:{specimen:"onion"}},
+];
+function openSandbox(sb){
+  openSheet(sb.title,"自由探索 · 想怎么玩就怎么玩",(benchSlot,panelSlot)=>{
+    const panel=el("div","panel",`<h4>观察记录</h4>`);
+    const log=el("div","obs-log");
+    log.appendChild(el("div","line","把你的发现记在这里 —— 每观察到一个现象，都会自动写一条。"));
+    panel.appendChild(log);
+    panelSlot.appendChild(panel);
+    const seen=new Set();
+    const onEvent=(ev,rule)=>{
+      if(rule&&rule.note&&!seen.has(ev)){
+        seen.add(ev);
+        log.prepend(el("div","line",`👀 ${rule.note}<br><b>为什么？</b>${rule.know}`));
+      }
+      if(ev==="current-on"&&!seen.has(ev)){
+        seen.add(ev);
+        log.prepend(el("div","line","👀 电路接通了，电流流动起来！<br><b>为什么？</b>闭合回路 + 电源 + 导体 = 电流。"));
+      }
+      if(ev==="focus-ok"&&!seen.has(ev)){
+        seen.add(ev);
+        log.prepend(el("div","line","👀 调到清晰啦！你看到了一格一格的细胞。"));
+      }
+    };
+    activeLab=ENGINES[sb.engine](benchSlot,sb.config,onEvent);
+  });
+}
+
+/* ---- 模式三：挑战 ---- */
+function openChallenge(ch){
+  openSheet(ch.title,`${SUBJECT[ch.subject].name} · 还原挑战 ${"★".repeat(ch.stars)}`,(benchSlot,panelSlot)=>{
+    const panel=el("div","panel");
+    panel.innerHTML=`<h4>题目</h4><p class="q-panel-text">${ch.q}</p>`;
+    const resultBox=el("div");
+    const btn=el("button","btn primary","提交答案");
+    panel.append(btn,resultBox);
+    panelSlot.appendChild(panel);
+    const onEvent=()=>{};
+    activeLab=ENGINES[ch.engine](benchSlot,ch.config,onEvent);
+    const showMC=()=>{
+      if(!ch.mc){ return win(); }
+      resultBox.innerHTML=`<h4 style="margin-bottom:8px">最后一问</h4><p class="q-panel-text" style="margin-bottom:8px">${ch.mc.q}</p>`;
+      const mc=el("div","mc");
+      ch.mc.opts.forEach((o,i)=>{
+        const b=el("button","",o);
+        b.addEventListener("click",()=>{
+          if(i===ch.mc.right){b.classList.add("right");setTimeout(win,500);}
+          else b.classList.add("wrong");
+        });
+        mc.appendChild(b);
+      });
+      resultBox.appendChild(mc);
+    };
+    const win=()=>{
+      const done=store.get("done",[]);
+      if(!done.includes(ch.id)){done.push(ch.id);store.set("done",done);}
+      resultBox.innerHTML="";
+      const f=el("div","finish",`<span class="big">🏆</span><h3>还原成功！</h3>`);
+      f.appendChild(el("div","result-banner win",`<b>实验解析</b>${ch.explain}`));
+      resultBox.appendChild(f);
+      renderChallenges();
+    };
+    btn.addEventListener("click",()=>{
+      const v=ch.validate(activeLab.state);
+      if(v.ok){ btn.remove(); showMC(); }
+      else{
+        resultBox.innerHTML="";
+        resultBox.appendChild(el("div","result-banner miss",`<b>还差一点点</b>${v.hint}`));
+      }
+    });
+  });
+}
+
+/* ================================================================
+   列表渲染 & 导航
+================================================================ */
+const filters={sub:"all",grade:"all"};
+function renderGuided(){
+  const grid=$("#guided-grid");grid.innerHTML="";
+  const done=store.get("done",[]);
+  const list=EXPERIMENTS.filter(e=>
+    (filters.sub==="all"||e.subject===filters.sub)&&
+    (filters.grade==="all"||e.grade===filters.grade));
+  if(!list.length){grid.appendChild(el("div","empty-note","这个分类下暂时还没有实验"));return;}
+  list.forEach(e=>{
+    const c=el("button","card");
+    c.innerHTML=`
+      <div class="card-top">
+        <span class="tag ${SUBJECT[e.subject].cls}">${SUBJECT[e.subject].name}</span>
+        <span class="tag grade">${GRADE[e.grade]}</span>
+        ${done.includes(e.id)?'<span class="done-badge" title="已完成">✓</span>':""}
+      </div>
+      <span class="icon">${e.icon}</span>
+      <h3>${e.title}</h3>
+      <p class="desc">${e.desc}</p>
+      <span class="go">开始实验 ›</span>`;
+    c.addEventListener("click",()=>openGuided(e));
+    grid.appendChild(c);
+  });
+}
+function renderSandbox(){
+  const grid=$("#sandbox-grid");grid.innerHTML="";
+  SANDBOX.forEach(s=>{
+    const c=el("button","card");
+    c.innerHTML=`<span class="icon">${s.icon}</span><h3>${s.title}</h3><p class="desc">${s.desc}</p><span class="go">进入 ›</span>`;
+    c.addEventListener("click",()=>openSandbox(s));
+    grid.appendChild(c);
+  });
+}
+function renderChallenges(){
+  const grid=$("#challenge-grid");grid.innerHTML="";
+  const done=store.get("done",[]);
+  CHALLENGES.forEach(ch=>{
+    const c=el("button","card q-card");
+    c.innerHTML=`
+      <div class="card-top">
+        <span class="tag ${SUBJECT[ch.subject].cls}">${SUBJECT[ch.subject].name}</span>
+        <span class="stars">${"★".repeat(ch.stars)}${"☆".repeat(3-ch.stars)}</span>
+        ${done.includes(ch.id)?'<span class="done-badge" title="已完成">🏆</span>':""}
+      </div>
+      <h3>${ch.icon} ${ch.title}</h3>
+      <p class="q-text">${ch.q}</p>
+      <span class="go">接受挑战 ›</span>`;
+    c.addEventListener("click",()=>openChallenge(ch));
+    grid.appendChild(c);
+  });
+}
+
+/* 筛选 */
+$("#guided-filters").addEventListener("click",e=>{
+  const b=e.target.closest(".chip");if(!b)return;
+  if(b.dataset.sub!==undefined){
+    $$("#guided-filters .chip[data-sub]").forEach(x=>x.classList.toggle("on",x===b));
+    filters.sub=b.dataset.sub;
+  }else if(b.dataset.grade!==undefined){
+    $$("#guided-filters .chip[data-grade]").forEach(x=>x.classList.toggle("on",x===b));
+    filters.grade=b.dataset.grade;
+  }
+  renderGuided();
+});
+
+/* 分段控件 */
+const seg=$(".seg"),thumb=$(".seg-thumb");
+function setMode(mode){
+  $$(".seg button").forEach(b=>{
+    const on=b.dataset.mode===mode;
+    b.classList.toggle("on",on);
+    b.setAttribute("aria-selected",on);
+    if(on){thumb.style.left=b.offsetLeft+"px";thumb.style.width=b.offsetWidth+"px";}
+  });
+  $$(".view").forEach(v=>v.classList.remove("on"));
+  $("#view-"+mode).classList.add("on");
+  store.set("mode",mode);
+}
+seg.addEventListener("click",e=>{
+  const b=e.target.closest("button");if(b)setMode(b.dataset.mode);
+});
+const alignThumb=()=>{
+  const on=$(".seg button.on");
+  if(on){thumb.style.left=on.offsetLeft+"px";thumb.style.width=on.offsetWidth+"px";}
+};
+window.addEventListener("resize",alignThumb);
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(alignThumb);
+
+/* 启动 */
+renderGuided();renderSandbox();renderChallenges();
+setMode(store.get("mode","guided"));
+</script>

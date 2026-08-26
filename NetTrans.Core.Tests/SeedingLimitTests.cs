@@ -71,7 +71,12 @@ public class SeedingLimitTests
     {
         var world = new World { Limits = SeedingLimits.Forever };
 
-        await world.RunAsync(timeoutMilliseconds: 700);
+        // Wait for it to start seeding rather than for the clock, then watch a
+        // moment longer: the claim is that it keeps going, so the grace period
+        // is the part of this test that does the checking.
+        await world.RunAsync(
+            until: () => world.Lines.Any(line => line.Contains("开始做种")),
+            graceMilliseconds: 200);
 
         Assert.Contains(world.Said, line => line.Contains("开始做种"));
         Assert.DoesNotContain(world.Said, line => line.Contains("停止做种"));
@@ -159,9 +164,27 @@ public class SeedingLimitTests
 
         public List<string> Said { get; } = new();
 
+        /// <summary>A snapshot, since the swarm appends from its own threads.</summary>
+        public IReadOnlyList<string> Lines
+        {
+            get { lock (Said) return Said.ToArray(); }
+        }
+
         public TorrentSwarm Swarm { get; private set; } = null!;
 
-        public async Task RunAsync(int timeoutMilliseconds = 1500)
+        /// <summary>
+        /// Runs the swarm until it stops on its own, or until <paramref name="until"/>
+        /// is true and the grace period after it has passed.
+        ///
+        /// Waiting for a condition rather than for a fixed number of
+        /// milliseconds is what keeps this honest on a slow machine: a deadline
+        /// short enough to keep the suite quick is also short enough to fail a
+        /// loaded CI runner for no reason.
+        /// </summary>
+        public async Task RunAsync(
+            Func<bool>? until = null,
+            int graceMilliseconds = 0,
+            int capMilliseconds = 10_000)
         {
             var leech = new FakeLeech(Torrent);
             leech.Wants.AddRange(Enumerable.Range(0, Torrent.PieceCount));
@@ -181,15 +204,31 @@ public class SeedingLimitTests
 
             Swarm.Said += (_, line) => { lock (Said) Said.Add(line); };
 
-            using var cancellation = new CancellationTokenSource(timeoutMilliseconds);
+            using var cancellation = new CancellationTokenSource(capMilliseconds);
+
+            var run = Swarm.RunAsync(cancellation.Token);
+
+            if (until is not null)
+            {
+                while (!until() && !run.IsCompleted && !cancellation.IsCancellationRequested)
+                {
+                    await Task.Delay(10, CancellationToken.None);
+                }
+
+                // Long enough to catch the swarm doing the thing the test says
+                // it must not do, and short enough not to be a wait.
+                if (graceMilliseconds > 0) await Task.Delay(graceMilliseconds, CancellationToken.None);
+
+                cancellation.Cancel();
+            }
 
             try
             {
-                await Swarm.RunAsync(cancellation.Token);
+                await run;
             }
             catch (OperationCanceledException)
             {
-                // Unlimited seeding has no natural end; the deadline is it.
+                // Unlimited seeding has no natural end; the caller's condition is.
             }
         }
     }

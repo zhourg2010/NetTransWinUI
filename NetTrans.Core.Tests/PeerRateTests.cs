@@ -71,7 +71,12 @@ public class PeerRateTests
         /// <summary>Every non-empty snapshot taken while the swarm was running.</summary>
         public List<IReadOnlyList<PeerRate>> Sampled { get; } = new();
 
-        public async Task RunAsync(int timeoutMilliseconds = 1500)
+        /// <summary>
+        /// Runs until a peer's rate has actually been seen, rather than for a
+        /// fixed number of milliseconds -- a deadline short enough to keep the
+        /// suite quick is also short enough to fail a loaded runner.
+        /// </summary>
+        public async Task RunAsync(int capMilliseconds = 10_000)
         {
             var seed = new FakeSeed(Torrent, Content);
             var connector = new FakePeerConnector(Torrent.InfoHash).Add(SeedAddress, seed);
@@ -86,23 +91,41 @@ public class PeerRateTests
                 RateWindow = TimeSpan.FromSeconds(1),
             };
 
-            using var cancellation = new CancellationTokenSource(timeoutMilliseconds);
+            using var cancellation = new CancellationTokenSource(capMilliseconds);
             using var sampling = new CancellationTokenSource();
+
+            var seen = new TaskCompletionSource();
 
             var sampler = Task.Run(async () =>
             {
                 while (!sampling.IsCancellationRequested)
                 {
                     var rates = Swarm.PeerRates;
-                    if (rates.Count > 0) lock (Sampled) Sampled.Add(rates);
+
+                    if (rates.Count > 0)
+                    {
+                        lock (Sampled) Sampled.Add(rates);
+
+                        // The transfer is over in milliseconds; what the test
+                        // needs is one sample with the peer moving bytes.
+                        if (rates[0].Down > 0) seen.TrySetResult();
+                    }
 
                     await Task.Delay(5, CancellationToken.None);
                 }
             });
 
+            var run = Swarm.RunAsync(cancellation.Token);
+
+            // The cap lives on the token, so the run itself ends if nothing is
+            // ever seen.
+            await Task.WhenAny(seen.Task, run);
+
+            cancellation.Cancel();
+
             try
             {
-                await Swarm.RunAsync(cancellation.Token);
+                await run;
             }
             catch (OperationCanceledException)
             {

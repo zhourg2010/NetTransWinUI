@@ -366,6 +366,17 @@ button:focus-visible,[tabindex]:focus-visible,input:focus-visible{outline:2px so
 .focus-row{display:flex;align-items:center;gap:10px;width:min(300px,100%);font-size:12.5px;color:var(--ink-2)}
 .focus-row input{flex:1;accent-color:var(--accent)}
 
+/* ============ 光学台 ============ */
+.optics{width:min(520px,100%)}
+.optics svg{width:100%;height:auto;display:block;overflow:visible}
+.optic-rail{stroke:var(--ink-3);stroke-width:2}
+.optic-axis{stroke:var(--ink-3);stroke-width:1.5;stroke-dasharray:4 5}
+.optic-lens{fill:color-mix(in srgb,var(--accent) 22%,transparent);stroke:var(--accent);stroke-width:2}
+.optic-screen{fill:var(--ink-2)}
+.optic-label{fill:var(--ink-3);font-size:11px;text-anchor:middle;font-family:inherit}
+.optic-note{fill:var(--ink-2);font-size:12.5px;text-anchor:middle;font-family:inherit;font-weight:600}
+.optic-virtual{opacity:.55}
+
 /* MC 小问题 */
 .mc{display:flex;flex-direction:column;gap:8px}
 .mc button{
@@ -497,6 +508,9 @@ const REAGENTS = {
   marble:  {name:"大理石",   em:"🪨", solid:"🪨"},
   ironnail:{name:"铁钉",     em:"📍", solid:"📍"},
   zinc:    {name:"锌粒",     em:"⬡",  solid:"·"},
+  cu:      {name:"铜片",     em:"🟠", solid:"▬"},
+  h2o2:    {name:"过氧化氢溶液", em:"🧯", liquid:true, color:"rgba(205,215,222,.5)"},
+  mno2:    {name:"二氧化锰",  em:"⬛", solid:"▪"},
   limewater:{name:"澄清石灰水", em:"🥛", liquid:true, color:"rgba(215,220,225,.45)"},
 };
 /* 规则：need 全部包含即触发（选最具体的），效果依次叠加 */
@@ -506,8 +520,10 @@ const CHEM_RULES = [
   {need:["naoh","phenol"], color:"rgba(240,80,140,.6)", note:"无色酚酞变<b>红</b>了！这是碱性溶液。", ev:"phenol-red", know:"酚酞遇碱变红，遇酸不变色。"},
   {need:["hcl","phenol"],  note:"酚酞在酸里<b>不变色</b>，还是无色的。", ev:"phenol-none", know:"酚酞遇酸和中性溶液都不变色。"},
   {need:["hcl","naoh","phenol"], color:"rgba(210,215,220,.4)", note:"红色<b>褪去</b>了！酸把碱中和掉了。", ev:"neutralize", know:"酸 + 碱 → 盐 + 水，这叫中和反应。"},
-  {need:["hcl","marble"],  bubbles:true, note:"大理石表面冒出<b>气泡</b>！生成了二氧化碳。", ev:"co2", know:"CaCO₃ + 2HCl → CaCl₂ + H₂O + CO₂↑"},
-  {need:["hcl","zinc"],    bubbles:true, note:"锌粒不断冒出气泡，这是<b>氢气</b>！", ev:"h2", know:"Zn + 2HCl → ZnCl₂ + H₂↑，实验室用它制氢气。"},
+  {need:["hcl","marble"],  bubbles:true, gas:"co2", note:"大理石表面冒出<b>气泡</b>！生成了二氧化碳。", ev:"co2", know:"CaCO₃ + 2HCl → CaCl₂ + H₂O + CO₂↑"},
+  {need:["hcl","cu"],      note:"铜片安静地躺在酸里，<b>没有任何气泡</b>。", ev:"cu-no-react", know:"铜排在金属活动性顺序中氢的后面，不能置换出盐酸里的氢。"},
+  {need:["hcl","zinc"],    bubbles:true, gas:"h2", note:"锌粒不断冒出气泡，这是<b>氢气</b>！", ev:"h2", know:"Zn + 2HCl → ZnCl₂ + H₂↑，实验室用它制氢气。"},
+  {need:["h2o2","mno2"],   bubbles:true, gas:"o2", note:"加入二氧化锰后<b>剧烈冒泡</b>！放出的是氧气。", ev:"o2", know:"2H₂O₂ →(MnO₂ 催化) 2H₂O + O₂↑，二氧化锰是催化剂。"},
   {need:["cuso4","ironnail"], color:"rgba(120,200,160,.55)", solidTint:"🔶", note:"铁钉表面覆盖了一层<b>红色的铜</b>，蓝色溶液慢慢变浅绿。", ev:"displace", know:"Fe + CuSO₄ → FeSO₄ + Cu，铁比铜活泼，把铜「挤」了出来。"},
   {need:["cuso4","naoh"],  precip:true, note:"出现了<b>蓝色絮状沉淀</b>！这是氢氧化铜。", ev:"cuoh2", know:"CuSO₄ + 2NaOH → Cu(OH)₂↓ + Na₂SO₄"},
   {need:["limewater","co2gas"], color:"rgba(230,232,235,.75)", note:"澄清石灰水变<b>浑浊</b>了！说明气体是二氧化碳。", ev:"limewater-milky", know:"CO₂ 能使澄清石灰水变浑浊，这是检验 CO₂ 的方法。"},
@@ -556,6 +572,32 @@ const EXPERIMENTS = [
     know:["容易导电的物体叫导体，如金属、石墨。","不容易导电的物体叫绝缘体，如橡胶、塑料。"]
   },
   {
+    id:"lens-image", subject:"phys", grade:"junior", engine:"optics", icon:"🔍",
+    title:"探究凸透镜成像的规律",
+    desc:"人教版物理八上·透镜及其应用：移动蜡烛和光屏，找出照相机、投影仪和放大镜的秘密。课标必做。",
+    config:{},
+    steps:[
+      {text:"把蜡烛移到二倍焦距以外（u > 2f）", ev:"u-far"},
+      {text:"移动光屏，找到清晰的像 —— 倒立、缩小", ev:"img-small"},
+      {text:"把蜡烛移到 F 和 2F 之间", ev:"u-mid"},
+      {text:"再找到清晰的像 —— 倒立、放大", ev:"img-big"},
+      {text:"把蜡烛移到焦距以内，透过透镜观察", ev:"img-virtual"},
+    ],
+    know:["u > 2f：倒立缩小实像 —— 照相机。","f < u < 2f：倒立放大实像 —— 投影仪。","u < f：正立放大虚像 —— 放大镜。"]
+  },
+  {
+    id:"parallel-circuit", subject:"phys", grade:"junior", engine:"circuit", icon:"🔀",
+    title:"探究并联电路的特点",
+    desc:"两条支路各接一个灯泡，取下一个，另一个还亮吗？课标必做实验。",
+    config:{parallel:true, shelf:["battery","bulb","bulb","motor"]},
+    steps:[
+      {text:"装上电池，两条支路各装一个小灯泡", ev:"para-setup"},
+      {text:"合上总开关 —— 两个灯都亮了", ev:"para-both"},
+      {text:"取下其中一个灯泡，观察另一个", ev:"para-one"},
+    ],
+    know:["并联电路中各支路互不影响。","家里的电灯和电器就是并联的：关掉一盏灯，其他照常工作。"]
+  },
+  {
     id:"acid-base", subject:"chem", grade:"junior", engine:"beaker", icon:"🧪",
     title:"酸碱指示剂的变色",
     desc:"人教版化学·酸和碱：用石蕊和酚酞检验溶液的酸碱性。",
@@ -579,6 +621,42 @@ const EXPERIMENTS = [
       {text:"点「收集气体」，把气体通入澄清石灰水", ev:"limewater-milky"},
     ],
     know:["CaCO₃ + 2HCl → CaCl₂ + H₂O + CO₂↑","CO₂ 使澄清石灰水变浑浊，可用来检验 CO₂。"]
+  },
+  {
+    id:"o2-make", subject:"chem", grade:"junior", engine:"beaker", icon:"🔥",
+    title:"实验室制取氧气并检验",
+    desc:"人教版化学九上·我们周围的空气：过氧化氢在二氧化锰催化下分解。课标必做实验。",
+    config:{shelf:["h2o2","mno2","water","hcl"], gasTools:["ember","lime"]},
+    steps:[
+      {text:"往烧杯里倒入过氧化氢溶液", ev:"add-h2o2"},
+      {text:"加入少量二氧化锰，观察气泡", ev:"o2"},
+      {text:"用带火星的木条检验 —— 复燃！", ev:"ember-relight"},
+    ],
+    know:["2H₂O₂ →(MnO₂ 催化) 2H₂O + O₂↑","二氧化锰是催化剂：加快反应，自身质量和化学性质不变。","氧气能使带火星的木条复燃 —— 检验氧气的方法。"]
+  },
+  {
+    id:"metal-activity", subject:"chem", grade:"junior", engine:"beaker", icon:"🥇",
+    title:"比较锌和铜的活动性",
+    desc:"人教版化学九下·金属和金属材料：把不同金属放进稀盐酸，比比谁更活泼。课标必做。",
+    config:{shelf:["hcl","cu","zinc","water"]},
+    steps:[
+      {text:"往烧杯里倒入稀盐酸", ev:"add-hcl"},
+      {text:"放入铜片，观察 —— 没有反应", ev:"cu-no-react"},
+      {text:"再放入锌粒，对比现象", ev:"h2"},
+    ],
+    know:["锌与稀盐酸反应放出氢气，铜不反应。","金属活动性：锌 > 氢 > 铜，排在氢前面的金属才能置换出酸里的氢。"]
+  },
+  {
+    id:"ph-test", subject:"chem", grade:"junior", engine:"beaker", icon:"🌈",
+    title:"用 pH 试纸测溶液酸碱度",
+    desc:"人教版化学九下·酸和碱：酸碱性不只有「是不是」，还有「有多强」。课标必做实验。",
+    config:{shelf:["hcl","naoh","water"], tools:["ph"]},
+    steps:[
+      {text:"倒入稀盐酸，用 pH 试纸测一测", ev:"ph-acid"},
+      {text:"倒掉，重新加入氢氧化钠溶液", ev:"add-naoh-fresh"},
+      {text:"再测一次 pH", ev:"ph-base"},
+    ],
+    know:["pH < 7 酸性，pH = 7 中性，pH > 7 碱性。","pH 越小酸性越强，pH 越大碱性越强。"]
   },
   {
     id:"displace", subject:"chem", grade:"senior", engine:"beaker", icon:"🥉",
@@ -660,6 +738,38 @@ const CHALLENGES = [
     explain:"大理石（CaCO₃）与稀盐酸反应生成 CO₂；CO₂ 通入澄清石灰水变浑浊 —— 这正是检验 CO₂ 的经典方法。"
   },
   {
+    id:"q-lens", subject:"phys", stars:2, engine:"optics", icon:"📷",
+    title:"把远处的风景装进相机",
+    q:"照相机拍照时，底片上得到的是倒立、缩小的实像。请在光具座上还原这种成像：把蜡烛放到合适的位置，并让光屏上出现清晰的像。",
+    config:{},
+    validate:s=> s.captured.includes("img-small") ? {ok:true} :
+      (s.captured.includes("img-big") ? {ok:false,hint:"现在的像是放大的 —— 那是投影仪。想让像变小，蜡烛该离透镜更远还是更近？"} :
+       {ok:false,hint:"先把蜡烛移到二倍焦距（2F）以外，再慢慢移动光屏找清晰的像。"}),
+    explain:"物体在二倍焦距以外（u > 2f）时，成倒立、缩小的实像，像落在另一侧 F 与 2F 之间 —— 照相机正是利用了这个规律。"
+  },
+  {
+    id:"q-o2", subject:"chem", stars:2, engine:"beaker", icon:"🪵",
+    title:"复燃的木条",
+    q:"把一根带火星的木条伸进集气瓶，木条立刻复燃了。请制取出这种气体并完成检验，还原整个实验。",
+    config:{shelf:["h2o2","mno2","marble","hcl","water"], gasTools:["ember","lime"]},
+    validate:s=> s.events.includes("ember-relight") ? {ok:true} :
+      (s.events.includes("o2") ? {ok:false,hint:"氧气已经制出来了！再用带火星的木条检验一下。"} :
+       s.events.includes("co2") ? {ok:false,hint:"二氧化碳只会让木条熄灭，不会复燃哦。换种药品试试。"} :
+       {ok:false,hint:"想想：哪两种药品放在一起能产生氧气？"}),
+    explain:"能使带火星木条复燃的气体是氧气。实验室用过氧化氢溶液在二氧化锰催化下分解制取：2H₂O₂ →(MnO₂) 2H₂O + O₂↑。"
+  },
+  {
+    id:"q-ph", subject:"chem", stars:1, engine:"beaker", icon:"🌈",
+    title:"变成深蓝色的试纸",
+    q:"用 pH 试纸测某无色溶液，试纸变成深蓝色，对照比色卡 pH ≈ 13。请还原这个实验。",
+    config:{shelf:["hcl","naoh","water"], tools:["ph"]},
+    validate:s=> s.events.includes("ph-base") ? {ok:true} :
+      (s.events.includes("ph-acid") ? {ok:false,hint:"试纸变红是酸性，pH 只有 1。深蓝色说明是强碱性的溶液。"} :
+       {ok:false,hint:"先加一种溶液，再点「用 pH 试纸测一测」。"}),
+    mc:{q:"关于这杯溶液，下面说法正确的是——", opts:["它是强酸","它是强碱","它是中性的"], right:1},
+    explain:"pH > 7 为碱性，pH ≈ 13 是强碱性 —— 比如氢氧化钠溶液。酸碱性强弱要用 pH 来度量，指示剂只能分辨酸碱。"
+  },
+  {
     id:"q-micro", subject:"bio", stars:3, engine:"micro", icon:"🔬",
     title:"帮同学找回实验顺序",
     q:"同学的实验报告被打乱了：滴水、取样、盖片、染色、调焦。请按正确顺序完成「观察洋葱表皮细胞」的全部操作。",
@@ -697,16 +807,47 @@ function BeakerLab(mount, config, emit){
   const btnReset = el("button","btn","倒掉重来");
   btnReset.addEventListener("click",()=>reset(true));
   actions.appendChild(btnReset);
-  if(config.collectGas){
+  const gasTools = config.gasTools || (config.collectGas?["lime"]:[]);
+  if(gasTools.includes("lime")){
     const btnGas = el("button","btn","收集气体 → 通入石灰水");
     btnGas.addEventListener("click",()=>{
       const gas=state.gas;
-      if(gas!=="co2" && gas!=="h2"){ caption.textContent="现在没有气体可以收集，先让反应冒泡吧"; return; }
+      if(!gas){ caption.textContent="现在没有气体可以收集，先让反应冒泡吧"; return; }
       if(!state.has("limewater")){ reset(false); add("limewater"); }
       if(gas==="co2"){ state.contents.push("co2gas"); applyRules(); }
-      else { caption.textContent="氢气通入石灰水……石灰水没有任何变化"; emit("h2-into-lime"); }
+      else { caption.textContent=(gas==="o2"?"氧气":"氢气")+"通入石灰水……石灰水没有任何变化"; state.events.push(gas+"-into-lime"); emit(gas+"-into-lime"); }
     });
     actions.appendChild(btnGas);
+  }
+  if(gasTools.includes("ember")){
+    const btnEmber = el("button","btn","🪵 带火星的木条检验");
+    btnEmber.addEventListener("click",()=>{
+      const gas=state.gas;
+      let ev,txt;
+      if(!gas){ caption.textContent="没有气体产生，木条上的火星慢慢暗下去了"; return; }
+      if(gas==="o2"){ ev="ember-relight"; txt="🔥 木条<b>复燃</b>了！烧得比刚才还旺 —— 这是氧气！"; }
+      else if(gas==="co2"){ ev="ember-out"; txt="木条上的火星<b>熄灭</b>了 —— 二氧化碳不支持燃烧。"; }
+      else { ev="h2-pop"; txt="靠近瓶口时发出<b>轻微的爆鸣声</b>！这是氢气。"; }
+      caption.innerHTML=txt;
+      if(!state.events.includes(ev)) state.events.push(ev);
+      emit(ev);
+    });
+    actions.appendChild(btnEmber);
+  }
+  if((config.tools||[]).includes("ph")){
+    const btnPh = el("button","btn","🧻 用 pH 试纸测一测");
+    btnPh.addEventListener("click",()=>{
+      if(!state.contents.some(c=>REAGENTS[c]&&REAGENTS[c].liquid)){ caption.textContent="烧杯里没有液体，先加点溶液再测吧"; return; }
+      const hasA=state.has("hcl"), hasB=state.has("naoh");
+      let ev,txt,color;
+      if(hasA&&!hasB){ ev="ph-acid"; txt="试纸变红，对照比色卡 pH ≈ 1 —— 强酸性！"; color="#e0453a"; }
+      else if(hasB&&!hasA){ ev="ph-base"; txt="试纸变深蓝，对照比色卡 pH ≈ 13 —— 强碱性！"; color="#3a5be0"; }
+      else { ev="ph-neutral"; txt="试纸呈绿色，pH = 7 —— 中性。"; color="#2f9e60"; }
+      caption.innerHTML=`🧻 <span style="color:${color};font-weight:700">${txt}</span>`;
+      if(!state.events.includes(ev)) state.events.push(ev);
+      emit(ev);
+    });
+    actions.appendChild(btnPh);
   }
   bench.append(shelf,stage,actions);
   mount.appendChild(bench);
@@ -757,7 +898,7 @@ function BeakerLab(mount, config, emit){
     stopBubbles();
     if(!matched) return;
     if(matched.color) liquid.style.background=matched.color;
-    if(matched.bubbles){ startBubbles(); state.gas = matched.ev==="h2" ? "h2" : "co2"; }
+    if(matched.bubbles){ startBubbles(); if(matched.gas) state.gas=matched.gas; }
     if(matched.precip) precip.style.height="26%";
     if(matched.solidTint) solids.textContent=matched.solidTint;
     caption.innerHTML=matched.note;
@@ -771,8 +912,19 @@ function BeakerLab(mount, config, emit){
    电路台引擎
 ================================================================ */
 function CircuitLab(mount, config, emit){
-  const slots=config.slots||["power","switch","load"];
-  const SLOT_META={power:{x:210,y:40,label:"电源"},switch:{x:380,y:150,label:"开关"},load:{x:210,y:260,label:"用电器"},test:{x:40,y:150,label:"测试口"}};
+  const parallel=!!config.parallel;
+  const slots=config.slots||(parallel?["power","switch","loadA","loadB"]:["power","switch","load"]);
+  const SLOT_META= parallel ? {
+    power:{x:210,y:40,label:"电源"},
+    switch:{x:380,y:95,label:"总开关"},
+    loadA:{x:210,y:150,label:"支路一"},
+    loadB:{x:210,y:260,label:"支路二"},
+  } : {
+    power:{x:210,y:40,label:"电源"},
+    switch:{x:380,y:150,label:"开关"},
+    load:{x:210,y:260,label:"用电器"},
+    test:{x:40,y:150,label:"测试口"},
+  };
   const state={items:{}, closed:false, lit:false, running:false,
     get filledAll(){ return slots.every(s=>state.items[s]); }};
   slots.forEach(s=>state.items[s]=null);
@@ -780,25 +932,26 @@ function CircuitLab(mount, config, emit){
 
   const bench=el("div","bench");
   const shelf=el("div","shelf",'<span class="shelf-label">元件盒 · 点一下装进空接口，点电路上的元件可取下</span>');
-  const chips={};
+  const chipList=[];
   (config.shelf||[]).forEach(id=>{
     const it=CIRCUIT_ITEMS[id];
     const chip=el("button","item-chip",`<span class="em">${it.em}</span>${it.name}`);
-    chip.addEventListener("click",()=>place(id));
-    chips[id]=chip; shelf.appendChild(chip);
+    const rec={id,elm:chip,used:false};
+    chip.addEventListener("click",()=>{ if(!rec.used) place(id,rec); });
+    chipList.push(rec); shelf.appendChild(chip);
   });
   const stage=el("div","stage");
   const wrap=el("div","circuit");
   const NS="http://www.w3.org/2000/svg";
   const svg=document.createElementNS(NS,"svg");
-  svg.setAttribute("viewBox","-15 0 450 300");
+  svg.setAttribute("viewBox","-15 0 450 315");
   wrap.appendChild(svg); stage.appendChild(wrap);
   bench.append(shelf,stage);
   mount.appendChild(bench);
 
   const wire=document.createElementNS(NS,"path");
   wire.setAttribute("class","wire");
-  wire.setAttribute("d","M60 40 H360 Q380 40 380 60 V240 Q380 260 360 260 H60 Q40 260 40 240 V60 Q40 40 60 40 Z");
+  wire.setAttribute("d","M60 40 H360 Q380 40 380 60 V240 Q380 260 360 260 H60 Q40 260 40 240 V60 Q40 40 60 40 Z"+(parallel?" M40 150 H380":""));
   svg.appendChild(wire);
 
   const nodes={};
@@ -842,11 +995,11 @@ function CircuitLab(mount, config, emit){
   nodes["switch"].item.addEventListener("click",toggleSwitch);
   swHint.addEventListener("click",toggleSwitch);
 
-  function place(id){
+  function place(id,rec){
     const open=slots.find(s=>s!=="switch"&&!state.items[s]&&!(config.fixed&&config.fixed[s]));
     if(!open) return;
     state.items[open]=id;
-    chips[id].classList.add("used");
+    rec.used=true; rec.elm.classList.add("used");
     emit("place-"+id);
     render();
   }
@@ -854,39 +1007,56 @@ function CircuitLab(mount, config, emit){
     const id=state.items[s];
     if(!id||id==="_sw") return;
     state.items[s]=null;
-    if(chips[id]) chips[id].classList.remove("used");
+    const rec=chipList.find(r=>r.id===id&&r.used);
+    if(rec){ rec.used=false; rec.elm.classList.remove("used"); }
     render();
   }
+  function decorate(s,running){
+    const id=state.items[s],n=nodes[s];
+    n.rect.classList.toggle("filled",!!id);
+    if(s==="switch"){ n.item.textContent=state.closed?"🔗":"🔌"; return; }
+    n.item.textContent=id?CIRCUIT_ITEMS[id].em:"";
+    const isBulb=id&&CIRCUIT_ITEMS[id].isBulb;
+    const isMotor=id&&CIRCUIT_ITEMS[id].isMotor;
+    n.glow.classList.toggle("on",!!(isBulb&&running));
+    if(isBulb&&running) state.lit=true;
+    n.item.style.transition="transform .3s";
+    n.item.style.transformOrigin=`${n.item.getAttribute("x")}px ${n.item.getAttribute("y")}px`;
+    n.item.style.transform=(isMotor&&running)?"rotate(360deg)":"";
+  }
   function render(){
-    const parts=slots.map(s=>state.items[s]);
-    const complete=parts.every(Boolean);
-    const conducts=complete&&parts.every(p=>p==="_sw"||CIRCUIT_ITEMS[p].conducts);
-    const hasPower=parts.some(p=>p!=="_sw"&&CIRCUIT_ITEMS[p]&&CIRCUIT_ITEMS[p].isPower);
-    state.running=complete&&conducts&&hasPower&&state.closed;
     state.lit=false;
-    slots.forEach(s=>{
-      const id=state.items[s],n=nodes[s];
-      n.rect.classList.toggle("filled",!!id);
-      if(s==="switch"){ n.item.textContent=state.closed?"🔗":"🔌"; }
-      else n.item.textContent=id?CIRCUIT_ITEMS[id].em:"";
-      const isBulb=id&&id!=="_sw"&&CIRCUIT_ITEMS[id].isBulb;
-      const isMotor=id&&id!=="_sw"&&CIRCUIT_ITEMS[id].isMotor;
-      n.glow.classList.toggle("on",!!(isBulb&&state.running));
-      if(isBulb&&state.running) state.lit=true;
-      n.item.style.transition="transform .3s";
-      n.item.style.transformOrigin=`${n.item.getAttribute("x")}px ${n.item.getAttribute("y")}px`;
-      n.item.style.transform=(isMotor&&state.running)?"rotate(360deg)":"";
-    });
+    if(parallel){
+      const pw=state.items.power, a=state.items.loadA, b=state.items.loadB;
+      const battery=pw&&CIRCUIT_ITEMS[pw].isPower;
+      const runA=!!(battery&&state.closed&&a&&CIRCUIT_ITEMS[a].conducts);
+      const runB=!!(battery&&state.closed&&b&&CIRCUIT_ITEMS[b].conducts);
+      state.running=runA||runB;
+      decorate("power",state.running);decorate("switch",state.running);
+      decorate("loadA",runA);decorate("loadB",runB);
+      if(battery&&a&&b&&CIRCUIT_ITEMS[a].isBulb&&CIRCUIT_ITEMS[b].isBulb) emit("para-setup");
+      const litA=runA&&CIRCUIT_ITEMS[a].isBulb, litB=runB&&CIRCUIT_ITEMS[b].isBulb;
+      if(litA&&litB) emit("para-both");
+      const branches=(a?1:0)+(b?1:0);
+      if(((litA?1:0)+(litB?1:0))===1&&branches===1) emit("para-one");
+    }else{
+      const parts=slots.map(s=>state.items[s]);
+      const complete=parts.every(Boolean);
+      const conducts=complete&&parts.every(p=>p==="_sw"||CIRCUIT_ITEMS[p].conducts);
+      const hasPower=parts.some(p=>p!=="_sw"&&CIRCUIT_ITEMS[p]&&CIRCUIT_ITEMS[p].isPower);
+      state.running=complete&&conducts&&hasPower&&state.closed;
+      slots.forEach(s=>decorate(s,state.running));
+      if(state.running){
+        const t=state.items.test;
+        if(t&&CIRCUIT_ITEMS[t]){ emit("test-conduct"); if(t==="pencil") emit("test-pencil"); }
+      }else if(complete&&state.closed&&hasPower&&!conducts){
+        const t=state.items.test;
+        if(t&&!CIRCUIT_ITEMS[t].conducts) emit("test-insulate");
+      }
+    }
     swHint.textContent=state.closed?"点我断开开关":"点我合上开关";
     wire.classList.toggle("live",state.running);
-    if(state.running){
-      emit("current-on");
-      const t=state.items.test;
-      if(t&&CIRCUIT_ITEMS[t]){ emit("test-conduct"); if(t==="pencil") emit("test-pencil"); }
-    }else if(complete&&state.closed&&hasPower&&!conducts){
-      const t=state.items.test;
-      if(t&&!CIRCUIT_ITEMS[t].conducts) emit("test-insulate");
-    }
+    if(state.running) emit("current-on");
   }
   render();
   return {state, destroy(){}};
@@ -1018,9 +1188,113 @@ function MicroLab(mount, config, emit){
 }
 
 /* ================================================================
+   光学台引擎（光具座：凸透镜成像）
+================================================================ */
+function OpticsLab(mount, config, emit){
+  const f=10, scale=6, LX=250, AXIS=118, RAIL=196;
+  const state={u:30, s:30, captured:[], events:[]};
+  const bench=el("div","bench");
+  const stage=el("div","stage");
+  const wrap=el("div","optics");
+  const NS="http://www.w3.org/2000/svg";
+  const svg=document.createElementNS(NS,"svg");
+  svg.setAttribute("viewBox","0 0 500 250");
+  wrap.appendChild(svg); stage.appendChild(wrap);
+  const put=(tag,attrs)=>{const n=document.createElementNS(NS,tag);for(const k in attrs)n.setAttribute(k,attrs[k]);svg.appendChild(n);return n;};
+
+  put("line",{x1:15,y1:RAIL,x2:485,y2:RAIL,class:"optic-rail"});
+  put("line",{x1:15,y1:AXIS,x2:485,y2:AXIS,class:"optic-axis"});
+  [[-2,"2F"],[-1,"F"],[1,"F"],[2,"2F"]].forEach(([m,lab])=>{
+    const x=LX+m*f*scale;
+    put("line",{x1:x,y1:RAIL-6,x2:x,y2:RAIL+6,class:"optic-rail"});
+    const t=put("text",{x,y:RAIL+22,class:"optic-label"});t.textContent=lab;
+  });
+  put("ellipse",{cx:LX,cy:AXIS,rx:9,ry:54,class:"optic-lens"});
+  const lensLab=put("text",{x:LX,y:42,class:"optic-label"});lensLab.textContent="凸透镜 f = 10 cm";
+  const screen=put("rect",{y:AXIS-58,width:6,height:116,rx:3,class:"optic-screen"});
+  const img=put("text",{class:"candle"});
+  img.textContent="🕯️";img.setAttribute("text-anchor","middle");
+  img.style.fontSize="30px";
+  const virt=put("text",{class:"optic-virtual"});
+  virt.textContent="🕯️";virt.setAttribute("text-anchor","middle");
+  virt.style.fontSize="30px";virt.style.display="none";
+  const candle=put("text",{});
+  candle.textContent="🕯️";candle.setAttribute("text-anchor","middle");
+  candle.style.fontSize="30px";
+  const note=put("text",{x:250,y:242,class:"optic-note"});
+
+  const mkRow=(label,init,oninput)=>{
+    const row=el("div","focus-row");
+    row.appendChild(el("span","",label));
+    const r=document.createElement("input");
+    r.type="range";r.min="5";r.max="35";r.step="0.5";r.value=init;
+    r.setAttribute("aria-label",label);
+    r.addEventListener("input",()=>oninput(+r.value));
+    row.appendChild(r);
+    const val=el("span","", init+" cm");
+    row.appendChild(val);
+    return {row,val};
+  };
+  const rowU=mkRow("蜡烛 · 物距",state.u,v=>{state.u=v;rowU.val.textContent=v+" cm";update();});
+  const rowS=mkRow("光屏位置",state.s,v=>{state.s=v;rowS.val.textContent=v+" cm";update();});
+  const btnLook=el("button","btn","👀 透过透镜观察");
+  btnLook.style.display="none";
+  btnLook.addEventListener("click",()=>{
+    virt.style.display="";
+    setTimeout(()=>{virt.style.display="none";},2500);
+    fire("img-virtual");
+    setNote("正立、放大的虚像 —— 这就是放大镜！");
+  });
+  const actions=el("div","bench-actions");
+  actions.appendChild(btnLook);
+  const zone=el("div","micro-zone");
+  zone.append(rowU.row,rowS.row,actions);
+  bench.append(stage,zone);
+  mount.appendChild(bench);
+
+  function fire(ev){
+    if(!state.captured.includes(ev)&&ev.startsWith("img"))state.captured.push(ev);
+    if(!state.events.includes(ev))state.events.push(ev);
+    emit(ev);
+  }
+  function setNote(t){note.textContent=t;}
+  function update(){
+    const u=state.u, s=state.s;
+    candle.setAttribute("transform",`translate(${LX-u*scale} ${RAIL-6})`);
+    screen.setAttribute("x",LX+s*scale-3);
+    emit(u>2*f?"u-far":(u>f?"u-mid":"u-near"));
+    if(u>f+0.2){
+      btnLook.style.display="none";
+      const v=1/(1/f-1/u);
+      const k=Math.min(2.2,v/u);
+      const diff=Math.abs(s-v);
+      const blur=Math.min(8,diff*1.1);
+      img.style.display="";
+      img.setAttribute("transform",`translate(${LX+s*scale} ${AXIS-4}) scale(${k} ${-k})`);
+      img.style.filter=`blur(${blur}px)`;
+      img.style.opacity=String(Math.max(.15,1-diff/14));
+      if(diff<1.5){
+        if(u>2*f){ fire("img-small"); setNote("清晰！倒立、缩小的实像 —— 照相机就是这样拍照的"); }
+        else if(u<2*f-0.2){ fire("img-big"); setNote("清晰！倒立、放大的实像 —— 投影仪的原理"); }
+        else { fire("img-equal"); setNote("倒立、等大的实像 —— 蜡烛正好在 2F 上"); }
+      }else{
+        setNote(diff<5?"快了……再微调光屏":"移动光屏，找到清晰的像");
+      }
+    }else{
+      img.style.display="none";
+      btnLook.style.display="";
+      virt.setAttribute("transform",`translate(${LX-u*scale} ${AXIS+58}) scale(2.1 2.1)`);
+      setNote("光屏上怎么也找不到像…… 点「透过透镜观察」试试");
+    }
+  }
+  update();
+  return {state, destroy(){}};
+}
+
+/* ================================================================
    Sheet 与三种模式的编排
 ================================================================ */
-const ENGINES={beaker:BeakerLab,circuit:CircuitLab,micro:MicroLab};
+const ENGINES={beaker:BeakerLab,circuit:CircuitLab,micro:MicroLab,optics:OpticsLab};
 let activeLab=null;
 const sheetWrap=$("#sheet-wrap");
 
@@ -1086,10 +1360,14 @@ function openGuided(exp){
 
 /* ---- 模式二：沙盒 ---- */
 const SANDBOX=[
-  {id:"sb-chem",engine:"beaker",icon:"⚗️",title:"化学混合台",desc:"所有试剂随便用。混一混、看一看，记录你观察到的现象。",
-   config:{shelf:Object.keys(REAGENTS),collectGas:true}},
+  {id:"sb-chem",engine:"beaker",icon:"⚗️",title:"化学混合台",desc:"所有试剂随便用。混一混、测一测，记录你观察到的现象。",
+   config:{shelf:Object.keys(REAGENTS),gasTools:["lime","ember"],tools:["ph"]}},
   {id:"sb-circ",engine:"circuit",icon:"🔌",title:"电学工作台",desc:"电池、灯泡、电机和各种材料，接出你自己的电路。",
    config:{slots:["power","switch","load","test"],shelf:["battery","bulb","motor","copper","pencil","eraser","plastic"]}},
+  {id:"sb-para",engine:"circuit",icon:"🔀",title:"并联电路台",desc:"两条支路随你接：灯泡、电机混着装，看看互相影响吗？",
+   config:{parallel:true,shelf:["battery","bulb","bulb","motor"]}},
+  {id:"sb-optics",engine:"optics",icon:"🔍",title:"光学工作台",desc:"移动蜡烛和光屏，自己发现凸透镜成像的全部秘密。",
+   config:{}},
   {id:"sb-micro",engine:"micro",icon:"🔬",title:"显微镜台",desc:"自己动手制作装片，练习调焦，看清细胞的样子。",
    config:{specimen:"onion"}},
 ];
@@ -1106,13 +1384,24 @@ function openSandbox(sb){
         seen.add(ev);
         log.prepend(el("div","line",`👀 ${rule.note}<br><b>为什么？</b>${rule.know}`));
       }
-      if(ev==="current-on"&&!seen.has(ev)){
+      const NOTES={
+        "current-on":"电路接通了，电流流动起来！<br><b>为什么？</b>闭合回路 + 电源 + 导体 = 电流。",
+        "focus-ok":"调到清晰啦！你看到了一格一格的细胞。",
+        "para-both":"两条支路的灯都亮了！<br><b>为什么？</b>并联电路里每条支路都直接连着电源。",
+        "para-one":"取下一个灯泡，另一个还亮着！<br><b>为什么？</b>并联支路互不影响 —— 家里的电灯就是这样接的。",
+        "img-small":"光屏上出现倒立、缩小的清晰像！<br><b>为什么？</b>u > 2f 时成缩小实像 —— 照相机的原理。",
+        "img-big":"光屏上出现倒立、放大的清晰像！<br><b>为什么？</b>f < u < 2f 时成放大实像 —— 投影仪的原理。",
+        "img-virtual":"透过透镜看到正立、放大的虚像！<br><b>为什么？</b>u < f 时凸透镜就是一个放大镜。",
+        "ph-acid":"pH ≈ 1，强酸性！<br><b>为什么？</b>pH 越小酸性越强。",
+        "ph-base":"pH ≈ 13，强碱性！<br><b>为什么？</b>pH 越大碱性越强。",
+        "ph-neutral":"pH = 7，中性。<br><b>为什么？</b>纯水和盐水都是中性的。",
+        "ember-relight":"带火星的木条复燃了！<br><b>为什么？</b>氧气支持燃烧 —— 这是检验氧气的方法。",
+        "h2-pop":"轻微的爆鸣声！<br><b>为什么？</b>氢气可燃，点燃前要验纯。",
+        "ember-out":"木条熄灭了。<br><b>为什么？</b>二氧化碳不支持燃烧，还能用来灭火。",
+      };
+      if(NOTES[ev]&&!seen.has(ev)){
         seen.add(ev);
-        log.prepend(el("div","line","👀 电路接通了，电流流动起来！<br><b>为什么？</b>闭合回路 + 电源 + 导体 = 电流。"));
-      }
-      if(ev==="focus-ok"&&!seen.has(ev)){
-        seen.add(ev);
-        log.prepend(el("div","line","👀 调到清晰啦！你看到了一格一格的细胞。"));
+        log.prepend(el("div","line","👀 "+NOTES[ev]));
       }
     };
     activeLab=ENGINES[sb.engine](benchSlot,sb.config,onEvent);

@@ -136,6 +136,16 @@ dotnet build -f net8.0-windows10.0.19041.0 -r win-x64
 `NetTrans.Core` and its tests need none of that and build with a bare .NET 8
 SDK on any OS.
 
+### Getting a build without a toolchain
+
+The `package` job on every `claude/**` push publishes a self-contained win-x64
+build and attaches it to the run as the **NetTrans-win-x64** artifact: download
+it from the run's page, unzip, double-click `NetTrans.exe`. It carries its own
+.NET and Windows App SDK, so there is nothing to install first — barring the
+Visual C++ runtime, which the Windows App SDK needs and most machines already
+have. `--demo` fills the window with the handoff's own seed data without
+touching the network.
+
 ## CI
 
 `.github/workflows/build.yml` runs on every push to a `claude/**` branch and

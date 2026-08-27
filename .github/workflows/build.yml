@@ -99,6 +99,17 @@ jobs:
 
           "total files: $((Get-ChildItem publish/NetTrans -Recurse -File).Count)"
 
+          # The pieces XAML actually needs at runtime. A compiled page is found
+          # through the app's PRI index; without it every ms-appx:/// lookup
+          # fails and every page throws the same parse error.
+          "--- .pri / .xbf / Resources ---"
+          Get-ChildItem publish/NetTrans -Recurse -Include *.pri,*.xbf |
+            Select-Object @{n='path';e={$_.FullName.Replace("$PWD\publish\NetTrans\",'')}}, Length |
+            Format-Table -AutoSize | Out-String -Width 200
+
+          "--- top-level layout ---"
+          Get-ChildItem publish/NetTrans | Select-Object Mode, Name | Format-Table -AutoSize | Out-String -Width 200
+
       # Builds every control on its own first. When the smoke test below fails
       # with XamlParseException against a window, this is the step that says
       # which control inside it threw.

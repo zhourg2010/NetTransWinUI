@@ -11,23 +11,13 @@
   </trustInfo>
 
   <!--
-    SetWindowSubclass / DefSubclassProc are exported by comctl32 version 6 and
-    not by the version 5 that sits in System32. Without this dependency the
-    loader binds to v5, the entry point is not there, and the frame this app is
-    built out of throws before its first window is shown -- which for an
-    unpackaged WinUI app means the process disappears with no message at all.
+    No Microsoft.Windows.Common-Controls dependency here, deliberately. The
+    Windows App SDK merges its own manifest into this one at build time and
+    already declares comctl32 v6, so declaring it a second time makes mt.exe
+    refuse the merge (MSB3073, exit code 31). That also settles the question it
+    was added for: SetWindowSubclass is available, so the silent startup
+    failure is something else.
   -->
-  <dependency>
-    <dependentAssembly>
-      <assemblyIdentity
-        type="win32"
-        name="Microsoft.Windows.Common-Controls"
-        version="6.0.0.0"
-        processorArchitecture="*"
-        publicKeyToken="6595b64144ccf1df"
-        language="*"/>
-    </dependentAssembly>
-  </dependency>
 
   <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
     <application>

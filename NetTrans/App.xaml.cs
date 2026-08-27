@@ -26,6 +26,15 @@ public partial class App : Application
         };
 
         Startup.Step("载入应用资源 (App.xaml)", InitializeComponent);
+
+        // The icons arrive as path strings; WinUI cannot make geometry out of
+        // them from markup, so it happens here, before the first window asks
+        // for one.
+        Startup.Step("准备图标", () =>
+        {
+            int count = Views.IconResources.Materialise(Resources);
+            Startup.Log($"图标 {count} 个");
+        });
     }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)

@@ -15,52 +15,56 @@
     -->
 
     <!--
-        PathGeometry rather than Geometry: Geometry is abstract, and WinUI's
-        parser cannot make one out of a string the way WPF's type converter
-        does. Declared as <Geometry> these compiled without complaint and then
-        failed at runtime with "Failed to assign to property StrokeIcon.Data",
-        which took down every window that shows an icon, i.e. all of them.
-        Figures takes the same abbreviated path syntax the SVG came in.
+        Declared as strings, and turned into real Geometry objects once at
+        startup by IconResources.
+
+        The obvious spellings do not survive WinUI. <Geometry x:Key="…">M …</>
+        compiles and then fails at runtime, because Geometry is abstract and
+        WinUI has no type converter standing behind it the way WPF does; that
+        one took down every window that shows an icon, i.e. all of them.
+        <PathGeometry Figures="M …"/> does not even compile, because Figures is
+        a PathFigureCollection. The string to Geometry conversion exists in
+        exactly one place, Path.Data, which is what IconResources goes through.
     -->
 
     <!-- stroke icons: drawn with StrokeIcon (round cap/join) -->
-    <PathGeometry x:Key="IconPlus" Figures="M 12 5 v 14 M 5 12 h 14"/>
-    <PathGeometry x:Key="IconTrash" Figures="M 4 7 h 16 M 10 11 v 6 M 14 11 v 6 M 6 7 l 1 12 a 2 2 0 0 0 2 2 h 6 a 2 2 0 0 0 2 -2 l 1 -12 M 9 7 V 5 a 1 1 0 0 1 1 -1 h 4 a 1 1 0 0 1 1 1 v 2"/>
-    <PathGeometry x:Key="IconFolder" Figures="M 3 8 a 2 2 0 0 1 2 -2 h 4 l 2 2 h 8 a 2 2 0 0 1 2 2 v 8 a 2 2 0 0 1 -2 2 H 5 a 2 2 0 0 1 -2 -2 V 8 z"/>
-    <PathGeometry x:Key="IconSearch" Figures="M 11 19 a 8 8 0 1 0 0 -16 8 8 0 0 0 0 16 z M 21 21 l -4.3 -4.3"/>
-    <PathGeometry x:Key="IconInfo" Figures="M 12 21 a 9 9 0 1 0 0 -18 9 9 0 0 0 0 18 z M 12 11 v 5 M 12 7.6 v .6"/>
-    <PathGeometry x:Key="IconGear" Figures="M 12 15.2 a 3.2 3.2 0 1 0 0 -6.4 3.2 3.2 0 0 0 0 6.4 z M 19.4 13.6 a 1.7 1.7 0 0 0 .34 1.87 l .06 .06 a 2 2 0 1 1 -2.83 2.83 l -.06 -.06 a 1.7 1.7 0 0 0 -1.87 -.34 1.7 1.7 0 0 0 -1.03 1.56 V 20 a 2 2 0 1 1 -4 0 v -.1 A 1.7 1.7 0 0 0 8.9 18.3 a 1.7 1.7 0 0 0 -1.87 .34 l -.06 .06 a 2 2 0 1 1 -2.83 -2.83 l .06 -.06 a 1.7 1.7 0 0 0 .34 -1.87 1.7 1.7 0 0 0 -1.56 -1.03 H 2 a 2 2 0 1 1 0 -4 h .1 a 1.7 1.7 0 0 0 1.56 -1.14 1.7 1.7 0 0 0 -.34 -1.87 l -.06 -.06 a 2 2 0 1 1 2.83 -2.83 l .06 .06 a 1.7 1.7 0 0 0 1.87 .34 H 8.9 A 1.7 1.7 0 0 0 9.94 4.1 V 4 a 2 2 0 1 1 4 0 v .1 a 1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87 -.34 l .06 -.06 a 2 2 0 1 1 2.83 2.83 l -.06 .06 a 1.7 1.7 0 0 0 -.34 1.87 v .04 a 1.7 1.7 0 0 0 1.56 1.03 H 22 a 2 2 0 1 1 0 4 h -.1 a 1.7 1.7 0 0 0 -1.56 1.03 z"/>
-    <PathGeometry x:Key="IconChevron" Figures="M 9 6 l 6 6 -6 6"/>
-    <PathGeometry x:Key="IconFilm" Figures="M 4 5 h 16 v 14 H 4 z M 4 9 h 16 M 4 15 h 16 M 8 5 v 14 M 16 5 v 14"/>
-    <PathGeometry x:Key="IconDoc" Figures="M 7 3 h 7 l 5 5 v 13 H 7 z M 14 3 v 5 h 5"/>
-    <PathGeometry x:Key="IconZip" Figures="M 7 3 h 10 v 18 H 7 z M 11 5 h 2 v 2 h -2 z M 13 7 h -2 v 2 h 2 z M 11 9 h 2 v 2 h -2 z M 13 11 h -2 v 2 h 2 z"/>
-    <PathGeometry x:Key="IconDisc" Figures="M 12 21 a 9 9 0 1 0 0 -18 9 9 0 0 0 0 18 z M 12 14.5 a 2.5 2.5 0 1 0 0 -5 2.5 2.5 0 0 0 0 5 z"/>
-    <PathGeometry x:Key="IconMusic" Figures="M 9 18 V 5 l 10 -2 v 13 M 9 18 a 3 3 0 1 1 -6 0 3 3 0 0 1 6 0 z M 19 16 a 3 3 0 1 1 -6 0 3 3 0 0 1 6 0 z"/>
-    <PathGeometry x:Key="IconOpen" Figures="M 14 4 h 6 v 6 M 20 4 l -9 9 M 18 14 v 5 a 1 1 0 0 1 -1 1 H 5 a 1 1 0 0 1 -1 -1 V 7 a 1 1 0 0 1 1 -1 h 5"/>
-    <PathGeometry x:Key="IconCopy" Figures="M 9 9 h 9 a 1 1 0 0 1 1 1 v 9 a 1 1 0 0 1 -1 1 H 9 a 1 1 0 0 1 -1 -1 v -9 a 1 1 0 0 1 1 -1 z M 5 15 H 4 a 1 1 0 0 1 -1 -1 V 5 a 1 1 0 0 1 1 -1 h 9 a 1 1 0 0 1 1 1 v 1"/>
-    <PathGeometry x:Key="IconRedo" Figures="M 20 11 a 8 8 0 1 0 -2.3 6 M 20 5 v 6 h -6"/>
-    <PathGeometry x:Key="IconRename" Figures="M 4 20 h 16 M 6 16 l 10.5 -10.5 a 2.1 2.1 0 0 0 -3 -3 L 3 13 v 3 h 3 z"/>
-    <PathGeometry x:Key="IconUp" Figures="M 12 19 V 5 M 5 12 l 7 -7 7 7"/>
-    <PathGeometry x:Key="IconDown" Figures="M 12 5 v 14 M 19 12 l -7 7 -7 -7"/>
-    <PathGeometry x:Key="IconClock" Figures="M 12 21 a 9 9 0 1 0 0 -18 9 9 0 0 0 0 18 z M 12 7 v 5 l 3.2 2"/>
-    <PathGeometry x:Key="IconShield" Figures="M 12 3 l 7 3 v 6 c 0 4.4 -3 7.6 -7 9 -4 -1.4 -7 -4.6 -7 -9 V 6 z"/>
-    <PathGeometry x:Key="IconCheck" Figures="M 20 6 L 9 17 l -5 -5"/>
-    <PathGeometry x:Key="IconClose" Figures="M 6 6 l 12 12 M 18 6 L 6 18"/>
-    <PathGeometry x:Key="IconGauge" Figures="M 12 20 a 8 8 0 1 0 -8 -8 M 12 12 l 4.5 -4.5"/>
-    <PathGeometry x:Key="IconLayers" Figures="M 12 3 l 9 5 -9 5 -9 -5 9 -5 z M 3 13 l 9 5 9 -5 M 3 17 l 9 5 9 -5"/>
-    <PathGeometry x:Key="IconMagnet" Figures="M 6 4 v 7 a 6 6 0 0 0 12 0 V 4 h -4 v 7 a 2 2 0 0 1 -4 0 V 4 z"/>
-    <PathGeometry x:Key="IconSortArrow" Figures="M 4 6 h 10 M 4 12 h 7 M 4 18 h 4 M 17 5 v 14 M 17 19 l 3 -3 M 17 19 l -3 -3"/>
-    <PathGeometry x:Key="IconGrid" Figures="M 4 6 h 16 M 4 12 h 16 M 4 18 h 16"/>
-    <PathGeometry x:Key="IconRows" Figures="M 4 5 h 16 v 6 H 4 z M 4 13 h 16 v 6 H 4 z"/>
-    <PathGeometry x:Key="IconEye" Figures="M 2 12 s 3.6 -6.5 10 -6.5 S 22 12 22 12 s -3.6 6.5 -10 6.5 S 2 12 2 12 z M 12 15 a 3 3 0 1 0 0 -6 3 3 0 0 0 0 6 z"/>
-    <PathGeometry x:Key="IconPower" Figures="M 12 3 v 9 M 6.5 6.6 a 8 8 0 1 0 11 0"/>
-    <PathGeometry x:Key="IconWindow" Figures="M 4 5 h 16 v 14 H 4 z M 4 9 h 16"/>
-    <PathGeometry x:Key="IconPin" Figures="M 12 21 v -6 M 8 4 h 8 l -1 7 3 3 H 6 l 3 -3 z"/>
-    <PathGeometry x:Key="IconArrowUp" Figures="M 12 5 v 14 M 6 11 l 6 -6 6 6"/>
-    <PathGeometry x:Key="IconArrowDown" Figures="M 12 19 V 5 M 6 13 l 6 6 6 -6"/>
+    <x:String x:Key="IconPlus">M 12 5 v 14 M 5 12 h 14</x:String>
+    <x:String x:Key="IconTrash">M 4 7 h 16 M 10 11 v 6 M 14 11 v 6 M 6 7 l 1 12 a 2 2 0 0 0 2 2 h 6 a 2 2 0 0 0 2 -2 l 1 -12 M 9 7 V 5 a 1 1 0 0 1 1 -1 h 4 a 1 1 0 0 1 1 1 v 2</x:String>
+    <x:String x:Key="IconFolder">M 3 8 a 2 2 0 0 1 2 -2 h 4 l 2 2 h 8 a 2 2 0 0 1 2 2 v 8 a 2 2 0 0 1 -2 2 H 5 a 2 2 0 0 1 -2 -2 V 8 z</x:String>
+    <x:String x:Key="IconSearch">M 11 19 a 8 8 0 1 0 0 -16 8 8 0 0 0 0 16 z M 21 21 l -4.3 -4.3</x:String>
+    <x:String x:Key="IconInfo">M 12 21 a 9 9 0 1 0 0 -18 9 9 0 0 0 0 18 z M 12 11 v 5 M 12 7.6 v .6</x:String>
+    <x:String x:Key="IconGear">M 12 15.2 a 3.2 3.2 0 1 0 0 -6.4 3.2 3.2 0 0 0 0 6.4 z M 19.4 13.6 a 1.7 1.7 0 0 0 .34 1.87 l .06 .06 a 2 2 0 1 1 -2.83 2.83 l -.06 -.06 a 1.7 1.7 0 0 0 -1.87 -.34 1.7 1.7 0 0 0 -1.03 1.56 V 20 a 2 2 0 1 1 -4 0 v -.1 A 1.7 1.7 0 0 0 8.9 18.3 a 1.7 1.7 0 0 0 -1.87 .34 l -.06 .06 a 2 2 0 1 1 -2.83 -2.83 l .06 -.06 a 1.7 1.7 0 0 0 .34 -1.87 1.7 1.7 0 0 0 -1.56 -1.03 H 2 a 2 2 0 1 1 0 -4 h .1 a 1.7 1.7 0 0 0 1.56 -1.14 1.7 1.7 0 0 0 -.34 -1.87 l -.06 -.06 a 2 2 0 1 1 2.83 -2.83 l .06 .06 a 1.7 1.7 0 0 0 1.87 .34 H 8.9 A 1.7 1.7 0 0 0 9.94 4.1 V 4 a 2 2 0 1 1 4 0 v .1 a 1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87 -.34 l .06 -.06 a 2 2 0 1 1 2.83 2.83 l -.06 .06 a 1.7 1.7 0 0 0 -.34 1.87 v .04 a 1.7 1.7 0 0 0 1.56 1.03 H 22 a 2 2 0 1 1 0 4 h -.1 a 1.7 1.7 0 0 0 -1.56 1.03 z</x:String>
+    <x:String x:Key="IconChevron">M 9 6 l 6 6 -6 6</x:String>
+    <x:String x:Key="IconFilm">M 4 5 h 16 v 14 H 4 z M 4 9 h 16 M 4 15 h 16 M 8 5 v 14 M 16 5 v 14</x:String>
+    <x:String x:Key="IconDoc">M 7 3 h 7 l 5 5 v 13 H 7 z M 14 3 v 5 h 5</x:String>
+    <x:String x:Key="IconZip">M 7 3 h 10 v 18 H 7 z M 11 5 h 2 v 2 h -2 z M 13 7 h -2 v 2 h 2 z M 11 9 h 2 v 2 h -2 z M 13 11 h -2 v 2 h 2 z</x:String>
+    <x:String x:Key="IconDisc">M 12 21 a 9 9 0 1 0 0 -18 9 9 0 0 0 0 18 z M 12 14.5 a 2.5 2.5 0 1 0 0 -5 2.5 2.5 0 0 0 0 5 z</x:String>
+    <x:String x:Key="IconMusic">M 9 18 V 5 l 10 -2 v 13 M 9 18 a 3 3 0 1 1 -6 0 3 3 0 0 1 6 0 z M 19 16 a 3 3 0 1 1 -6 0 3 3 0 0 1 6 0 z</x:String>
+    <x:String x:Key="IconOpen">M 14 4 h 6 v 6 M 20 4 l -9 9 M 18 14 v 5 a 1 1 0 0 1 -1 1 H 5 a 1 1 0 0 1 -1 -1 V 7 a 1 1 0 0 1 1 -1 h 5</x:String>
+    <x:String x:Key="IconCopy">M 9 9 h 9 a 1 1 0 0 1 1 1 v 9 a 1 1 0 0 1 -1 1 H 9 a 1 1 0 0 1 -1 -1 v -9 a 1 1 0 0 1 1 -1 z M 5 15 H 4 a 1 1 0 0 1 -1 -1 V 5 a 1 1 0 0 1 1 -1 h 9 a 1 1 0 0 1 1 1 v 1</x:String>
+    <x:String x:Key="IconRedo">M 20 11 a 8 8 0 1 0 -2.3 6 M 20 5 v 6 h -6</x:String>
+    <x:String x:Key="IconRename">M 4 20 h 16 M 6 16 l 10.5 -10.5 a 2.1 2.1 0 0 0 -3 -3 L 3 13 v 3 h 3 z</x:String>
+    <x:String x:Key="IconUp">M 12 19 V 5 M 5 12 l 7 -7 7 7</x:String>
+    <x:String x:Key="IconDown">M 12 5 v 14 M 19 12 l -7 7 -7 -7</x:String>
+    <x:String x:Key="IconClock">M 12 21 a 9 9 0 1 0 0 -18 9 9 0 0 0 0 18 z M 12 7 v 5 l 3.2 2</x:String>
+    <x:String x:Key="IconShield">M 12 3 l 7 3 v 6 c 0 4.4 -3 7.6 -7 9 -4 -1.4 -7 -4.6 -7 -9 V 6 z</x:String>
+    <x:String x:Key="IconCheck">M 20 6 L 9 17 l -5 -5</x:String>
+    <x:String x:Key="IconClose">M 6 6 l 12 12 M 18 6 L 6 18</x:String>
+    <x:String x:Key="IconGauge">M 12 20 a 8 8 0 1 0 -8 -8 M 12 12 l 4.5 -4.5</x:String>
+    <x:String x:Key="IconLayers">M 12 3 l 9 5 -9 5 -9 -5 9 -5 z M 3 13 l 9 5 9 -5 M 3 17 l 9 5 9 -5</x:String>
+    <x:String x:Key="IconMagnet">M 6 4 v 7 a 6 6 0 0 0 12 0 V 4 h -4 v 7 a 2 2 0 0 1 -4 0 V 4 z</x:String>
+    <x:String x:Key="IconSortArrow">M 4 6 h 10 M 4 12 h 7 M 4 18 h 4 M 17 5 v 14 M 17 19 l 3 -3 M 17 19 l -3 -3</x:String>
+    <x:String x:Key="IconGrid">M 4 6 h 16 M 4 12 h 16 M 4 18 h 16</x:String>
+    <x:String x:Key="IconRows">M 4 5 h 16 v 6 H 4 z M 4 13 h 16 v 6 H 4 z</x:String>
+    <x:String x:Key="IconEye">M 2 12 s 3.6 -6.5 10 -6.5 S 22 12 22 12 s -3.6 6.5 -10 6.5 S 2 12 2 12 z M 12 15 a 3 3 0 1 0 0 -6 3 3 0 0 0 0 6 z</x:String>
+    <x:String x:Key="IconPower">M 12 3 v 9 M 6.5 6.6 a 8 8 0 1 0 11 0</x:String>
+    <x:String x:Key="IconWindow">M 4 5 h 16 v 14 H 4 z M 4 9 h 16</x:String>
+    <x:String x:Key="IconPin">M 12 21 v -6 M 8 4 h 8 l -1 7 3 3 H 6 l 3 -3 z</x:String>
+    <x:String x:Key="IconArrowUp">M 12 5 v 14 M 6 11 l 6 -6 6 6</x:String>
+    <x:String x:Key="IconArrowDown">M 12 19 V 5 M 6 13 l 6 6 6 -6</x:String>
 
     <!-- filled icons: drawn with StrokeIcon IsFilled="True" -->
-    <PathGeometry x:Key="IconPlayFill" Figures="M 7 4.5 l 13 7.5 -13 7.5 z"/>
-    <PathGeometry x:Key="IconPauseFill" Figures="M 7 4 h 4 v 16 H 7 z M 13 4 h 4 v 16 h -4 z"/>
+    <x:String x:Key="IconPlayFill">M 7 4.5 l 13 7.5 -13 7.5 z</x:String>
+    <x:String x:Key="IconPauseFill">M 7 4 h 4 v 16 H 7 z M 13 4 h 4 v 16 h -4 z</x:String>
 
 </ResourceDictionary>

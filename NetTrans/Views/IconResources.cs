@@ -1,7 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Markup;
 using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Shapes;
+
 
 namespace NetTrans.Views;
 
@@ -59,7 +59,8 @@ public static class IconResources
             throw new ArgumentException($"图标路径里有不该出现的字符：{data}", nameof(data));
         }
 
-        var path = (Path)XamlReader.Load(
+        // Fully qualified: with implicit usings, `Path` is also System.IO.Path.
+        var path = (Microsoft.UI.Xaml.Shapes.Path)XamlReader.Load(
             $"<Path xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' Data='{data}'/>");
 
         return path.Data!;

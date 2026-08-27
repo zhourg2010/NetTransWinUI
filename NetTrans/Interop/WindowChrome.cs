@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using NetTrans.Models;
@@ -37,6 +38,12 @@ public sealed class WindowChrome : IDisposable
 
     public nint Handle { get; }
 
+    /// <summary>
+    /// Whether the window is subclassed. False means no docking, no edge-hide
+    /// and no hotkey -- but a window that opens, which is the trade.
+    /// </summary>
+    public bool Subclassed { get; }
+
     public WindowChrome(Window window)
     {
         _window = window;
@@ -44,7 +51,21 @@ public sealed class WindowChrome : IDisposable
 
         _subclassId = _nextSubclassId++;
         _subclass = SubclassProc;
-        NativeMethods.SetWindowSubclass(Handle, _subclass, _subclassId, 0);
+
+        // Subclassing is how docking, the move loop and the 老板键 hear from the
+        // OS. Losing it costs those; it must not cost the window itself, which
+        // is what an exception here used to do -- silently, before anything was
+        // on screen.
+        try
+        {
+            Subclassed = NativeMethods.SetWindowSubclass(Handle, _subclass, _subclassId, 0);
+
+            if (!Subclassed) Diagnostics.Startup.Log($"SetWindowSubclass 失败：{Marshal.GetLastWin32Error()}");
+        }
+        catch (Exception exception)
+        {
+            Diagnostics.Startup.Log($"SetWindowSubclass 不可用：{exception.GetType().Name}: {exception.Message}");
+        }
     }
 
     /// <summary>Physical pixels per DIP. The handoff's numbers are DIPs, the Win32 calls are pixels.</summary>
@@ -197,6 +218,7 @@ public sealed class WindowChrome : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
-        NativeMethods.RemoveWindowSubclass(Handle, _subclass, _subclassId);
+
+        if (Subclassed) NativeMethods.RemoveWindowSubclass(Handle, _subclass, _subclassId);
     }
 }

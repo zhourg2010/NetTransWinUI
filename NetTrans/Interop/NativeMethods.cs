@@ -42,6 +42,9 @@ internal static partial class NativeMethods
     internal const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
     internal const int DWMWCP_DONOTROUND = 1;
 
+    internal const uint MB_ICONERROR = 0x00000010;
+    internal const uint MB_SETFOREGROUND = 0x00010000;
+
     [StructLayout(LayoutKind.Sequential)]
     internal struct RECT
     {
@@ -107,6 +110,10 @@ internal static partial class NativeMethods
 
     [LibraryImport("user32.dll")]
     internal static partial uint GetDpiForWindow(nint hWnd);
+
+    // The one way to say something when XAML is the thing that is broken.
+    [LibraryImport("user32.dll", EntryPoint = "MessageBoxW", StringMarshalling = StringMarshalling.Utf16)]
+    internal static partial int MessageBox(nint hWnd, string text, string caption, uint type);
 
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]

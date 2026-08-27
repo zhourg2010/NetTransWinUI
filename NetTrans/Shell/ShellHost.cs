@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using NetTrans.Diagnostics;
 using NetTrans.Interop;
 using NetTrans.Models;
 using NetTrans.Services;
@@ -59,8 +60,16 @@ public sealed class ShellHost : IDisposable
 
     public void Start()
     {
+        // Each frame is logged as it is built: three windows, three lots of
+        // Win32, and if one of them is what fails then knowing which one is
+        // most of the answer.
+        Startup.Log("主窗口");
         BuildMainFrame();
+
+        Startup.Log("详情窗口");
         BuildInspectorFrame();
+
+        Startup.Log("灵动岛");
         BuildIsland();
 
         _dock = new DockManager(_mainChrome, _inspectorChrome);
@@ -82,6 +91,7 @@ public sealed class ShellHost : IDisposable
         _viewModel.ThemeChanged += (_, theme) => ApplyTheme(theme);
         ApplyTheme(_viewModel.Theme);
 
+        Startup.Log("激活主窗口");
         _mainWindow.Activate();
         if (_viewModel.EdgeHide) ScheduleEdgeHide();
     }

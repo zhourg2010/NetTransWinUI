@@ -87,7 +87,53 @@ jobs:
             "装一次 Microsoft Visual C++ 2015-2022 Redistributable (x64) 即可。"
           ) | Set-Content -Encoding UTF8 publish/NetTrans/关于这个版本.txt
 
+      # What actually ended up in the box. A missing dependency is invisible
+      # until the app dies on someone's machine with no message.
+      - name: List what was published
+        shell: pwsh
+        run: |
+          Get-ChildItem publish/NetTrans -File |
+            Sort-Object Length -Descending |
+            Select-Object -First 40 Name, @{n='MB';e={[math]::Round($_.Length/1MB,2)}} |
+            Format-Table -AutoSize | Out-String -Width 200
+
+          "total files: $((Get-ChildItem publish/NetTrans -Recurse -File).Count)"
+
+      # The app has to survive being started. A runner has a desktop, so this
+      # is the one check that exercises XAML load, the Win32 frame and the
+      # first paint -- everything the unit tests cannot reach.
+      - name: Smoke test (--demo)
+        shell: pwsh
+        run: |
+          $exe = Join-Path $PWD 'publish/NetTrans/NetTrans.exe'
+          $log = Join-Path $PWD 'publish/NetTrans/NetTrans.startup.log'
+
+          $app = Start-Process $exe -ArgumentList '--demo' -PassThru
+          Start-Sleep -Seconds 20
+
+          if (Test-Path $log) {
+            Write-Host '--- NetTrans.startup.log ---'
+            Get-Content $log | Write-Host
+            Write-Host '--- end ---'
+          } else {
+            Write-Host 'no startup log was written'
+          }
+
+          if ($app.HasExited) {
+            throw "NetTrans exited on its own with code $($app.ExitCode) -- it should still be running."
+          }
+
+          Stop-Process -Id $app.Id -Force
+
+          if (-not (Test-Path $log)) { throw 'no startup log' }
+          if (-not (Select-String -Path $log -SimpleMatch -Pattern '启动完成' -Quiet)) {
+            throw 'the app started but never finished starting up -- see the log above.'
+          }
+
+          Write-Host 'started, drew a window, and stayed up.'
+
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: NetTrans-win-x64
           path: publish/NetTrans

@@ -29,6 +29,15 @@
       very confusing way to find out.
     -->
     <EnableMsixTooling>true</EnableMsixTooling>
+
+    <!--
+      …and it has to come out as resources.pri. The generator names the index
+      after the project (NetTrans.pri), while an unpackaged app's resource
+      loader only ever looks for resources.pri beside the executable. Same
+      1.4 MB of compiled XAML either way; the wrong name is indistinguishable
+      from not having built it at all.
+    -->
+    <ProjectPriFileName>resources.pri</ProjectPriFileName>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <SelfContained>true</SelfContained>
 

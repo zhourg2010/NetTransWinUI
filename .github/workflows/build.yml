@@ -157,40 +157,27 @@ jobs:
       # A compiled XAML page is found through the app's own PRI index; without
       # it every ms-appx:/// lookup fails and every page throws the same parse
       # error, which is exactly what the probe showed.
-      # Last, and terse: when the smoke test fails this is the first thing to
-      # read. A compiled XAML page lives in the app's own PRI; if that is not
-      # deployed, every ms-appx:/// lookup fails and every page throws the same
-      # parse error, which is what the probe showed.
-      - name: XAML runtime files
-        if: always()
-        shell: pwsh
-        run: |
-          $root = 'publish/NetTrans'
-
-          # The app's own PRI is the thing to check: without it every compiled
-          # XAML page is unreachable and the app dies on its first window.
-          if (-not (Test-Path (Join-Path $root 'resources.pri'))) {
-            Write-Host '::error::resources.pri is missing from the publish output - every XAML page will fail to load.'
-          }
-
-          "resources.pri exists : $(Test-Path (Join-Path $root 'resources.pri'))"
-          "NetTrans.pri exists  : $(Test-Path (Join-Path $root 'NetTrans.pri'))"
-
-          $pri = Get-ChildItem $root -Recurse -Filter *.pri
-          "pri files            : $($pri.Count)"
-          $pri | Select-Object -First 8 | ForEach-Object { "   {0,-40} {1,9:N0}" -f $_.Name, $_.Length }
-
-          $xbf = Get-ChildItem $root -Recurse -Filter *.xbf
-          "xbf files            : $($xbf.Count)"
-          $xbf | Select-Object -First 6 | ForEach-Object { "   " + $_.FullName.Replace((Resolve-Path $root).Path, '') }
-
-          "app folders          : " + (
-            (Get-ChildItem $root -Directory | Where-Object { $_.Name -notmatch '^[a-z]{2}(-[A-Za-z]+)+$' } |
-              ForEach-Object { $_.Name }) -join ', ')
-
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: NetTrans-win-x64
           path: publish/NetTrans
           retention-days: 30
+
+      # Dead last on purpose: whatever went wrong, this is the tail of the log.
+      - name: Summary
+        if: always()
+        shell: pwsh
+        run: |
+          $root = 'publish/NetTrans'
+          $log  = Join-Path $root 'NetTrans.startup.log'
+
+          "resources.pri : $(Test-Path (Join-Path $root 'resources.pri'))"
+          "NetTrans.pri  : $(Test-Path (Join-Path $root 'NetTrans.pri'))"
+
+          if (Test-Path $log) {
+            "--- last 12 lines of the startup log ---"
+            Get-Content $log -Tail 12 | ForEach-Object { $_ }
+          } else {
+            "no startup log"
+          }

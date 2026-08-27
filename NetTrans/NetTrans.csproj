@@ -19,6 +19,16 @@
     <!-- Unpackaged (no MSIX) desktop app. Flip WindowsPackageType to "MSIX" and
          add a Package.appxmanifest if you'd rather ship through MSIX/Store. -->
     <WindowsPackageType>None</WindowsPackageType>
+
+    <!--
+      Unpackaged still needs this on. It is what runs GenerateProjectPriFile,
+      and every compiled XAML page lives in the resources.pri it produces:
+      without it the build succeeds, the app starts, and then every single page
+      throws "XAML parsing failed" (0x802B000A) because ms-appx:/// resolves to
+      nothing. Only the controls written without a .xaml survive, which is a
+      very confusing way to find out.
+    -->
+    <EnableMsixTooling>true</EnableMsixTooling>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <SelfContained>true</SelfContained>
 

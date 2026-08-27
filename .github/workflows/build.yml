@@ -167,6 +167,12 @@ jobs:
         run: |
           $root = 'publish/NetTrans'
 
+          # The app's own PRI is the thing to check: without it every compiled
+          # XAML page is unreachable and the app dies on its first window.
+          if (-not (Test-Path (Join-Path $root 'resources.pri'))) {
+            Write-Host '::error::resources.pri is missing from the publish output - every XAML page will fail to load.'
+          }
+
           "resources.pri exists : $(Test-Path (Join-Path $root 'resources.pri'))"
           "NetTrans.pri exists  : $(Test-Path (Join-Path $root 'NetTrans.pri'))"
 

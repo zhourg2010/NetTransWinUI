@@ -503,12 +503,14 @@ public sealed class TorrentSwarm
         if (pieces <= 0) return 0;
         if (pieces >= _torrent.PieceCount) return _torrent.TotalLength;
 
-        long total = 0;
+        // Arithmetic rather than a walk: every piece is PieceLength except the
+        // last, so the only question is whether the short one is among those
+        // finished. The walk took one lock per piece and ran on every progress
+        // read -- which is every message a peer sends.
+        long total = (long)pieces * _torrent.PieceLength;
 
-        for (int i = 0; i < _torrent.PieceCount; i++)
-        {
-            if (_picker.IsDone(i)) total += _torrent.LengthOfPiece(i);
-        }
+        int last = _torrent.PieceCount - 1;
+        if (_picker.IsDone(last)) total -= _torrent.PieceLength - _torrent.LengthOfPiece(last);
 
         return total;
     }

@@ -18,6 +18,15 @@ public sealed class PiecePicker
     private readonly bool[] _wanted;
     private readonly int[] _availability;
 
+    // Counters rather than a walk over the arrays. Three of the questions asked
+    // here -- is it done, how much is left, is anything free -- were answered by
+    // scanning every piece under the lock, and the first of them is asked once
+    // per message a peer sends. On a 4 GB torrent that is sixteen thousand
+    // iterations for each block that arrives.
+    private int _completed;
+    private int _remaining;
+    private int _unassigned;
+
     public PiecePicker(int pieces)
     {
         _done = new bool[pieces];
@@ -26,6 +35,9 @@ public sealed class PiecePicker
         _availability = new int[pieces];
 
         Array.Fill(_wanted, true);
+
+        _remaining = pieces;
+        _unassigned = pieces;
     }
 
     /// <summary>
@@ -61,32 +73,58 @@ public sealed class PiecePicker
     {
         get
         {
-            lock (_gate) return _done.Count(done => done);
+            lock (_gate) return _completed;
         }
     }
 
     /// <summary>Whether any wanted piece is still free to hand out. Called under the lock.</summary>
-    private bool AnythingUnassigned()
-    {
-        for (int i = 0; i < _done.Length; i++)
-        {
-            if (_wanted[i] && !_done[i] && !_assigned[i]) return true;
-        }
-
-        return false;
-    }
+    private bool AnythingUnassigned() => _unassigned > 0;
 
     /// <summary>Wanted and not yet had. Called under the lock.</summary>
-    private int Remaining()
-    {
-        int remaining = 0;
+    private int Remaining() => _remaining;
 
-        for (int i = 0; i < _done.Length; i++)
+    /// <summary>
+    /// Moves a piece into the done set, keeping the counters with it.
+    ///
+    /// Every transition goes through here and <see cref="Assign"/> /
+    /// <see cref="Unassign"/> rather than writing the arrays directly: a counter
+    /// updated in some places and not others is worse than no counter.
+    /// Called under the lock.
+    /// </summary>
+    private void MarkDone(int index)
+    {
+        if (_done[index]) return;
+
+        _done[index] = true;
+        _completed++;
+
+        if (_wanted[index])
         {
-            if (_wanted[i] && !_done[i]) remaining++;
+            _remaining--;
+            if (!_assigned[index]) _unassigned--;
         }
 
-        return remaining;
+        _assigned[index] = false;
+    }
+
+    /// <summary>Reserves a piece for one peer. Called under the lock.</summary>
+    private void Assign(int index)
+    {
+        if (_assigned[index]) return;
+
+        _assigned[index] = true;
+
+        if (_wanted[index] && !_done[index]) _unassigned--;
+    }
+
+    /// <summary>Gives it back. Called under the lock.</summary>
+    private void Unassign(int index)
+    {
+        if (!_assigned[index]) return;
+
+        _assigned[index] = false;
+
+        if (_wanted[index] && !_done[index]) _unassigned++;
     }
 
     /// <summary>
@@ -124,6 +162,19 @@ public sealed class PiecePicker
         lock (_gate)
         {
             for (int i = 0; i < _wanted.Length; i++) _wanted[i] = keep.Contains(i);
+
+            // The wanted set moved under the counters, so they are rebuilt --
+            // once, here, rather than on every question asked afterwards.
+            _remaining = 0;
+            _unassigned = 0;
+
+            for (int i = 0; i < _wanted.Length; i++)
+            {
+                if (!_wanted[i] || _done[i]) continue;
+
+                _remaining++;
+                if (!_assigned[i]) _unassigned++;
+            }
         }
     }
 
@@ -162,7 +213,7 @@ public sealed class PiecePicker
         {
             for (int i = 0; i < _done.Length; i++)
             {
-                if (PeerWire.HasPiece(bitfield, i)) _done[i] = true;
+                if (PeerWire.HasPiece(bitfield, i)) MarkDone(i);
             }
         }
     }
@@ -241,7 +292,7 @@ public sealed class PiecePicker
                 best = i;
             }
 
-            if (best >= 0) _assigned[best] = true;
+            if (best >= 0) Assign(best);
 
             return best;
         }
@@ -252,7 +303,7 @@ public sealed class PiecePicker
     {
         lock (_gate)
         {
-            if (index >= 0 && index < _assigned.Length) _assigned[index] = false;
+            if (index >= 0 && index < _assigned.Length) Unassign(index);
         }
     }
 
@@ -263,8 +314,7 @@ public sealed class PiecePicker
         {
             if (index < 0 || index >= _done.Length) return;
 
-            _done[index] = true;
-            _assigned[index] = false;
+            MarkDone(index);
         }
     }
 

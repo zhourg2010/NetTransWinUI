@@ -161,6 +161,8 @@ public sealed class PieceBuffer
     private readonly bool[] _received;
     private readonly byte[] _bytes;
 
+    private int _have;
+
     public PieceBuffer(int index, int length)
     {
         Index = index;
@@ -174,7 +176,9 @@ public sealed class PieceBuffer
 
     public int BlockCount => _received.Length;
 
-    public bool IsComplete => _received.All(received => received);
+    // Counted rather than scanned: this is asked after every block, and a piece
+    // of a 4 MB torrent holds 256 of them.
+    public bool IsComplete => _have == _received.Length;
 
     /// <summary>The offset and length of one block of this piece.</summary>
     public (int Offset, int Length) Block(int block)
@@ -209,7 +213,15 @@ public sealed class PieceBuffer
         if (data.Length != expected) return false;
 
         data.CopyTo(_bytes.AsSpan(offset));
-        _received[block] = true;
+
+        // A peer may send the same block twice, so the count only moves the
+        // first time -- which is the whole reason this tracks blocks rather
+        // than bytes.
+        if (!_received[block])
+        {
+            _received[block] = true;
+            _have++;
+        }
 
         return true;
     }

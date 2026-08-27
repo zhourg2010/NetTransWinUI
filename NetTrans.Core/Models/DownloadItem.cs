@@ -71,7 +71,8 @@ public sealed class DownloadItem
 
     public NewVersionInfo? NewerVersion { get; set; }
 
-    public List<LogEntry> Log { get; } = new();
+    /// <summary>Bounded, and safe to read while the transfer writes to it.</summary>
+    public TransferLog Log { get; } = new();
 
     /// <summary>0 = pending, 1 = complete, 2 = in flight -- the 96-cell 分块 grid.</summary>
     public int[] Blocks { get; set; } = System.Array.Empty<int>();

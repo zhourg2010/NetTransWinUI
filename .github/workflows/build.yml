@@ -22,6 +22,12 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      # Two things the XAML compiler accepts and the XAML parser refuses. Both
+      # only show up when a window is built, as a parse failure with no line
+      # number, so catching them here costs seconds instead of a Windows run.
+      - name: Check XAML
+        run: python3 tools/check-xaml.py
+
       - name: Test NetTrans.Core
         # minimal prints failures and the summary, and nothing for the ~800
         # tests that passed -- which is what anyone reading a red run wants.

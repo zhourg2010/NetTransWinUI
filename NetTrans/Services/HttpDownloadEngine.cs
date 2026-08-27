@@ -19,7 +19,7 @@ namespace NetTrans.Services;
 /// also when the observable properties are raised. Nothing else crosses the
 /// boundary.
 /// </summary>
-public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
+public sealed partial class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
 {
     private const int IslandSamples = 26;
 
@@ -286,45 +286,6 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
             ? System.IO.Path.Combine(task.SavePath, task.Name)
             : null;
 
-    public async Task<string?> VerifyAsync(int id, CancellationToken cancellationToken = default)
-    {
-        if (Tasks.FirstOrDefault(task => task.Id == id) is not { } task) return null;
-
-        string path = System.IO.Path.Combine(task.SavePath, task.Name);
-        if (!System.IO.File.Exists(path)) return null;
-
-        string hash;
-        try
-        {
-            // Hashing a several-gigabyte file is not something to do on the UI
-            // thread, and ComputeFileAsync opens the file for async reads.
-            hash = await FileHash.ComputeFileAsync(path, cancellationToken: cancellationToken).ConfigureAwait(true);
-        }
-        catch (Exception) when (!cancellationToken.IsCancellationRequested)
-        {
-            return null;
-        }
-
-        task.Model.Sha256 = hash;
-        task.Checksum = FileHash.Describe(hash, expected: null);
-        task.Model.Log.Add(new LogEntry(DateTime.Now.ToString("HH:mm"), $"SHA-256 {hash}"));
-        task.Refresh();
-
-        return task.Checksum;
-    }
-
-    public async Task<bool> CheckForUpdateAsync(int id, CancellationToken cancellationToken = default)
-    {
-        if (Tasks.FirstOrDefault(task => task.Id == id) is not { } task) return false;
-
-        var newer = await VersionCheck.CheckAsync(task.Model, _transport, cancellationToken).ConfigureAwait(true);
-        if (newer is null) return false;
-
-        task.NewerVersion = newer;
-        task.Refresh();
-        return true;
-    }
-
     public bool Rename(int id, string newName)
     {
         if (Tasks.FirstOrDefault(task => task.Id == id) is not { } task) return false;
@@ -390,50 +351,6 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
         _speedHistory[^1] = TotalSpeed;
 
         Ticked?.Invoke(this, EventArgs.Empty);
-    }
-
-    private void OnCoreCompleted(object? sender, DownloadItem item) =>
-        _dispatcher.TryEnqueue(async () =>
-        {
-            if (Tasks.FirstOrDefault(task => task.Id == item.Id) is not { } task) return;
-
-            task.Refresh();
-            Completed?.Invoke(this, task);
-
-            // 完成后校验 SHA-256, then see whether the server has moved on. Both
-            // are after the fact, so a failure in either must not disturb a
-            // transfer that already succeeded.
-            try
-            {
-                if (_settings.VerifyChecksums) await VerifyAsync(item.Id);
-                if (_settings.ScanOnCompletion) await ScanAsync(task);
-                await CheckForUpdateAsync(item.Id);
-            }
-            catch (Exception)
-            {
-                // Housekeeping; the download itself is done.
-            }
-        });
-
-    /// <summary>
-    /// 完成后扫描: mark the file as web-sourced, then let Defender look at it if
-    /// this machine has one. Both halves are best-effort by construction.
-    /// </summary>
-    private static async Task ScanAsync(DownloadItemViewModel task)
-    {
-        string path = System.IO.Path.Combine(task.SavePath, task.Name);
-        if (!System.IO.File.Exists(path)) return;
-
-        bool marked = FileScan.Mark(path, task.Model.Url);
-
-        var verdict = await FileScan.ScanAsync(path).ConfigureAwait(true);
-
-        task.Model.Log.Add(new LogEntry(
-            DateTime.Now.ToString("HH:mm"),
-            marked ? FileScan.Describe(verdict) : "无法写入来源标记（分区不支持）",
-            IsError: verdict == ScanVerdict.ThreatFound));
-
-        task.Refresh();
     }
 
     private void OnCoreStatusChanged(object? sender, DownloadItem item) =>

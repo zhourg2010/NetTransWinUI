@@ -48,21 +48,33 @@ NetTrans.Core/              No WinUI, no Windows — buildable and testable anyw
   Net/
     IHttpTransport.cs       The HTTP surface a transfer needs
     HttpTransport.cs        HttpClient behind it: probe, then ranged reads
+    SchemeTransport.cs      Sends each URL to the transport that speaks its scheme
     RemoteFileInfo.cs       Length, range support, validators, filename
+    RequestProfiles.cs      Per-site Referer / Cookie / credentials, and the proxy
+    PrivateLinks.cs         thunder:// and its cousins, which are base64 not protocols
+    Ftp/
+      FtpSession.cs         The control channel: login, SIZE, MDTM, REST, RETR
+      FtpTransport.cs       FTP behind the same interface as HTTP
+      FtpConnector.cs       The sockets, and the TLS upgrade for FTPS
   Download/
     DownloadEngine.cs       The queue: concurrency, priority, global rate cap
-    ITransferJob.cs         What the queue drives: a ranged file or a playlist
-    DownloadJob.cs          One ranged transfer: probe, plan, fetch, write, resume
-    PlaylistJob.cs          One segmented transfer: segments, in order, into files
-    TorrentJob.cs           One torrent, plus resolving a magnet to a metainfo
     SegmentPlan.cs          How a file is split, and the 96-cell chunk map
-    ResumeState.cs          The .nettrans sidecar behind 断点续传
-    PlaylistResume.cs       The .nettrans-hls sidecar: whole segments, not offsets
-    FileSink.cs             Concurrent disjoint writes via RandomAccess
-    TokenBucket.cs          The 限速 dropdowns
-    SpeedMeter.cs           Sliding-window throughput
-    SpeedLimits.cs          Reads "512 KB/s" back into a rate
     IClock.cs               Time, injected, so the loop is testable
+    Jobs/
+      ITransferJob.cs       What the queue drives: a file, a playlist, a torrent
+      DownloadJob.cs        One ranged transfer: probe, plan, fetch, write, resume
+      PlaylistJob.cs        One segmented transfer: segments, in order, into files
+      TorrentJob.cs         One torrent, plus resolving a magnet to a metainfo
+    Storage/
+      FileSink.cs           Concurrent disjoint writes via RandomAccess
+      FileHash.cs           SHA-256 over a file too big to hold in memory
+      ResumeState.cs        The .nettrans sidecar behind 断点续传
+      PlaylistResume.cs     The .nettrans-hls sidecar: whole segments, not offsets
+    Throttling/
+      TokenBucket.cs        The 限速 dropdowns
+      RateGate.cs           One budget for a swarm, in both directions
+      SpeedMeter.cs         Sliding-window throughput
+      SpeedLimits.cs        Reads "512 KB/s" back into a rate
   Torrent/
     Bencode.cs              The format, with the byte spans an info hash needs
     TorrentMetainfo.cs      Files, pieces, hashes; a piece can span two files
@@ -76,6 +88,8 @@ NetTrans.Core/              No WinUI, no Windows — buildable and testable anyw
     PiecePicker.cs          Rarest-first, sequential, endgame, file selection
     PieceStore.cs           Verify before writing; read back to upload
     TorrentSwarm.cs         Announce, connect, replace peers as they fail
+    SwarmProgress.cs        What a swarm reports: the whole torrent, and per peer
+    TorrentResume.cs        The bitfield sidecar, since pieces arrive out of order
     MetadataExchange.cs     BEP 9, which is how a magnet gets a file list
     TorrentOptions.cs       Seeding limits, file selection, force recheck
 

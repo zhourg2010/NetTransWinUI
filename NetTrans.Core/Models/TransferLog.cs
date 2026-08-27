@@ -58,6 +58,12 @@ public sealed class TransferLog : IReadOnlyList<LogEntry>
         }
     }
 
+    /// <summary>Several lines at once, for seed data and for a restored task.</summary>
+    public void AddRange(IEnumerable<LogEntry> entries)
+    {
+        foreach (var entry in entries) Add(entry);
+    }
+
     /// <summary>A copy, so a reader is not walking a list a transfer is still writing to.</summary>
     public IEnumerator<LogEntry> GetEnumerator()
     {

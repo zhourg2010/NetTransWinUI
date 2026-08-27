@@ -392,7 +392,18 @@ public sealed partial class ShellViewModel : ObservableObject
 
         var shown = target.Take(fold.Shown).ToList();
 
+        // Nothing moved: the common case while sorting by progress or speed,
+        // which rebuilds on every tick.
+        if (!Differs(shown))
+        {
+            SyncSelection();
+            RaiseShellState();
+            return;
+        }
+
         // Sync in place so rows keep their hover/animation state across ticks.
+        // The scan per row stays: it only runs when the order actually moved,
+        // and what is on screen is bounded by the fold.
         for (int i = 0; i < shown.Count; i++)
         {
             int existing = IndexOf(VisibleTasks, shown[i]);
@@ -415,6 +426,19 @@ public sealed partial class ShellViewModel : ObservableObject
         }
 
         return -1;
+    }
+
+    /// <summary>Whether the visible list already is what it should be, in order.</summary>
+    private bool Differs(List<DownloadItemViewModel> shown)
+    {
+        if (VisibleTasks.Count != shown.Count) return true;
+
+        for (int i = 0; i < shown.Count; i++)
+        {
+            if (!ReferenceEquals(VisibleTasks[i], shown[i])) return true;
+        }
+
+        return false;
     }
 
     private void SyncSelection()

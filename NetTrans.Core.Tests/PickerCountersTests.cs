@@ -264,3 +264,81 @@ public class PickerCountersTests
         return bits;
     }
 }
+
+/// <summary>
+/// Locating a piece among the files, which every block read and written goes
+/// through.
+/// </summary>
+public class PieceLocationTests
+{
+    [Fact]
+    public void The_search_agrees_with_a_walk_over_every_file()
+    {
+        var builder = new TorrentBuilder { Name = "pack", PieceLength = 64 };
+        var random = new Random(4242);
+
+        // A pack with the awkward cases in it: files shorter than a piece,
+        // files longer than several, and the zero-length ones torrents carry.
+        for (int i = 0; i < 60; i++)
+        {
+            int length = random.Next(4) switch
+            {
+                0 => 0,
+                1 => random.Next(1, 40),
+                2 => random.Next(40, 200),
+                _ => random.Next(200, 500),
+            };
+
+            builder.Add($"file-{i:00}.bin", new byte[length]);
+        }
+
+        var torrent = TorrentMetainfo.Parse(builder.Build());
+
+        for (int piece = 0; piece < torrent.PieceCount; piece++)
+        {
+            var found = torrent.Locate(piece).ToList();
+            var walked = Walk(torrent, piece).ToList();
+
+            Assert.Equal(walked, found);
+        }
+    }
+
+    [Fact]
+    public void A_single_file_torrent_still_locates_into_itself()
+    {
+        var builder = new TorrentBuilder { Name = "one.bin", PieceLength = 32 };
+        builder.Add("one.bin", new byte[100]);
+
+        var torrent = TorrentMetainfo.Parse(builder.Build());
+
+        for (int piece = 0; piece < torrent.PieceCount; piece++)
+        {
+            var (file, fileOffset, pieceOffset, length) = Assert.Single(torrent.Locate(piece));
+
+            Assert.Equal("one.bin", file.Path);
+            Assert.Equal(piece * 32, fileOffset);
+            Assert.Equal(0, pieceOffset);
+            Assert.Equal(torrent.LengthOfPiece(piece), length);
+        }
+    }
+
+    /// <summary>What the search replaced: look at every file, keep the overlaps.</summary>
+    private static IEnumerable<(TorrentEntry File, long FileOffset, long PieceOffset, long Length)> Walk(
+        TorrentMetainfo torrent,
+        int index)
+    {
+        long start = index * torrent.PieceLength;
+        long end = start + torrent.LengthOfPiece(index);
+
+        foreach (var file in torrent.Files)
+        {
+            long fileEnd = file.Offset + file.Length;
+            if (fileEnd <= start || file.Offset >= end) continue;
+
+            long from = Math.Max(start, file.Offset);
+            long to = Math.Min(end, fileEnd);
+
+            yield return (file, from - file.Offset, from - start, to - from);
+        }
+    }
+}

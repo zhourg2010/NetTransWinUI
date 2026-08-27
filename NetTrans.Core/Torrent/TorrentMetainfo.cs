@@ -98,16 +98,56 @@ public sealed class TorrentMetainfo
         long start = index * PieceLength;
         long end = start + LengthOfPiece(index);
 
-        foreach (var file in Files)
+        // The files lie end to end in offset order, so the first one this piece
+        // touches is found rather than searched for. Walking the whole list was
+        // fine for a film and its subtitles and quadratic for a pack of five
+        // thousand -- and this runs for every block read and written.
+        for (int i = FirstFileEndingAfter(start); i < Files.Count; i++)
         {
+            var file = Files[i];
+            if (file.Offset >= end) break;
+
             long fileEnd = file.Offset + file.Length;
-            if (fileEnd <= start || file.Offset >= end) continue;
+            if (fileEnd <= start) continue;
 
             long from = Math.Max(start, file.Offset);
             long to = Math.Min(end, fileEnd);
 
             yield return (file, from - file.Offset, from - start, to - from);
         }
+    }
+
+    /// <summary>
+    /// The first file whose bytes reach past <paramref name="offset"/>.
+    ///
+    /// File ends are non-decreasing down the list, which is what makes this a
+    /// binary search. Zero-length files -- which torrents do contain -- end
+    /// exactly where they start and are simply skipped by the caller's overlap
+    /// test.
+    /// </summary>
+    internal int FirstFileEndingAfter(long offset)
+    {
+        int low = 0;
+        int high = Files.Count - 1;
+        int found = Files.Count;
+
+        while (low <= high)
+        {
+            int middle = low + (high - low) / 2;
+            var file = Files[middle];
+
+            if (file.Offset + file.Length > offset)
+            {
+                found = middle;
+                high = middle - 1;
+            }
+            else
+            {
+                low = middle + 1;
+            }
+        }
+
+        return found;
     }
 
     /// <summary>Reads a .torrent.</summary>

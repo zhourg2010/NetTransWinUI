@@ -40,6 +40,17 @@ public partial class App : Application
 
         if (!Startup.Step("读取主题", () => ThemeBrushes.SetTheme(Current.RequestedTheme))) return;
 
+        // --xamlprobe builds every control on its own and writes the result to
+        // the log, which is how a "XAML parsing failed" with no detail gets
+        // turned into the name of the control that actually threw.
+        if (Environment.GetCommandLineArgs().Contains("--xamlprobe"))
+        {
+            XamlProbe.Run();
+            Startup.Log("启动完成（探测模式）");
+            Exit();
+            return;
+        }
+
         if (!Startup.Step("读取设置", () =>
         {
             settingsStore = new JsonSettingsStore();

@@ -99,6 +99,26 @@ jobs:
 
           "total files: $((Get-ChildItem publish/NetTrans -Recurse -File).Count)"
 
+      # Builds every control on its own first. When the smoke test below fails
+      # with XamlParseException against a window, this is the step that says
+      # which control inside it threw.
+      - name: XAML probe
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $exe = Join-Path $PWD 'publish/NetTrans/NetTrans.exe'
+          $log = Join-Path $PWD 'publish/NetTrans/NetTrans.startup.log'
+
+          $probe = Start-Process $exe -ArgumentList '--demo','--xamlprobe' -PassThru
+          $probe.WaitForExit(60000) | Out-Null
+
+          if (Test-Path $log) {
+            Write-Host '--- xaml probe ---'
+            Get-Content $log | Where-Object { $_ -match 'ok |FAILED|控件|HRESULT|Exception' } | Write-Host
+            Write-Host '--- end ---'
+            Remove-Item $log
+          }
+
       # The app has to survive being started. A runner has a desktop, so this
       # is the one check that exercises XAML load, the Win32 frame and the
       # first paint -- everything the unit tests cannot reach.

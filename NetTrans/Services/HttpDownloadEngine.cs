@@ -81,6 +81,14 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
 
     public IHttpTransport Transport => _transport;
 
+    /// <summary>
+    /// The task whose detail window is open, or 0 for none.
+    ///
+    /// Per-connection rates are built for this one alone: they are what the
+    /// inspector's 连接 tab draws, and nothing else reads them.
+    /// </summary>
+    public int Inspected { get; set; }
+
     public double TotalSpeed { get; private set; }
 
     /// <summary>Always zero: an HTTP downloader has nothing to upload. BT would.</summary>
@@ -340,6 +348,8 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
     /// <summary>The one place view models are refreshed, on the UI thread.</summary>
     private void Tick()
     {
+        int inspected = Inspected;
+
         foreach (var task in Tasks)
         {
             // Per-connection rates only exist while a job is live.
@@ -356,7 +366,10 @@ public sealed class HttpDownloadEngine : IDownloadEngine, IAsyncDisposable
                     if (_rechecking.Remove(task.Id)) torrent.Recheck = true;
                 }
 
-                task.Model.ConnectionSpeeds = job.ConnectionSpeeds;
+                // Only the inspector draws these, and it draws one task. Asking
+                // every running job for a fresh array twice a second built a
+                // rate per peer for rows nobody was looking at.
+                if (task.Id == inspected) task.Model.ConnectionSpeeds = job.ConnectionSpeeds;
 
                 // 单任务限速 can be changed from the inspector while the transfer
                 // is running, and the job holds its own bucket.

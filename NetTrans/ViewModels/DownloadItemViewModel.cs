@@ -170,13 +170,57 @@ public sealed partial class DownloadItemViewModel : ObservableObject
         ? TaskPresenter.NewVersionSubtitle(newer)
         : "";
 
-    /// <summary>Called by the engine after it mutates the model, to refresh every derived readout at once.</summary>
+    /// <summary>
+    /// Called by the engine after it mutates the model, to refresh every derived
+    /// readout at once.
+    ///
+    /// "At once" is the point. Each of the four writes below used to raise the
+    /// nine derived readouts on its own, so a moving row fired them four times
+    /// per tick, and the six below went out whether or not anything had changed
+    /// -- for every row in the list, twice a second, including the ones sitting
+    /// finished. A binding update is not free, so a quiet row now costs nothing
+    /// and a busy one costs one round instead of four.
+    /// </summary>
     public void Refresh()
     {
-        Done = Model.Done;
-        Speed = Model.Speed;
-        Status = Model.Status;
-        Connections = Model.Connections;
+        // Status is the one write whose setter has news of its own, so whether
+        // it moved decides who does the raising.
+        bool statusMoved = Status != Model.Status;
+
+        bool moved =
+            statusMoved ||
+            Done != Model.Done ||
+            Connections != Model.Connections ||
+            Math.Abs(Speed - Model.Speed) > 0.5 ||
+
+            // A seeding torrent moves none of the above; what changes is what
+            // it has sent, and the inspector is watching that.
+            _lastUploaded != Model.Uploaded ||
+            _lastLog != Model.Log.Count;
+
+        _lastUploaded = Model.Uploaded;
+        _lastLog = Model.Log.Count;
+
+        _quiet = true;
+
+        try
+        {
+            Done = Model.Done;
+            Speed = Model.Speed;
+            Connections = Model.Connections;
+
+            _quiet = !statusMoved;
+            Status = Model.Status;
+        }
+        finally
+        {
+            _quiet = false;
+        }
+
+        if (!moved) return;
+
+        // The status setter has already raised these when it fired.
+        if (!statusMoved) RaiseDerived();
 
         OnPropertyChanged(nameof(Blocks));
         OnPropertyChanged(nameof(ConnectionSpeeds));
@@ -184,31 +228,47 @@ public sealed partial class DownloadItemViewModel : ObservableObject
         OnPropertyChanged(nameof(Log));
         OnPropertyChanged(nameof(AverageSpeedText));
         OnPropertyChanged(nameof(PeakSpeedText));
+        OnPropertyChanged(nameof(UploadText));
+        OnPropertyChanged(nameof(RatioText));
+        OnPropertyChanged(nameof(PeersText));
+        OnPropertyChanged(nameof(SeedsText));
+        OnPropertyChanged(nameof(PeersSeedsText));
     }
+
+    /// <summary>
+    /// Set while <see cref="Refresh"/> writes the four values, so their setters
+    /// update the model without each raising the same nine readouts.
+    /// </summary>
+    private bool _quiet;
+
+    private long _lastUploaded = -1;
+    private int _lastLog = -1;
 
     // TaskPresenter derives everything from the model, so a view-model write has
     // to reach the model before the derived readouts are raised.
     partial void OnDoneChanged(long value)
     {
         Model.Done = value;
-        RaiseDerived();
+        if (!_quiet) RaiseDerived();
     }
 
     partial void OnSpeedChanged(double value)
     {
         Model.Speed = value;
-        RaiseDerived();
+        if (!_quiet) RaiseDerived();
     }
 
     partial void OnConnectionsChanged(int value)
     {
         Model.Connections = value;
-        RaiseDerived();
+        if (!_quiet) RaiseDerived();
     }
 
     partial void OnStatusChanged(DownloadStatus value)
     {
         Model.Status = value;
+        if (_quiet) return;
+
         RaiseDerived();
         OnPropertyChanged(nameof(IsDone));
         OnPropertyChanged(nameof(IsRunning));

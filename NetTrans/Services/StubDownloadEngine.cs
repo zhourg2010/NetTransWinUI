@@ -201,6 +201,9 @@ public sealed class StubDownloadEngine : IDownloadEngine
     {
     }
 
+    /// <summary>The demo engine makes rates for every row regardless; nothing to gate.</summary>
+    public int Inspected { get; set; }
+
     public void ApplySettings(AppSettings settings)
     {
     }

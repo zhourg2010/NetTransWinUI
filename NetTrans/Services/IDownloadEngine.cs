@@ -40,6 +40,12 @@ public interface IDownloadEngine
     /// <summary>Shared with the sheets, so 批量下载 and 视频嗅探 go out through the same client the transfers do.</summary>
     IHttpTransport Transport { get; }
 
+    /// <summary>
+    /// The task whose detail window is open, or 0 for none. Per-connection
+    /// rates are built for that one alone, since nothing else draws them.
+    /// </summary>
+    int Inspected { get; set; }
+
     double TotalSpeed { get; }
     double UploadSpeed { get; }
 

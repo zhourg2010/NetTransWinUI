@@ -424,6 +424,10 @@ public sealed partial class ShellViewModel : ObservableObject
         int last = SelectedIds.Count > 0 ? SelectedIds[^1] : -1;
         Current = Engine.Tasks.FirstOrDefault(t => t.Id == last);
 
+        // Per-connection rates are built for the inspected task alone, so the
+        // engine has to be told which one that is.
+        Engine.Inspected = ShowInspector && Current is not null ? Current.Id : 0;
+
         OnPropertyChanged(nameof(SelectionCount));
         OnPropertyChanged(nameof(RemoveTooltip));
         OnPropertyChanged(nameof(CanRemove));
@@ -556,7 +560,15 @@ public sealed partial class ShellViewModel : ObservableObject
         // start would be the kind of setting nobody trusts.
         ThemeChanged?.Invoke(this, value);
     }
-    partial void OnShowInspectorChanged(bool value) { Settings.ShowInspector = value; Persist(); OnPropertyChanged(nameof(InspectorTooltip)); }
+    partial void OnShowInspectorChanged(bool value)
+    {
+        Settings.ShowInspector = value;
+        Persist();
+
+        Engine.Inspected = value && Current is not null ? Current.Id : 0;
+
+        OnPropertyChanged(nameof(InspectorTooltip));
+    }
     partial void OnShowIslandChanged(bool value) { Settings.ShowIsland = value; Persist(); }
     partial void OnEdgeHideChanged(bool value) { Settings.EdgeHide = value; Persist(); }
 

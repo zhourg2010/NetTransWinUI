@@ -25,25 +25,36 @@ public static class IconResources
     /// <summary>Every icon key starts with this.</summary>
     private const string Prefix = "Icon";
 
-    /// <summary>Replaces the icon strings in a dictionary, and in everything it merges.</summary>
+    /// <summary>
+    /// Reads the icon strings out of <paramref name="resources"/> and everything
+    /// it merges, and puts the geometries back into that top-level dictionary.
+    ///
+    /// Back into the top one specifically: a dictionary loaded through
+    /// `Source="…"` is sealed ("Local values are not allowed in resource
+    /// dictionary with Source set"), and the app's own dictionary is both
+    /// writable and searched first, so an entry written there is what every
+    /// lookup finds.
+    /// </summary>
     public static int Materialise(ResourceDictionary resources)
     {
-        int converted = 0;
+        var icons = new Dictionary<string, string>(StringComparer.Ordinal);
 
-        foreach (var merged in resources.MergedDictionaries) converted += Materialise(merged);
+        Collect(resources, icons);
 
-        // Snapshot: the dictionary is written to inside the loop.
-        var keys = resources.Keys.OfType<string>().Where(key => key.StartsWith(Prefix, StringComparison.Ordinal)).ToList();
+        foreach (var (key, data) in icons) resources[key] = Parse(data);
 
-        foreach (var key in keys)
+        return icons.Count;
+    }
+
+    private static void Collect(ResourceDictionary resources, Dictionary<string, string> into)
+    {
+        foreach (var merged in resources.MergedDictionaries) Collect(merged, into);
+
+        foreach (var key in resources.Keys.OfType<string>())
         {
-            if (resources[key] is not string data) continue;
-
-            resources[key] = Parse(data);
-            converted++;
+            if (!key.StartsWith(Prefix, StringComparison.Ordinal)) continue;
+            if (resources[key] is string data) into[key] = data;
         }
-
-        return converted;
     }
 
     /// <summary>

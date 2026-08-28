@@ -123,7 +123,7 @@ public sealed partial class DownloadItemViewModel : ObservableObject
 
     public Brush TileBrush => new SolidColorBrush(ParseColor(Model.Tint));
 
-    public Geometry KindGlyph => Glyph(Kind switch
+    public string KindGlyph => Glyph(Kind switch
     {
         FileKind.Disc => "IconDisc",
         FileKind.Film => "IconFilm",
@@ -135,7 +135,7 @@ public sealed partial class DownloadItemViewModel : ObservableObject
     /// <summary>The hover action's label: 暂停 while running, 重试 after a failure, otherwise 继续.</summary>
     public string ToggleLabel => TaskPresenter.ToggleLabel(Status);
 
-    public Geometry ToggleGlyph => Glyph(IsRunning ? "IconPauseFill" : "IconPlayFill");
+    public string ToggleGlyph => Glyph(IsRunning ? "IconPauseFill" : "IconPlayFill");
 
     // ── derived: inspector ────────────────────────────────────────────────
     public Brush RingBrush => Resource(Status switch
@@ -307,7 +307,8 @@ public sealed partial class DownloadItemViewModel : ObservableObject
 
     private static Brush Resource(string key) => ThemeBrushes.Get(key);
 
-    private static Geometry Glyph(string key) => (Geometry)Application.Current.Resources[key];
+    /// <summary>The icon's path data. StrokeIcon builds the geometry itself.</summary>
+    private static string Glyph(string key) => Views.IconResources.Data(key);
 
     private static Windows.UI.Color ParseColor(string hex)
     {

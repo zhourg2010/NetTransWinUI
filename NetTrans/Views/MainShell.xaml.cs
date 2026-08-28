@@ -568,5 +568,5 @@ public sealed partial class MainShell : UserControl
         ViewModel.Banner = null;
     }
 
-    private static Geometry Glyph(string key) => (Geometry)Application.Current.Resources[key];
+    private static string Glyph(string key) => IconResources.Data(key);
 }

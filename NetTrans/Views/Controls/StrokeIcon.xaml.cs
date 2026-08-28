@@ -12,7 +12,7 @@ namespace NetTrans.Views.Controls;
 public sealed partial class StrokeIcon : UserControl
 {
     public static readonly DependencyProperty DataProperty =
-        DependencyProperty.Register(nameof(Data), typeof(Geometry), typeof(StrokeIcon),
+        DependencyProperty.Register(nameof(Data), typeof(string), typeof(StrokeIcon),
             new PropertyMetadata(null, (d, _) => ((StrokeIcon)d).Apply()));
 
     public static readonly DependencyProperty IconSizeProperty =
@@ -28,9 +28,16 @@ public sealed partial class StrokeIcon : UserControl
         DependencyProperty.Register(nameof(IsFilled), typeof(bool), typeof(StrokeIcon),
             new PropertyMetadata(false, (d, _) => ((StrokeIcon)d).Apply()));
 
-    public Geometry? Data
+    /// <summary>
+    /// The icon's path data, as the key in Icons.xaml holds it.
+    ///
+    /// A string rather than a Geometry on purpose: a Geometry belongs to one
+    /// element, so a shared resource cannot be handed to two icons. Each
+    /// StrokeIcon builds its own from this.
+    /// </summary>
+    public string? Data
     {
-        get => (Geometry?)GetValue(DataProperty);
+        get => (string?)GetValue(DataProperty);
         set => SetValue(DataProperty, value);
     }
 
@@ -68,7 +75,9 @@ public sealed partial class StrokeIcon : UserControl
 
     private void Apply()
     {
-        Glyph.Data = Data;
+        // Parsed per icon: the geometry belongs to this element's Path and
+        // cannot be shared with another.
+        Glyph.Data = Data is { Length: > 0 } data ? IconResources.Parse(data) : null;
 
         if (IsFilled)
         {

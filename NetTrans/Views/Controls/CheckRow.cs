@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Input;
 using NetTrans.Services;
+using NetTrans.Views;
 
 namespace NetTrans.Views.Controls;
 
@@ -27,7 +28,7 @@ public sealed class CheckRow : FormRow
 
         _check = new StrokeIcon
         {
-            Data = (Microsoft.UI.Xaml.Media.Geometry)Application.Current.Resources["IconCheck"],
+            Data = IconResources.Data("IconCheck"),
             IconSize = 16,
             Thickness = 2.6,
             Width = 18,

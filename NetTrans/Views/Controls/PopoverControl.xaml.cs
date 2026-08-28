@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Windows.Foundation;
+using NetTrans.Views;
 
 namespace NetTrans.Views.Controls;
 
@@ -17,7 +18,7 @@ namespace NetTrans.Views.Controls;
 /// <param name="KeepOpen">Sort rows flip direction in place rather than dismissing.</param>
 public sealed record PopoverItem(
     string Label,
-    Geometry? Glyph = null,
+    string? Glyph = null,
     bool IsChecked = false,
     bool IsDestructive = false,
     bool SeparatorBefore = false,
@@ -99,7 +100,7 @@ public sealed partial class PopoverControl : UserControl
         };
         layout.Children.Add(label);
 
-        var glyph = item.IsChecked ? (Geometry)Application.Current.Resources["IconCheck"] : item.Glyph;
+        var glyph = item.IsChecked ? IconResources.Data("IconCheck") : item.Glyph;
         if (glyph is not null)
         {
             var icon = new StrokeIcon

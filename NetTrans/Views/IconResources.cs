@@ -74,6 +74,13 @@ public static class IconResources
         var path = (Microsoft.UI.Xaml.Shapes.Path)XamlReader.Load(
             $"<Path xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' Data='{data}'/>");
 
-        return path.Data!;
+        var geometry = path.Data!;
+
+        // The Path was scaffolding. Cut the geometry loose before it goes into a
+        // dictionary: a resource that still belongs to an element is refused
+        // with "Element is already the child of another element".
+        path.Data = null;
+
+        return geometry;
     }
 }

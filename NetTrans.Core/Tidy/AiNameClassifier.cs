@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 
 namespace NetTrans.Tidy;
@@ -49,6 +50,13 @@ public sealed record AiOptions
 /// </summary>
 public sealed class AiNameClassifier : INameClassifier, IDisposable
 {
+    /// <summary>
+    /// Relaxed escaping, because the names being sent are Chinese: the default
+    /// encoder turns 报销单.zzz into \u62A5\u9500\u5355, which is the same
+    /// request at six times the tokens and unreadable in any log.
+    /// </summary>
+    private static readonly JsonSerializerOptions Wire = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+
     private static readonly string Instruction =
         "你是文件整理助手。根据文件名判断每个文件属于哪一类，只能从这些 id 里选：" +
         string.Join(", ", TidyCategories.Names) + "。" +
@@ -120,7 +128,7 @@ public sealed class AiNameClassifier : INameClassifier, IDisposable
             Calls++;
 
             var response = await _client
-                .PostAsJsonAsync($"{_options.BaseUrl.TrimEnd('/')}/chat/completions", request, cancellationToken)
+                .PostAsJsonAsync($"{_options.BaseUrl.TrimEnd('/')}/chat/completions", request, Wire, cancellationToken)
                 .ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)

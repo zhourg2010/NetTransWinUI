@@ -318,3 +318,58 @@ jobs:
           } else {
             "no startup log"
           }
+
+  # Dispatched by hand (Actions → build → Run workflow), never on a push: turns
+  # the run's zip into a GitHub Release, which is a link that needs no login and
+  # does not expire -- unlike an artifact.
+  #
+  # It lives in build.yml rather than a release.yml of its own for one reason:
+  # workflow_dispatch only exists for workflows already registered on the
+  # default branch, and this one is. The file that actually runs is the one on
+  # the dispatched ref, so this job works from a feature branch.
+  release:
+    if: github.event_name == 'workflow_dispatch'
+    needs: package
+    runs-on: ubuntu-latest
+
+    # The ceiling is Settings → Actions → General → Workflow permissions; a job
+    # cannot ask for more than the repository allows.
+    permissions:
+      contents: write
+
+    env:
+      TAG: v0.1.0
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: NetTrans-win-x64
+          path: NetTrans
+
+      - name: Zip it
+        run: |
+          zip -qr "NetTrans-$TAG-win-x64.zip" NetTrans
+          ls -lh "NetTrans-$TAG-win-x64.zip"
+
+      - name: Publish the release
+        run: |
+          notes=$(cat <<'TEXT'
+          解压即用的 Windows 绿色版（x64，自包含，不装、不写注册表）。
+
+          - 下载管理：HTTP/FTP 分段续传、HLS/DASH、BitTorrent
+          - 完成后校验 + 哈希库 + 联网核对发布方的 SHA256SUMS
+          - 大文件核对：本机 1 GB 以上单体文件，单独的账本
+          - 深度整理：先按项目、再按类型，一张卡一张卡地问，随时整批还原
+
+          命令行：`--tidy 目录 --ask`、`--tidy --undo`、`--bigfiles`
+          TEXT
+          )
+
+          gh release create "$TAG" "NetTrans-$TAG-win-x64.zip" \
+            --target "${{ github.sha }}" \
+            --title "NetTrans $TAG" \
+            --notes "$notes"
+
+          gh release view "$TAG" --json url --jq .url

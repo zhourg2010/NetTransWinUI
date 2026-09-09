@@ -115,25 +115,38 @@ jobs:
           $total = (Get-ChildItem publish/NetTrans -Recurse -File | Measure-Object Length -Sum)
           "total files: $($total.Count), $([math]::Round($total.Sum/1MB,1)) MB"
 
-      # Builds every control on its own first. When the smoke test below fails
-      # with XamlParseException against a window, this is the step that says
-      # which control inside it threw.
+      # Builds every control on its own first, sheets included -- they take
+      # the shell view model, so the probe passes it the demo one. This is the
+      # check that would have caught the icons-as-abstract-Geometry failure,
+      # and it is the only one that reaches a sheet nobody has opened yet.
+      #
+      # Not continue-on-error: a control that cannot be constructed is an app
+      # that dies when someone opens that sheet.
       - name: XAML probe
         shell: pwsh
-        continue-on-error: true
         run: |
           $exe = Join-Path $PWD 'publish/NetTrans/NetTrans.exe'
           $log = Join-Path $PWD 'publish/NetTrans/NetTrans.startup.log'
 
           $probe = Start-Process $exe -ArgumentList '--demo','--xamlprobe' -PassThru
-          $probe.WaitForExit(60000) | Out-Null
+          if (-not $probe.WaitForExit(60000)) { throw '逐个构造没有在 60 秒内结束' }
 
-          if (Test-Path $log) {
-            Write-Host '--- xaml probe ---'
-            Get-Content $log | Where-Object { $_ -match 'ok |FAILED|控件|HRESULT|Exception' } | Write-Host
-            Write-Host '--- end ---'
-            Remove-Item $log
+          if (-not (Test-Path $log)) { throw '逐个构造没有写日志' }
+
+          $lines = Get-Content $log
+          $lines | Where-Object { $_ -match 'ok |FAILED|控件|HRESULT|Exception' } | Write-Host
+
+          $summary = $lines | Where-Object { $_ -match '个控件' } | Select-Object -Last 1
+          if (-not $summary) { throw '日志里没有逐个构造的结果 —— 这一步其实什么都没查' }
+          if ($summary -notmatch '0 个失败') { throw "有控件构造失败：$summary" }
+
+          # The sheets are the half most likely to reference a resource that is
+          # not there, so their presence in the list is itself an assertion.
+          foreach ($sheet in @('TidySheet', 'BigFileSheet', 'SettingsSheet')) {
+            if (-not ($lines | Where-Object { $_ -match "ok .*$sheet" })) { throw "$sheet 没有被构造到" }
           }
+
+          Remove-Item $log
 
       # The app has to survive being started. A runner has a desktop, so this
       # is the one check that exercises XAML load, the Win32 frame and the

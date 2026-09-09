@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Text;
 using NetTrans.Download;
-using NetTrans.Interop;
 using NetTrans.Net;
 using NetTrans.Services;
 using NetTrans.Verify;
@@ -25,33 +24,7 @@ internal static class BigFileCommand
 
     public static bool Wanted(IEnumerable<string> args) => args.Contains(Flag);
 
-    public static int Run(string[] args)
-    {
-        bool allocated = AttachToConsole();
-
-        try
-        {
-            return Execute(args);
-        }
-        catch (Exception failure)
-        {
-            Console.WriteLine($"出错了：{failure.Message}");
-            return 1;
-        }
-        finally
-        {
-            // Double-clicked rather than run from a prompt: the window is ours
-            // and would close with the process, taking the report with it.
-            if (allocated && !args.Contains("--no-wait"))
-            {
-                Console.WriteLine();
-                Console.WriteLine("按回车关闭。");
-                Console.ReadLine();
-            }
-        }
-    }
-
-    private static int Execute(string[] args)
+    public static int Execute(string[] args)
     {
         var options = Options.Parse(args);
 
@@ -239,31 +212,5 @@ internal static class BigFileCommand
                 .Where(drive => drive.DriveType == DriveType.Fixed && drive.IsReady)
                 .Select(drive => drive.RootDirectory.FullName)
                 .ToList();
-    }
-
-    /// <summary>Borrows the console it was launched from, or opens one. True when it had to open one.</summary>
-    private static bool AttachToConsole()
-    {
-        bool allocated = false;
-
-        if (!NativeMethods.AttachConsole(NativeMethods.ATTACH_PARENT_PROCESS))
-        {
-            allocated = NativeMethods.AllocConsole();
-        }
-
-        try
-        {
-            // Before the writer below: setting the encoding throws the cached
-            // writers away, which would undo it.
-            Console.OutputEncoding = Encoding.UTF8;
-        }
-        catch (Exception)
-        {
-            // A console that will not take UTF-8 still prints the numbers.
-        }
-
-        Console.SetOut(new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true });
-
-        return allocated;
     }
 }

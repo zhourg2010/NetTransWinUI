@@ -103,6 +103,14 @@ NetTrans.Core/              No WinUI, no Windows — buildable and testable anyw
     StreamLoader.cs         Picks the reader by manifest kind
     HlsDecryptor.cs         AES-128 segments, with the key fetched once
     PlaylistUrl.cs          Whether a URL is a manifest, and which kind
+  Tidy/
+    TidyCategory.cs         The buckets, and the Chinese folder each becomes
+    TidyRules.cs            What a file is, from its name alone
+    TidyScan.cs             What may be touched, and which roots are refused
+    TidyPlan.cs             Folder to a list of moves -- and only a list
+    TidyRunner.cs           The half that touches the disk, plus duplicate finding
+    TidyJournal.cs          整理日志: every move, so any run can be put back
+    AiNameClassifier.cs     Optional, names-only, OpenAI-compatible
   Verify/
     HashKind.cs             MD5 / SHA-1 / SHA-256 / SHA-512, recognised by length
     JsonStore.cs            Atomic write, tolerant read: both of NetTrans' own files
@@ -386,6 +394,46 @@ network or real files.
   It borrows the console it was launched from, prints a line per file, and
   writes `NetTrans.bigfiles.md` beside the ledger. Ctrl-C keeps what it has
   already computed. Exit code 2 means something did not match.
+- **深度整理（`--tidy`）** files a folder — 桌面 and 下载 by default, or any
+  directory named on the command line — into 安装包 / 文档 / 图片（截图 in its
+  own subfolder）/ 视频 / 音乐 / 压缩包 / 代码 / 种子 / 快捷方式 / 磁盘镜像 /
+  其他, optionally by month as well, with anything untouched for N days going to
+  存档/年份 instead. `--dupes` hashes files that share a length to the byte and
+  puts the later copy in 重复文件.
+
+  It is a **预演 by default** — the plan prints as a table of file, size,
+  destination and the reason for it, and nothing moves until `--apply`. Every
+  move is written to `NetTrans.tidy.json`, and `--tidy --undo` replays the last
+  run backwards, refusing any file that has since been moved or replaced rather
+  than overwriting it. **Nothing is ever deleted**: what looks like rubbish goes
+  to 待清理 and waits for a person. Files touched in the last five minutes are
+  left alone (something may still be writing them), as are half-finished
+  downloads, hidden and system files, and symlinks; drive roots, the Windows and
+  Program Files directories and the profile root are refused outright. The
+  folders it creates are never walked into, so a second run has nothing to
+  shuffle.
+
+  ```
+  NetTrans.exe --tidy                          预演：桌面和下载
+  NetTrans.exe --tidy D:\Downloads --apply      真的整理这个目录
+  NetTrans.exe --tidy --by both --stale 365    分类再分月，一年没动的进存档
+  NetTrans.exe --tidy --undo                   把上一次整理整批还原
+  ```
+- **让 AI 认一下剩下的（`--ai`）**, off unless asked for. The extension decides
+  almost everything for free; only the names the rules could not place — the
+  `.zzz`s and the untitled ones — are put to a model. **Only file names are
+  sent, never a byte of any file's contents**: a file name is already on the
+  screen of anyone standing behind you, and no tidying convenience is worth
+  uploading the rest. It speaks the OpenAI-compatible `/chat/completions` shape,
+  so it works with a local Ollama (the default, `http://localhost:11434/v1`,
+  which is the only kind of free that stays free and sends nothing anywhere) or
+  with any hosted endpoint through `NETTRANS_AI_URL` / `NETTRANS_AI_MODEL` /
+  `NETTRANS_AI_KEY`. The key is read from the environment each run and never
+  written to any NetTrans file. The model's reply is data, not instruction: only
+  answers about files that were asked about, and only categories that already
+  exist, are kept — an invented bucket is discarded. Every failure (no endpoint,
+  no model, a timeout, prose instead of JSON) is silent and harmless: those
+  files land in 其他, exactly where they would have been anyway.
 - **批量下载** really crawls: 抓取深度, 仅限本站 and 后缀筛选 are honoured, every
   found link is probed for its size (which is what 最小文件 filters on), pages are
   never fetched twice, and pages that could not be read are reported rather than

@@ -217,6 +217,62 @@ jobs:
 
           if ($tool.ExitCode -ne 0) { throw "大文件核对退出码 $($tool.ExitCode)，应为 0" }
 
+      # 深度整理 moves people's files, so the check is end to end: tidy a
+      # fixture, prove every file landed where the rules say, then --undo and
+      # prove every one of them came back.
+      - name: Tidy and undo (--tidy)
+        shell: pwsh
+        run: |
+          $dir = Join-Path $PWD 'tidy-fixture'
+          New-Item -ItemType Directory -Force $dir | Out-Null
+
+          $names = @('setup.exe', 'invoice.pdf', 'Screenshot_20260102.png', 'movie.mkv.part', 'mystery.zzz')
+          foreach ($name in $names) {
+            $path = Join-Path $dir $name
+            Set-Content -Path $path -Value 'x' -Encoding UTF8
+            # Older than the settle window, which holds back anything that may
+            # still be being written.
+            (Get-Item $path).LastWriteTimeUtc = (Get-Date).AddDays(-1).ToUniversalTime()
+          }
+
+          $exe = Join-Path $PWD 'publish/NetTrans/NetTrans.exe'
+          $report = Join-Path $PWD 'tidy-report.md'
+
+          $tidy = Start-Process $exe -ArgumentList '--tidy',$dir,'--apply','--no-wait','--report',$report -PassThru -Wait
+          if ($tidy.ExitCode -ne 0) { throw "深度整理退出码 $($tidy.ExitCode)，应为 0" }
+
+          Get-Content $report | Write-Host
+
+          $expected = @{
+            '安装包\setup.exe'               = $true
+            '文档\invoice.pdf'               = $true
+            '图片\截图\Screenshot_20260102.png' = $true
+            '其他\mystery.zzz'               = $true
+            'movie.mkv.part'                 = $true   # 没下完的，原地不动
+          }
+
+          foreach ($relative in $expected.Keys) {
+            if (-not (Test-Path (Join-Path $dir $relative))) { throw "整理后没找到 $relative" }
+          }
+
+          if (Test-Path (Join-Path $dir 'setup.exe')) { throw 'setup.exe 还在原地，没有被整理' }
+
+          $undo = Start-Process $exe -ArgumentList '--tidy','--undo','--no-wait' -PassThru -Wait
+          if ($undo.ExitCode -ne 0) { throw "还原退出码 $($undo.ExitCode)，应为 0" }
+
+          foreach ($name in $names) {
+            if (-not (Test-Path (Join-Path $dir $name))) { throw "还原后 $name 没有回到原位" }
+          }
+
+          $journal = Join-Path $PWD 'publish/NetTrans/NetTrans.tidy.json'
+          if (-not (Test-Path $journal)) { throw '整理日志没写出来' }
+          if (Test-Path (Join-Path $PWD 'publish/NetTrans/NetTrans.hashes.json')) {
+            throw '深度整理写进了主程序的哈希库'
+          }
+
+          Remove-Item $journal, (Join-Path $PWD 'publish/NetTrans/NetTrans.tidy.md') -ErrorAction SilentlyContinue
+          Remove-Item $dir -Recurse -Force
+
       # Last, so it is the easy thing to find when the smoke test above failed.
       # A compiled XAML page is found through the app's own PRI index; without
       # it every ms-appx:/// lookup fails and every page throws the same parse

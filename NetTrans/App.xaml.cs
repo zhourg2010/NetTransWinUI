@@ -32,18 +32,24 @@ public partial class App : Application
     {
         Startup.Log("OnLaunched");
 
-        // 大文件核对 is a command-line tool that happens to live in a GUI app:
-        // it runs, prints, writes its ledger and exits, without ever building a
-        // window. On a pool thread, so the progress callbacks are not posted to
-        // a UI thread that is blocked waiting for them.
+        // 大文件核对 and 深度整理 are command-line tools that happen to live in a
+        // GUI app: they run, print, write their own file and exit, without ever
+        // building a window. On a pool thread, so progress callbacks are not
+        // posted to a UI thread that is blocked waiting for them.
         var argv = Environment.GetCommandLineArgs();
-        if (Tools.BigFileCommand.Wanted(argv))
+
+        Func<string[], int>? tool =
+            Tools.BigFileCommand.Wanted(argv) ? Tools.BigFileCommand.Execute :
+            Tools.TidyCommand.Wanted(argv) ? Tools.TidyCommand.Run :
+            null;
+
+        if (tool is not null)
         {
-            Startup.Log("大文件核对（命令行）");
+            Startup.Log("命令行工具");
 
-            int code = Task.Run(() => Tools.BigFileCommand.Run(argv)).GetAwaiter().GetResult();
+            int code = Task.Run(() => Tools.ConsoleMode.Run(argv, tool)).GetAwaiter().GetResult();
 
-            Startup.Log($"大文件核对结束，退出码 {code}");
+            Startup.Log($"命令行工具结束，退出码 {code}");
             Environment.Exit(code);
             return;
         }

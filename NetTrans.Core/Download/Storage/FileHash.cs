@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+using NetTrans.Verify;
 
 namespace NetTrans.Download;
 
@@ -26,22 +26,56 @@ public static class FileHash
         IProgress<long>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        using var sha = SHA256.Create();
-        var buffer = new byte[BufferSize];
-        long total = 0;
+        var digests = await ComputeAsync(stream, new[] { HashKind.Sha256 }, progress, cancellationToken).ConfigureAwait(false);
+        return digests[HashKind.Sha256];
+    }
 
-        while (true)
+    /// <summary>
+    /// Hashes a stream with several algorithms at once.
+    ///
+    /// A published checksum may be MD5 while the hash database keeps SHA-256,
+    /// and reading a 6 GB ISO twice to get both would double the wait for no
+    /// reason: the read is what costs, not the digests.
+    /// </summary>
+    public static async Task<IReadOnlyDictionary<HashKind, string>> ComputeAsync(
+        Stream stream,
+        IReadOnlyList<HashKind> kinds,
+        IProgress<long>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var wanted = kinds.Distinct().ToArray();
+        if (wanted.Length == 0) return new Dictionary<HashKind, string>();
+
+        var algorithms = wanted.Select(kind => kind.Create()).ToArray();
+        try
         {
-            int read = await stream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-            if (read == 0) break;
+            var buffer = new byte[BufferSize];
+            long total = 0;
 
-            sha.TransformBlock(buffer, 0, read, null, 0);
-            total += read;
-            progress?.Report(total);
+            while (true)
+            {
+                int read = await stream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+                if (read == 0) break;
+
+                foreach (var algorithm in algorithms) algorithm.TransformBlock(buffer, 0, read, null, 0);
+
+                total += read;
+                progress?.Report(total);
+            }
+
+            var result = new Dictionary<HashKind, string>(wanted.Length);
+            for (int i = 0; i < wanted.Length; i++)
+            {
+                algorithms[i].TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+                result[wanted[i]] = Convert.ToHexString(algorithms[i].Hash ?? Array.Empty<byte>()).ToLowerInvariant();
+            }
+
+            return result;
         }
-
-        sha.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
-        return Convert.ToHexString(sha.Hash ?? Array.Empty<byte>()).ToLowerInvariant();
+        finally
+        {
+            foreach (var algorithm in algorithms) algorithm.Dispose();
+        }
     }
 
     /// <summary>Hashes a file on disk.</summary>
@@ -50,10 +84,21 @@ public static class FileHash
         IProgress<long>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        var digests = await ComputeFileAsync(path, new[] { HashKind.Sha256 }, progress, cancellationToken).ConfigureAwait(false);
+        return digests[HashKind.Sha256];
+    }
+
+    /// <summary>Hashes a file on disk with several algorithms in one pass over it.</summary>
+    public static async Task<IReadOnlyDictionary<HashKind, string>> ComputeFileAsync(
+        string path,
+        IReadOnlyList<HashKind> kinds,
+        IProgress<long>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
         await using var stream = new FileStream(
             path, FileMode.Open, FileAccess.Read, FileShare.Read, BufferSize, FileOptions.Asynchronous | FileOptions.SequentialScan);
 
-        return await ComputeAsync(stream, progress, cancellationToken).ConfigureAwait(false);
+        return await ComputeAsync(stream, kinds, progress, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

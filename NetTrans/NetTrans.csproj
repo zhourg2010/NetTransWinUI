@@ -45,6 +45,14 @@
     <Platforms>x86;x64;arm64</Platforms>
     <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
 
+    <!--
+      The zip carries its own .NET and Windows App SDK, so it is large by
+      construction. The ~90 folders of translated framework messages are not:
+      the app's own text is Chinese, and English fallback is what a missing
+      satellite assembly gives. Worth about 15 MB and 400 files.
+    -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>NetTrans</AssemblyName>
     <Product>NetTrans</Product>

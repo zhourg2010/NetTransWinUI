@@ -31,6 +31,13 @@ public sealed class AppSettings
     public bool WatchClipboard { get; set; } = true;
     public bool NotifyOnCompletion { get; set; } = true;
     public bool VerifyChecksums { get; set; } = true;
+
+    /// <summary>哈希库: remember what finished files hash to, and check the next download against it.</summary>
+    public bool UseHashDatabase { get; set; } = true;
+
+    /// <summary>联网核对: look for a digest the server published next to the file (.sha256, SHA256SUMS).</summary>
+    public bool CheckChecksumsOnline { get; set; } = true;
+
     public bool ScanOnCompletion { get; set; } = true;
     public bool EdgeHide { get; set; } = true;
     public string BossKey { get; set; } = "Ctrl + Alt + H";

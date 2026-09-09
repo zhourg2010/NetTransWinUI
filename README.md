@@ -67,7 +67,8 @@ NetTrans.Core/              No WinUI, no Windows — buildable and testable anyw
       TorrentJob.cs         One torrent, plus resolving a magnet to a metainfo
     Storage/
       FileSink.cs           Concurrent disjoint writes via RandomAccess
-      FileHash.cs           SHA-256 over a file too big to hold in memory
+      FileHash.cs           MD5/SHA-1/SHA-256/SHA-512 over a file too big to hold
+                            in memory, several digests in one pass over it
       ResumeState.cs        The .nettrans sidecar behind 断点续传
       PlaylistResume.cs     The .nettrans-hls sidecar: whole segments, not offsets
     Throttling/
@@ -102,6 +103,14 @@ NetTrans.Core/              No WinUI, no Windows — buildable and testable anyw
     StreamLoader.cs         Picks the reader by manifest kind
     HlsDecryptor.cs         AES-128 segments, with the key fetched once
     PlaylistUrl.cs          Whether a URL is a manifest, and which kind
+  Verify/
+    HashKind.cs             MD5 / SHA-1 / SHA-256 / SHA-512, recognised by length
+    ChecksumFile.cs         coreutils, BSD and bare-hash checksum files
+    ChecksumSources.cs      Where a published digest might be, given the file's URL
+    OnlineChecksums.cs      联网核对: fetch those, take the first that names the file
+    HashRecord.cs           One row of the 哈希库, and how much its origin is worth
+    HashDatabase.cs         The local database: name+size to digest, bounded, on disk
+    FileVerifier.cs         完成后校验 end to end: expectation, hash, verdict, record
   Services/
     FormatHelpers.cs        mb() / spd() / eta() from the handoff
     TaskPresenter.cs        Every string the design derives from a task
@@ -300,8 +309,24 @@ network or real files.
 ## The rest of the features
 
 - **校验 SHA-256** streams the file so a 6 GB ISO does not have to fit in memory,
-  and runs automatically on completion when 完成后校验 is on. Comparing against a
-  published checksum tolerates the usual `<hash>  <filename>` shape.
+  and runs automatically on completion when 完成后校验 is on. What the file is
+  supposed to hash to is looked for in cost order: the value the task carries,
+  then the local 哈希库, then the server — see below.
+- **哈希库 + 联网核对.** Verification is only worth anything if there is something
+  to verify against, and most downloads arrive with nothing. So two things feed
+  each other. 联网核对 looks where the web actually publishes digests: a sidecar
+  next to the file (`.sha256`, `.sha256sum`, `.sha512`, `.sha1`, `.md5`) and the
+  directory's shared list (`SHA256SUMS`, `checksums.txt`) — coreutils, BSD and
+  bare-hash formats, PGP-armoured lists included. Whatever it finds goes into
+  `NetTrans.hashes.json` next to the executable, keyed by file name and length.
+  The digest of every finished file goes in too, so the same release downloaded
+  again a year later is verified offline and instantly, and a file that comes
+  back different from last time is called out even though nobody published a
+  digest for it at all. A published digest is never overwritten by a locally
+  computed one, and a copy that fails its published digest does not erase what
+  the publisher said — the retry gets checked without going back to the server.
+  Every probe may 404, which is the normal answer; a download that succeeded is
+  never reported as suspect because a checksum file was missing.
 - **批量下载** really crawls: 抓取深度, 仅限本站 and 后缀筛选 are honoured, every
   found link is probed for its size (which is what 最小文件 filters on), pages are
   never fetched twice, and pages that could not be read are reported rather than
@@ -356,6 +381,10 @@ decoration.
   shut the machine down by itself. 退出程序 / 休眠 / 关机 each get a 20-second bar
   with 取消 first; cancelling stands down that batch, not the setting.
 - **完成后校验** hashes the finished file (SHA-256) off the UI thread.
+- **哈希库** records what finished files hash to and checks the next download
+  against it; **联网核对校验值** allows the requests that look for a published
+  digest. Turning the database off leaves the file on disk untouched and simply
+  stops reading and writing it.
 - **完成后扫描** writes the `Zone.Identifier` mark of the web — the durable half,
   since SmartScreen and Protected View keep honouring it after the file moves —
   and asks Defender for a single-file scan where there is one. Remediation stays

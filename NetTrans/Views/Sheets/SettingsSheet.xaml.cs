@@ -37,6 +37,8 @@ public sealed partial class SettingsSheet : UserControl
         ClipboardSwitch.IsOn = viewModel.WatchClipboard;
         NotifySwitch.IsOn = settings.NotifyOnCompletion;
         VerifySwitch.IsOn = settings.VerifyChecksums;
+        HashDatabaseSwitch.IsOn = settings.UseHashDatabase;
+        OnlineChecksumSwitch.IsOn = settings.CheckChecksumsOnline;
         ScanSwitch.IsOn = settings.ScanOnCompletion;
         EdgeSwitch.IsOn = viewModel.EdgeHide;
         IslandSwitch.IsOn = viewModel.ShowIsland;
@@ -69,6 +71,10 @@ public sealed partial class SettingsSheet : UserControl
     private void OnNotifyToggled(object? sender, bool value) => Update(s => s.NotifyOnCompletion = value);
 
     private void OnVerifyToggled(object? sender, bool value) => Update(s => s.VerifyChecksums = value);
+
+    private void OnHashDatabaseToggled(object? sender, bool value) => Update(s => s.UseHashDatabase = value);
+
+    private void OnOnlineChecksumToggled(object? sender, bool value) => Update(s => s.CheckChecksumsOnline = value);
 
     private void OnScanToggled(object? sender, bool value) => Update(s => s.ScanOnCompletion = value);
 

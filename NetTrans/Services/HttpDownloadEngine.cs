@@ -39,6 +39,9 @@ public sealed partial class HttpDownloadEngine : IDownloadEngine, IAsyncDisposab
     /// <summary>Tasks that asked for 强制校验 and have not had it yet.</summary>
     private readonly HashSet<int> _rechecking = new();
 
+    /// <summary>哈希库: what finished downloads are supposed to hash to. Read from disk on first use.</summary>
+    private readonly HashDatabaseStore _hashes = new();
+
     private int _nextId = 1;
 
     public HttpDownloadEngine(AppSettings settings)
@@ -415,5 +418,6 @@ public sealed partial class HttpDownloadEngine : IDownloadEngine, IAsyncDisposab
         _timer.Stop();
         await _engine.DisposeAsync();
         _transport.Dispose();
+        _hashes.Flush();
     }
 }

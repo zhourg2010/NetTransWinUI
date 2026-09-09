@@ -104,6 +104,14 @@
                         <controls:IosSwitch x:Name="VerifySwitch" Toggled="OnVerifyToggled"/>
                     </controls:FormRow>
 
+                    <controls:FormRow Label="哈希库（记录并比对下载过的文件）">
+                        <controls:IosSwitch x:Name="HashDatabaseSwitch" Toggled="OnHashDatabaseToggled"/>
+                    </controls:FormRow>
+
+                    <controls:FormRow Label="联网核对校验值">
+                        <controls:IosSwitch x:Name="OnlineChecksumSwitch" Toggled="OnOnlineChecksumToggled"/>
+                    </controls:FormRow>
+
                     <controls:FormRow Label="完成后病毒扫描">
                         <controls:IosSwitch x:Name="ScanSwitch" Toggled="OnScanToggled"/>
                     </controls:FormRow>

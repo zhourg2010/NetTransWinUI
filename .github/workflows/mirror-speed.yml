@@ -1,0 +1,62 @@
+name: mirror-speed
+
+# 各地区节点测速. Not part of the normal loop: it talks to a dozen real mirrors
+# in other countries, so it runs when asked, or when the code behind it changes.
+#
+# The numbers belong to the machine that produced them -- a GitHub runner in
+# Azure. A Beijing mirror measuring slow here says how far away the runner is,
+# not how good the mirror is. Run the same test locally to rank mirrors for
+# your own link:
+#
+#   NETTRANS_LIVE=1 dotnet test NetTrans.Core.Tests/NetTrans.Core.Tests.csproj \
+#     --filter FullyQualifiedName~NetTrans.Tests.Live -l "console;verbosity=detailed"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "NetTrans.Core/Net/SpeedProbe.cs"
+      - "NetTrans.Core/Net/SpeedReport.cs"
+      - "NetTrans.Core.Tests/Live/**"
+      - ".github/workflows/mirror-speed.yml"
+
+jobs:
+  speed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      # A mirror being down is a result, not a build failure: the run reports
+      # what it measured either way, and only fails if no mirror at all served
+      # us the full read -- which would mean the transport is broken.
+      - name: Measure the mirrors
+        env:
+          NETTRANS_LIVE: "1"
+          NETTRANS_SPEED_REPORT: ${{ github.workspace }}/speed-report.md
+        run: >
+          dotnet test NetTrans.Core.Tests/NetTrans.Core.Tests.csproj
+          -c Release
+          --filter FullyQualifiedName~NetTrans.Tests.Live
+          --logger "console;verbosity=detailed"
+
+      - name: Put the table in the run summary
+        if: always()
+        run: |
+          if [ -f speed-report.md ]; then
+            cat speed-report.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "测速没有产生报告，见上面的日志。" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mirror-speed-report
+          path: speed-report.md
+          if-no-files-found: ignore
+          retention-days: 30

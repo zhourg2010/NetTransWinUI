@@ -247,6 +247,33 @@ What is *not* covered: anything that needs a window. `WindowChrome`,
 running the app. `DockGeometry` extracts the part of the docking behaviour that
 is pure arithmetic, which is the part most likely to be subtly wrong.
 
+### 各地区节点测速
+
+`NetTrans.Core.Tests/Live/` holds the one kind of test that talks to the real
+internet: how fast Ubuntu's regional mirrors are, measured through the same
+`IHttpTransport` a download uses, and whether 联网核对 finds the SHA256SUMS that
+Ubuntu really publishes. Both are skipped unless `NETTRANS_LIVE=1` — a suite
+that goes red because a mirror in another country is down is a suite people
+learn to ignore.
+
+```
+NETTRANS_LIVE=1 dotnet test NetTrans.Core.Tests/NetTrans.Core.Tests.csproj \
+  --filter FullyQualifiedName~NetTrans.Tests.Live -l "console;verbosity=detailed"
+```
+
+Twelve mirrors, 8 MB each with a 15-second cap, one at a time — several at once
+would each measure a fraction of the same link and rank by scheduling luck. The
+report is a table of speed, connect time and what each mirror managed; the only
+assertion is that at least one served the whole read, because which mirror won
+is the measurement, not the pass mark. Connect time is reported separately from
+throughput: a mirror on the other side of the planet answers slowly and then
+streams fast, and one number covering both hides which half is the problem.
+
+**The numbers belong to the machine that produced them.** The `mirror-speed`
+workflow runs this on a GitHub runner in Azure and puts the table in the run
+summary, where a Beijing mirror measures slow because the runner is far from it.
+To rank mirrors for your own connection, run it on your own connection.
+
 ## Downloading
 
 `NetTrans.Core/Download` is a real multi-segment HTTP downloader. `HttpDownloadEngine`

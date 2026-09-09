@@ -174,6 +174,7 @@ public class BigFileTests : IDisposable
 
         var published = new HashDatabase();
         published.Remember(Sha, 3, "payload.bin", HashOrigin.Published, source: "https://example.com/SHA256SUMS");
+        var before = published.Lookup("payload.bin", 3);
 
         var ledger = new BigFileLedger();
         var outcome = Assert.Single(await BigFileAudit.RunAsync(files, ledger, new ManualClock(), published));
@@ -181,8 +182,9 @@ public class BigFileTests : IDisposable
         Assert.Equal(VerifyOutcome.Match, outcome.Verdict);
         Assert.Contains("哈希库", outcome.From);
 
-        // The scan must not have written anything back into 哈希库.
-        Assert.False(published.Dirty);
+        // The scan must not have written anything back into 哈希库: the row is
+        // identical, down to the "seen" count only Remember touches.
+        Assert.Equal(before, published.Lookup("payload.bin", 3));
         Assert.Equal(1, published.Count);
     }
 

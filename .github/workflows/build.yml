@@ -97,6 +97,30 @@ jobs:
             "装一次 Microsoft Visual C++ 2015-2022 Redistributable (x64) 即可。"
           ) | Set-Content -Encoding UTF8 publish/NetTrans/关于这个版本.txt
 
+      # Framework messages translated into ~90 languages, one folder each. The
+      # app's own text is Chinese and its fallback is English, so the rest are
+      # weight in a zip people download over a home connection.
+      #
+      # SatelliteResourceLanguages does not reach them -- they are copied by the
+      # Windows App SDK's own targets, not by NuGet satellite resolution -- so
+      # they are removed here instead, and only where a folder holds nothing
+      # but .resources.dll files.
+      - name: Drop the translated framework messages
+        shell: pwsh
+        run: |
+          $before = (Get-ChildItem publish/NetTrans -Recurse -File).Count
+
+          $dropped = Get-ChildItem publish/NetTrans -Directory | Where-Object {
+            $_.Name -ne 'en' -and
+            $_.Name -match '^[a-zA-Z]{2,3}(-[A-Za-z0-9]+)*$' -and
+            -not (Get-ChildItem $_.FullName -Recurse -File | Where-Object { $_.Name -notlike '*.resources.dll' })
+          }
+
+          $dropped | ForEach-Object { Remove-Item $_.FullName -Recurse -Force }
+
+          "dropped $($dropped.Count) language folders: $($dropped.Name -join ', ')"
+          "files: $before -> $((Get-ChildItem publish/NetTrans -Recurse -File).Count)"
+
       # What actually ended up in the box. A missing dependency is invisible
       # until the app dies on someone's machine with no message.
       - name: List what was published
@@ -107,7 +131,13 @@ jobs:
             Select-Object -First 40 Name, @{n='MB';e={[math]::Round($_.Length/1MB,2)}} |
             Format-Table -AutoSize | Out-String -Width 200
 
-          "total files: $((Get-ChildItem publish/NetTrans -Recurse -File).Count)"
+          Get-ChildItem publish/NetTrans -Directory |
+            Select-Object Name, @{n='MB';e={[math]::Round((Get-ChildItem $_.FullName -Recurse -File | Measure-Object Length -Sum).Sum/1MB,2)}} |
+            Sort-Object MB -Descending |
+            Format-Table -AutoSize | Out-String -Width 200
+
+          $total = (Get-ChildItem publish/NetTrans -Recurse -File | Measure-Object Length -Sum)
+          "total files: $($total.Count), $([math]::Round($total.Sum/1MB,1)) MB"
 
       # Builds every control on its own first. When the smoke test below fails
       # with XamlParseException against a window, this is the step that says

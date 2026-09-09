@@ -111,9 +111,5 @@ public static class ChecksumFile
         text.Length == length && text.All(Uri.IsHexDigit);
 
     /// <summary>Checksum files name files relative to their own directory; only the last part is comparable.</summary>
-    private static string Basename(string name)
-    {
-        int slash = name.LastIndexOfAny(new[] { '/', '\\' });
-        return slash < 0 ? name : name[(slash + 1)..];
-    }
+    private static string Basename(string name) => HashRecord.FileNameOf(name);
 }

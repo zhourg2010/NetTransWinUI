@@ -94,7 +94,7 @@ public sealed class HashDatabase
             {
                 Sha256 = sha256.ToLowerInvariant(),
                 Size = size,
-                Name = System.IO.Path.GetFileName(name),
+                Name = HashRecord.FileNameOf(name),
                 Origin = origin,
                 Url = url ?? existing?.Url,
                 Source = source ?? existing?.Source,

@@ -42,6 +42,18 @@ public sealed record HashRecord
     public int Seen { get; init; } = 1;
 
     /// <summary>The key a finished download is looked up by: same name, same length.</summary>
-    public static string KeyFor(string name, long size) =>
-        $"{System.IO.Path.GetFileName(name).ToLowerInvariant()}|{size}";
+    public static string KeyFor(string name, long size) => $"{FileNameOf(name).ToLowerInvariant()}|{size}";
+
+    /// <summary>
+    /// The last part of a path, whichever separator it was written with.
+    ///
+    /// Path.GetFileName follows the platform, and a checksum file published on
+    /// a Unix host is read on Windows and the other way round -- including by
+    /// the tests, which run on Linux.
+    /// </summary>
+    public static string FileNameOf(string path)
+    {
+        int slash = path.LastIndexOfAny(new[] { '/', '\\' });
+        return slash < 0 ? path : path[(slash + 1)..];
+    }
 }

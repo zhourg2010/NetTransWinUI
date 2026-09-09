@@ -1,0 +1,106 @@
+name: release
+
+# 打一个 tag，出一个可以直接下载的绿色版 zip。
+#
+# Actions 的 artifact 要登录 GitHub 才能下、30 天后过期；Release 的链接是公开
+# 的、也不会过期，所以"给我一个包"走这条路。
+#
+#   git tag v0.1.0 && git push origin v0.1.0
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+# 建 Release 要写权限；默认只读。
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish (win-x64)
+        run: >
+          dotnet publish NetTrans/NetTrans.csproj
+          -c Release
+          -f net8.0-windows10.0.19041.0
+          -r win-x64
+          -p:Platform=x64
+          -o publish/NetTrans
+
+      - name: Record what this build is
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          @(
+            "NetTrans $tag"
+            ""
+            "built: $(Get-Date -Format 'yyyy-MM-dd HH:mm') UTC"
+            ""
+            "双击 NetTrans.exe 运行，解压即用的绿色版：设置写在同目录的"
+            "NetTrans.settings.json，哈希库写在 NetTrans.hashes.json，整理日志写在"
+            "NetTrans.tidy.json，没有安装程序、不写注册表；不要的时候整个文件夹删掉即可。"
+            ""
+            "命令行工具："
+            "  NetTrans.exe --tidy 目录 --ask       深度整理：一张卡一张卡地问"
+            "  NetTrans.exe --tidy --undo           把上一次整理整批还原"
+            "  NetTrans.exe --bigfiles              大文件核对（1 GB 以上）"
+            ""
+            "自包含：.NET 与 Windows App SDK 都在包里。若提示缺少 VCRUNTIME140，"
+            "装一次 Microsoft Visual C++ 2015-2022 Redistributable (x64) 即可。"
+          ) | Set-Content -Encoding UTF8 publish/NetTrans/关于这个版本.txt
+
+      # A release nobody can start is worse than no release: the same 20-second
+      # check the branch builds run, before anything is published.
+      - name: Smoke test (--demo)
+        shell: pwsh
+        run: |
+          $exe = Join-Path $PWD 'publish/NetTrans/NetTrans.exe'
+          $log = Join-Path $PWD 'publish/NetTrans/NetTrans.startup.log'
+
+          $app = Start-Process $exe -ArgumentList '--demo' -PassThru
+          Start-Sleep -Seconds 20
+
+          if (Test-Path $log) { Get-Content $log | Write-Host }
+
+          if ($app.HasExited) { throw "NetTrans 自己退出了，退出码 $($app.ExitCode)" }
+          Stop-Process -Id $app.Id -Force
+
+          if (-not (Select-String -Path $log -SimpleMatch -Pattern '启动完成' -Quiet)) {
+            throw '起来了但没走完启动流程，见上面的日志。'
+          }
+
+          Remove-Item $log
+
+      - name: Zip it
+        shell: pwsh
+        run: |
+          $name = "NetTrans-${{ github.ref_name }}-win-x64.zip"
+          Compress-Archive -Path publish/NetTrans/* -DestinationPath $name -CompressionLevel Optimal
+
+          "zip: $name  $([math]::Round((Get-Item $name).Length/1MB,1)) MB"
+          "NAME=$name" >> $env:GITHUB_ENV
+
+      - name: Publish the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $notes = @(
+            "解压即用的 Windows 绿色版（x64，自包含）。"
+            ""
+            "- 下载管理：HTTP/FTP 分段续传、HLS/DASH、BitTorrent"
+            "- 完成后校验 + 哈希库 + 联网核对发布方的 SHA256SUMS"
+            "- 大文件核对：本机 1 GB 以上单体文件，单独的账本"
+            "- 深度整理：先按项目、再按类型，一张卡一张卡地问，随时还原"
+          ) -join "`n"
+
+          gh release create "${{ github.ref_name }}" "$env:NAME" --title "NetTrans ${{ github.ref_name }}" --notes $notes

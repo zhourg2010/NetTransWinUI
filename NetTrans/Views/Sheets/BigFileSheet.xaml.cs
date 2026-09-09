@@ -25,10 +25,19 @@ public sealed partial class BigFileSheet : UserControl
     private readonly BigFileStore _store = new();
     private readonly CancellationTokenSource _cancellation = new();
 
+    /// <summary>
+    /// True until the tree is up: a ComboBox with SelectedIndex set in markup
+    /// raises SelectionChanged mid-parse, when the elements declared after it
+    /// are still null.
+    /// </summary>
+    private bool _loading = true;
+
     public BigFileSheet(ShellViewModel viewModel)
     {
         _viewModel = viewModel;
         InitializeComponent();
+
+        _loading = false;
     }
 
     private long Threshold => (SizeBox.SelectedIndex switch { 1 => 2L, 2 => 4L, 3 => 8L, _ => 1L }) * 1024 * 1024 * 1024;
@@ -53,6 +62,8 @@ public sealed partial class BigFileSheet : UserControl
 
     private void OnScopeChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_loading) return;
+
         PathBox.IsEnabled = ScopeBox.SelectedIndex == 2;
         if (ScopeBox.SelectedIndex != 2) PathBox.Text = "";
     }

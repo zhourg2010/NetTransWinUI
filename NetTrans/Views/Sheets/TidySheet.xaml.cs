@@ -27,6 +27,17 @@ public sealed partial class TidySheet : UserControl
     private IReadOnlyList<TidyAction> _plan = Array.Empty<TidyAction>();
     private bool _busy;
 
+    /// <summary>
+    /// True until the tree is up.
+    ///
+    /// A ComboBox with SelectedIndex set in markup raises SelectionChanged
+    /// while the sheet is still being parsed -- so the handler runs before the
+    /// elements below it in the file exist, and touching one is a
+    /// NullReferenceException that surfaces as "XAML parsing failed" with
+    /// nothing else to go on. 设置 has carried the same flag since the start.
+    /// </summary>
+    private bool _loading = true;
+
     public TidySheet(ShellViewModel viewModel)
     {
         _viewModel = viewModel;
@@ -34,6 +45,8 @@ public sealed partial class TidySheet : UserControl
 
         PathBox.Text = Folder(0);
         UndoButton.Visibility = _store.Journal.Last is null ? Visibility.Collapsed : Visibility.Visible;
+
+        _loading = false;
     }
 
     private static string Folder(int index) => index switch
@@ -57,6 +70,8 @@ public sealed partial class TidySheet : UserControl
 
     private void OnRootChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_loading) return;
+
         if (RootBox.SelectedIndex < 2) PathBox.Text = Folder(RootBox.SelectedIndex);
 
         Invalidate();
@@ -69,7 +84,7 @@ public sealed partial class TidySheet : UserControl
     /// <summary>Any change to the form invalidates the plan on screen: it was for the old settings.</summary>
     private void Invalidate()
     {
-        if (_busy) return;
+        if (_loading || _busy) return;
 
         _plan = Array.Empty<TidyAction>();
         Results.Visibility = Visibility.Collapsed;

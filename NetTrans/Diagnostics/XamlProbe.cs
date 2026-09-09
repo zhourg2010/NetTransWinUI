@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using Microsoft.UI.Xaml;
 using NetTrans.ViewModels;
 
@@ -46,25 +47,50 @@ public static class XamlProbe
 
         int failed = 0;
 
-        foreach (var (type, arguments) in types)
+        // XamlParseException says "XAML parsing failed" and nothing else -- no
+        // line, no element, no inner exception. What actually threw is whatever
+        // ran inside the parse, and the only place it is visible is as a first
+        // chance a moment earlier. Keeping it turns an unusable message into a
+        // stack that names the handler.
+        Exception? underlying = null;
+        void Watch(object? _, FirstChanceExceptionEventArgs e) => underlying ??= e.Exception;
+
+        AppDomain.CurrentDomain.FirstChanceException += Watch;
+
+        try
         {
-            try
+            foreach (var (type, arguments) in types)
             {
-                _ = Activator.CreateInstance(type, arguments!);
-                Startup.Log($"  ok     {type.FullName}");
+                underlying = null;
+
+                try
+                {
+                    _ = Activator.CreateInstance(type, arguments!);
+                    Startup.Log($"  ok     {type.FullName}");
+                }
+                catch (Exception exception)
+                {
+                    failed++;
+
+                    var real = Unwrap(exception);
+
+                    Startup.Log($"  FAILED {type.FullName}");
+                    Startup.Log($"         {real.GetType().FullName}: {real.Message}");
+                    Startup.Log($"         HRESULT 0x{real.HResult:X8}");
+
+                    if (underlying is { } first && first.GetType() != real.GetType())
+                    {
+                        Startup.Log($"         起因 {first.GetType().FullName}: {first.Message}");
+                        if (first.StackTrace is { } cause) Startup.Log(cause);
+                    }
+
+                    if (real.StackTrace is { } stack) Startup.Log(stack);
+                }
             }
-            catch (Exception exception)
-            {
-                failed++;
-
-                var real = Unwrap(exception);
-
-                Startup.Log($"  FAILED {type.FullName}");
-                Startup.Log($"         {real.GetType().FullName}: {real.Message}");
-                Startup.Log($"         HRESULT 0x{real.HResult:X8}");
-
-                if (real.StackTrace is { } stack) Startup.Log(stack);
-            }
+        }
+        finally
+        {
+            AppDomain.CurrentDomain.FirstChanceException -= Watch;
         }
 
         Startup.Log($"── {types.Count} 个控件，{failed} 个失败 ──");

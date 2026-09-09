@@ -19,13 +19,13 @@ public static class JsonStore
     };
 
     /// <summary>Reads the file, or hands back null when it is missing, empty, corrupt or from some other future.</summary>
-    public static T? Read<T>(string path) where T : class
+    public static T? Read<T>(string path, JsonSerializerOptions? options = null) where T : class
     {
         try
         {
             if (!File.Exists(path)) return null;
 
-            return JsonSerializer.Deserialize<T>(File.ReadAllText(path), Options);
+            return JsonSerializer.Deserialize<T>(File.ReadAllText(path), options ?? Options);
         }
         catch (Exception)
         {
@@ -34,10 +34,10 @@ public static class JsonStore
     }
 
     /// <summary>Writes through a temporary file in the same directory, then moves it into place.</summary>
-    public static void Write<T>(string path, T value)
+    public static void Write<T>(string path, T value, JsonSerializerOptions? options = null)
     {
         string temporary = path + ".tmp";
-        File.WriteAllText(temporary, JsonSerializer.Serialize(value, Options));
+        File.WriteAllText(temporary, JsonSerializer.Serialize(value, options ?? Options));
         File.Move(temporary, path, overwrite: true);
     }
 }

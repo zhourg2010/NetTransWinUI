@@ -106,6 +106,11 @@ NetTrans.Core/              No WinUI, no Windows — buildable and testable anyw
   Tidy/
     TidyCategory.cs         The buckets, and the Chinese folder each becomes
     TidyRules.cs            What a file is, from its name alone
+    NameStem.cs             Name minus version, date and 副本; tokens without a dictionary
+    ProjectFinder.cs        Files that look like one piece of work, and why
+    TidyDraft.cs            Every decision so far, with snapshot undo
+    TidyQueue.cs            The cards still to ask, recomputed after each answer
+    TidyDraftFile.cs        草稿: the wizard's output and --apply's input
     TidyScan.cs             What may be touched, and which roots are refused
     TidyPlan.cs             Folder to a list of moves -- and only a list
     TidyRunner.cs           The half that touches the disk, plus duplicate finding
@@ -417,16 +422,42 @@ network or real files.
   folders it creates are never walked into, so a second run has nothing to
   shuffle.
 
-  In the app it is 添加菜单 → **深度整理…**: pick 桌面 / 下载 / a path, choose how
-  to group, press 预演, read the table of what would move where, and only then
-  press 整理. 还原上一次整理 sits under it. From a prompt or a scheduled task:
+  **It asks rather than decides, one card at a time.** First every group of
+  files that looks like one piece of work — 建筑报告.png and 建筑报告v1.0.1.docx
+  are two halves of the same thing, and sorting by type would file them in
+  different folders — then every kind of file, then the summary. How many cards
+  there are is a property of the folder, not of the design: three projects means
+  three cards. Each carries the reason it exists, and can be accepted, renamed,
+  redirected, added to, or skipped; 上一个 takes any answer back.
+
+  The queue is recomputed after every answer, so accepting a project retires the
+  type card its files would have appeared on, and skipping one brings that card
+  back. A card nobody reached counts as accepted — 剩下都按默认 and walking every
+  card have to produce the same plan, or the wizard would be changing the
+  outcome rather than confirming it.
+
+  Where the groups come from, in order of confidence: files already sitting in
+  one subfolder (somebody grouped them by hand), then names that start with the
+  same specific word once the version, the date, the `(2)` and the 最终版 have
+  been stripped off, then — only when asked — files written within minutes of
+  each other that share a word. A stoplist keeps 报告 / 新建文档 / img from
+  keying a group that would swallow the desktop, and two files is the minimum.
+
+  In the app it is 添加菜单 → **深度整理…**. From a prompt or a scheduled task:
 
   ```
   NetTrans.exe --tidy                          预演：桌面和下载
-  NetTrans.exe --tidy D:\Downloads --apply      真的整理这个目录
-  NetTrans.exe --tidy --by both --stale 365    分类再分月，一年没动的进存档
+  NetTrans.exe --tidy D:\Downloads --ask       一张卡一张卡地问
+  NetTrans.exe --tidy D:\Downloads --plan p.json   产出草稿，人手改
+  NetTrans.exe --tidy --plan p.json --apply    严格按草稿执行
+  NetTrans.exe --tidy D:\Downloads --apply      不问，直接按默认整理
   NetTrans.exe --tidy --undo                   把上一次整理整批还原
   ```
+
+  The draft is the interface between the two: the wizard writes one, a person
+  can edit it (indented, enum names, Chinese unescaped — it is meant to be
+  opened), and `--apply` runs exactly what it says without scanning again, so
+  the folder somebody reviewed is the folder that gets tidied.
 - **让 AI 认一下剩下的（`--ai`）**, off unless asked for. The extension decides
   almost everything for free; only the names the rules could not place — the
   `.zzz`s and the untitled ones — are put to a model. **Only file names are

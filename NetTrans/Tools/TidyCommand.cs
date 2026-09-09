@@ -6,8 +6,15 @@ namespace NetTrans.Tools;
 /// <summary>
 /// 深度整理, from the command line:
 ///
-///     NetTrans.exe --tidy [路径…] [--apply] [--by 分类|月份|两级] [--depth 2]
-///                         [--stale 365] [--dupes] [--ai] [--undo]
+///     NetTrans.exe --tidy [路径…] [--apply] [--ask] [--plan 草稿.json]
+///                         [--by 分类|月份|两级] [--depth 2] [--stale 365]
+///                         [--dupes] [--ai] [--undo]
+///
+/// Three ways to use it, all the same code underneath:
+///
+///   --tidy 目录                  预演：算一遍，打印出来，什么也不动
+///   --tidy 目录 --ask            一张卡一张卡地问：先项目，再类型
+///   --tidy 目录 --plan p.json    产出草稿，人手改，再 --plan p.json --apply
 ///
 /// 预演 by default. Nothing moves until --apply, and everything that moves is
 /// written to a journal that --undo replays backwards. Nothing is ever deleted:
@@ -26,11 +33,19 @@ internal static class TidyCommand
 
         if (options.Undo) return Undo(store);
 
-        var actions = new List<TidyAction>();
-        var moves = new List<TidyMove>();
+        // A draft that has already been reviewed: run exactly what it says and
+        // do not scan again -- the folder somebody read is the folder that gets
+        // tidied.
+        if (options.Plan is { } saved && options.Apply && File.Exists(saved))
+        {
+            return ApplySaved(saved, store);
+        }
 
         Console.WriteLine($"深度整理{(options.Apply ? "" : "（预演）")} · 日志 {store.Path}");
         Console.WriteLine();
+
+        var actions = new List<TidyAction>();
+        var moves = new List<TidyMove>();
 
         foreach (var root in options.Roots)
         {
@@ -40,7 +55,19 @@ internal static class TidyCommand
                 continue;
             }
 
-            var planned = Plan(root, options);
+            var draft = Draft(root, options);
+
+            if (options.Ask) Ask(draft);
+            else draft.AcceptRest();
+
+            if (options.Plan is { } path)
+            {
+                TidyDraftFile.Save(draft, path);
+                Console.WriteLine($"草稿：{path}（改完用 --tidy --plan {path} --apply 执行）");
+                Console.WriteLine();
+            }
+
+            var planned = TidyPlan.Build(draft, DateTimeOffset.Now, File.Exists);
             actions.AddRange(planned);
 
             Console.WriteLine($"— {root}");
@@ -49,23 +76,7 @@ internal static class TidyCommand
 
             if (!options.Apply) continue;
 
-            var result = TidyRunner.Apply(planned);
-            moves.AddRange(result.Moved);
-
-            foreach (var failure in result.Failed) Console.WriteLine($"没能移动：{failure}");
-        }
-
-        if (options.Apply && moves.Count > 0)
-        {
-            store.Journal.Add(new TidyBatch
-            {
-                Id = DateTime.Now.ToString("yyyyMMdd-HHmmss"),
-                When = DateTimeOffset.Now,
-                Roots = options.Roots.ToList(),
-                Moves = moves,
-            });
-
-            store.Flush();
+            Move(planned, moves, store, root);
         }
 
         Console.WriteLine(TidyReport.Summary(actions, options.Apply));
@@ -77,28 +88,153 @@ internal static class TidyCommand
         return actions.Any(action => action.Moves) ? 0 : 3;
     }
 
-    private static IReadOnlyList<TidyAction> Plan(string root, Options options)
+    private static TidyDraft Draft(string root, Options options)
     {
         var items = TidyScan.Collect(root, options.Tidy, (directory, failure) =>
             Console.WriteLine($"读不了 {directory}：{failure.Message}"));
 
-        IReadOnlyDictionary<string, string>? duplicates = null;
+        var draft = TidyDraft.From(root, options.Tidy, items, ProjectFinder.Find(root, items, options.Bursts));
+
         if (options.Duplicates)
         {
             Console.WriteLine("正在按大小分组、对可能重复的文件算哈希…");
-            duplicates = TidyRunner.FindDuplicatesAsync(items).GetAwaiter().GetResult();
+            draft.Duplicates = TidyRunner.FindDuplicatesAsync(items).GetAwaiter().GetResult();
         }
 
-        var guesses = options.Ai ? Ask(items) : null;
+        if (options.Ai) draft.Guesses = Guess(items) ?? draft.Guesses;
 
-        return TidyPlan.Build(root, items, options.Tidy, DateTimeOffset.Now, File.Exists, duplicates, guesses);
+        draft.Rebuild();
+        return draft;
+    }
+
+    /// <summary>
+    /// The same queue the wizard shows, one card at a time on a terminal.
+    /// Enter accepts what is on screen, which is the whole point of proposing
+    /// it.
+    /// </summary>
+    private static void Ask(TidyDraft draft)
+    {
+        while (true)
+        {
+            var card = TidyQueue.Current(draft);
+            var (at, total) = TidyQueue.Progress(draft);
+
+            if (card.Kind == TidyCardKind.Summary) return;
+
+            Console.WriteLine();
+            Console.WriteLine($"[{at}/{total}] {(card.Kind == TidyCardKind.Project ? "项目" : "类型")}：{card.Title}");
+            Console.WriteLine($"        {card.Detail}");
+
+            foreach (var line in Preview(draft, card)) Console.WriteLine($"        · {line}");
+
+            Console.Write("回车=接受  n=跳过  r 新名字  d 新目录  a=剩下全按默认  u=撤销 > ");
+
+            var answer = (Console.ReadLine() ?? "").Trim();
+
+            if (answer.Equals("a", StringComparison.OrdinalIgnoreCase))
+            {
+                draft.AcceptRest();
+                return;
+            }
+
+            if (answer.Equals("u", StringComparison.OrdinalIgnoreCase))
+            {
+                draft.Undo();
+                continue;
+            }
+
+            Answer(draft, card, answer);
+        }
+    }
+
+    private static void Answer(TidyDraft draft, TidyCard card, string answer)
+    {
+        bool skip = answer.Equals("n", StringComparison.OrdinalIgnoreCase);
+        string? renamed = answer.StartsWith("r ", StringComparison.OrdinalIgnoreCase) ? answer[2..].Trim() : null;
+        string? moved = answer.StartsWith("d ", StringComparison.OrdinalIgnoreCase) ? answer[2..].Trim() : null;
+
+        switch (card.Kind)
+        {
+            case TidyCardKind.Project when card.ProjectId is { } id:
+                if (renamed is { Length: > 0 }) draft.RenameProject(id, renamed);
+                if (moved is { Length: > 0 }) draft.SetProjectDestination(id, moved);
+
+                if (skip) draft.SkipProject(id);
+                else if (renamed is null && moved is null) draft.AcceptProject(id);
+                break;
+
+            default:
+                foreach (var category in card.Categories ?? Array.Empty<TidyCategory>())
+                {
+                    if (moved is { Length: > 0 }) draft.SetBucketFolder(category, moved);
+
+                    if (skip) draft.SkipBucket(category);
+                    else if (moved is null) draft.AcceptBucket(category);
+                }
+
+                break;
+        }
+    }
+
+    /// <summary>A few names off the card, so the answer is about something visible.</summary>
+    private static IEnumerable<string> Preview(TidyDraft draft, TidyCard card)
+    {
+        var names = card.Kind == TidyCardKind.Project && card.ProjectId is { } id
+            ? draft.Projects.First(project => project.Id == id).Members.Select(Path.GetFileName)
+            : (card.Categories ?? Array.Empty<TidyCategory>()).SelectMany(draft.InBucket).Select(item => item.Name);
+
+        var listed = names.Take(6).ToList();
+        foreach (var name in listed) yield return name!;
+
+        if (card.Count > listed.Count) yield return $"…另外 {card.Count - listed.Count} 个";
+    }
+
+    private static int ApplySaved(string path, TidyStore store)
+    {
+        if (TidyDraftFile.Load(path) is not { } draft)
+        {
+            Console.WriteLine($"读不了草稿 {path}");
+            return 1;
+        }
+
+        var planned = TidyPlan.Build(draft, DateTimeOffset.Now, File.Exists);
+
+        Console.WriteLine($"按草稿执行：{path}");
+        Console.WriteLine(TidyReport.Table(planned, draft.Root));
+        Console.WriteLine();
+
+        var moves = new List<TidyMove>();
+        Move(planned, moves, store, draft.Root);
+
+        Console.WriteLine(TidyReport.Summary(planned, applied: true));
+        return planned.Any(action => action.Moves) ? 0 : 3;
+    }
+
+    private static void Move(IReadOnlyList<TidyAction> planned, List<TidyMove> moves, TidyStore store, string root)
+    {
+        var result = TidyRunner.Apply(planned);
+        moves.AddRange(result.Moved);
+
+        foreach (var failure in result.Failed) Console.WriteLine($"没能移动：{failure}");
+
+        if (result.Moved.Count == 0) return;
+
+        store.Journal.Add(new TidyBatch
+        {
+            Id = DateTime.Now.ToString("yyyyMMdd-HHmmss"),
+            When = DateTimeOffset.Now,
+            Roots = new List<string> { root },
+            Moves = result.Moved.ToList(),
+        });
+
+        store.Flush();
     }
 
     /// <summary>
     /// Puts the names the rules could not place to a model -- names only, never
     /// a byte of any file -- and says out loud where they are going.
     /// </summary>
-    private static IReadOnlyDictionary<string, TidyCategory>? Ask(IReadOnlyList<TidyItem> items)
+    private static IReadOnlyDictionary<string, TidyCategory>? Guess(IReadOnlyList<TidyItem> items)
     {
         var unknown = items
             .Where(item => TidyRules.Classify(item.Name).Category == TidyCategory.Unknown)
@@ -167,13 +303,17 @@ internal static class TidyCommand
         public bool Undo { get; init; }
         public bool Duplicates { get; init; }
         public bool Ai { get; init; }
+        public bool Ask { get; init; }
+        public bool Bursts { get; init; }
+        public string? Plan { get; init; }
         public string? Report { get; init; }
 
         public static Options Parse(string[] args)
         {
             var roots = new List<string>();
             var tidy = new TidyOptions();
-            bool apply = false, undo = false, dupes = false, ai = false;
+            bool apply = false, undo = false, dupes = false, ai = false, ask = false, bursts = false;
+            string? plan = null;
             string? report = null;
 
             for (int i = 0; i < args.Length; i++)
@@ -197,6 +337,18 @@ internal static class TidyCommand
 
                     case "--ai":
                         ai = true;
+                        break;
+
+                    case "--ask":
+                        ask = true;
+                        break;
+
+                    case "--bursts":
+                        bursts = true;
+                        break;
+
+                    case "--plan" when i + 1 < args.Length:
+                        plan = args[++i];
                         break;
 
                     case "--report" when i + 1 < args.Length:
@@ -237,6 +389,9 @@ internal static class TidyCommand
                 Undo = undo,
                 Duplicates = dupes,
                 Ai = ai,
+                Ask = ask,
+                Bursts = bursts,
+                Plan = plan,
                 Report = report,
             };
         }

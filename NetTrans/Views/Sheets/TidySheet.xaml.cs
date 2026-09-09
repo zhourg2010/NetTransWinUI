@@ -8,33 +8,31 @@ using NetTrans.Views.Controls;
 namespace NetTrans.Views.Sheets;
 
 /// <summary>
-/// 深度整理: the command-line tool's plan, as a sheet.
+/// 深度整理, as a wizard whose length the folder decides.
 ///
-/// Same two steps as `--tidy` and `--tidy --apply`, and for the same reason:
-/// this moves somebody's files, so it shows the whole plan first -- what goes
-/// where, and why -- and the confirming button only becomes 整理 once there is
-/// a plan on screen to confirm.
+/// One card per proposed project, then one per kind of file, then the summary.
+/// The queue is recomputed from the draft after every answer, so accepting a
+/// project can retire a question that no longer has a subject, and skipping one
+/// brings it back. Nothing touches the disk until 开始整理 on the last card.
 /// </summary>
 public sealed partial class TidySheet : UserControl
 {
-    /// <summary>Long enough to see the shape of the run; the report file has the rest.</summary>
-    private const int Shown = 60;
+    /// <summary>Names listed on a card before it turns into a wall.</summary>
+    private const int Listed = 12;
 
     private readonly ShellViewModel _viewModel;
     private readonly TidyStore _store = new();
     private readonly CancellationTokenSource _cancellation = new();
 
-    private IReadOnlyList<TidyAction> _plan = Array.Empty<TidyAction>();
-    private bool _busy;
+    private TidyDraft? _draft;
+    private TidyCard? _card;
+    private TextBox? _nameBox;
+    private TextBox? _folderBox;
 
     /// <summary>
-    /// True until the tree is up.
-    ///
-    /// A ComboBox with SelectedIndex set in markup raises SelectionChanged
-    /// while the sheet is still being parsed -- so the handler runs before the
-    /// elements below it in the file exist, and touching one is a
-    /// NullReferenceException that surfaces as "XAML parsing failed" with
-    /// nothing else to go on. 设置 has carried the same flag since the start.
+    /// True until the tree is up: a ComboBox with SelectedIndex set in markup
+    /// raises SelectionChanged mid-parse, when the elements declared after it
+    /// are still null.
     /// </summary>
     private bool _loading = true;
 
@@ -56,46 +54,32 @@ public sealed partial class TidySheet : UserControl
         _ => "",
     };
 
-    private TidyOptions Options => new()
-    {
-        Grouping = GroupBox.SelectedIndex switch
-        {
-            1 => TidyGrouping.Month,
-            2 => TidyGrouping.CategoryThenMonth,
-            _ => TidyGrouping.Category,
-        },
-        Depth = DepthBox.SelectedIndex + 1,
-        StaleDays = StaleBox.SelectedIndex switch { 1 => 182, 2 => 365, 3 => 730, _ => 0 },
-    };
-
     private void OnRootChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_loading) return;
-
         if (RootBox.SelectedIndex < 2) PathBox.Text = Folder(RootBox.SelectedIndex);
-
-        Invalidate();
     }
 
-    private void OnSettingsChanged(object sender, RoutedEventArgs e) => Invalidate();
+    // ── 第一屏 ────────────────────────────────────────────────────────────
 
-    private void OnSwitchToggled(object? sender, bool value) => Invalidate();
-
-    /// <summary>Any change to the form invalidates the plan on screen: it was for the old settings.</summary>
-    private void Invalidate()
+    private async void OnConfirmed(object? sender, EventArgs e)
     {
-        if (_loading || _busy) return;
+        if (_draft is null)
+        {
+            await ScanAsync();
+            return;
+        }
 
-        _plan = Array.Empty<TidyAction>();
-        Results.Visibility = Visibility.Collapsed;
-        ResultList.Children.Clear();
+        if (_card?.Kind == TidyCardKind.Summary)
+        {
+            await ApplyAsync();
+            return;
+        }
 
-        Host.IsRightEnabled = false;
-        PreviewButton.IsEnabled = true;
-        PreviewButton.Content = "预演";
+        Accept();
     }
 
-    private async void OnPreviewClick(object sender, RoutedEventArgs e)
+    private async Task ScanAsync()
     {
         string root = PathBox.Text.Trim();
 
@@ -105,19 +89,19 @@ public sealed partial class TidySheet : UserControl
             return;
         }
 
-        _busy = true;
-        PreviewButton.IsEnabled = false;
-        PreviewButton.Content = "正在看…";
+        Host.IsRightEnabled = false;
+        var options = new TidyOptions
+        {
+            Depth = DepthBox.SelectedIndex + 1,
+            StaleDays = StaleBox.SelectedIndex switch { 1 => 182, 2 => 365, 3 => 730, _ => 0 },
+        };
 
-        var options = Options;
         bool dupes = DupesSwitch.IsOn;
         bool ai = AiSwitch.IsOn;
 
         try
         {
-            // Off the UI thread: hashing for duplicates and asking a model both
-            // take seconds, and the sheet has to stay alive to be cancelled.
-            _plan = await Task.Run(() => Plan(root, options, dupes, ai), _cancellation.Token);
+            _draft = await Task.Run(() => Build(root, options, dupes, ai), _cancellation.Token);
         }
         catch (OperationCanceledException)
         {
@@ -126,27 +110,24 @@ public sealed partial class TidySheet : UserControl
         catch (Exception failure)
         {
             _viewModel.Say($"看不了这个目录：{failure.Message}");
-            PreviewButton.IsEnabled = true;
-            PreviewButton.Content = "预演";
+            Host.IsRightEnabled = true;
             return;
         }
-        finally
-        {
-            _busy = false;
-        }
 
-        Show(root);
+        Setup.Visibility = Visibility.Collapsed;
+        Card.Visibility = Visibility.Visible;
+        Host.IsRightEnabled = true;
+
+        Show();
     }
 
-    private IReadOnlyList<TidyAction> Plan(string root, TidyOptions options, bool dupes, bool ai)
+    private TidyDraft Build(string root, TidyOptions options, bool dupes, bool ai)
     {
         var items = TidyScan.Collect(root, options);
+        var draft = TidyDraft.From(root, options, items, ProjectFinder.Find(root, items));
 
-        var duplicates = dupes
-            ? TidyRunner.FindDuplicatesAsync(items, _cancellation.Token).GetAwaiter().GetResult()
-            : null;
+        if (dupes) draft.Duplicates = TidyRunner.FindDuplicatesAsync(items, _cancellation.Token).GetAwaiter().GetResult();
 
-        IReadOnlyDictionary<string, TidyCategory>? guessed = null;
         if (ai)
         {
             var unknown = items
@@ -159,47 +140,263 @@ public sealed partial class TidySheet : UserControl
             {
                 // Names only, and only the ones the rules could not place.
                 using var classifier = new AiNameClassifier(AiOptions.FromEnvironment());
-                guessed = classifier.ClassifyAsync(unknown, _cancellation.Token).GetAwaiter().GetResult();
+                draft.Guesses = classifier.ClassifyAsync(unknown, _cancellation.Token).GetAwaiter().GetResult();
             }
         }
 
-        return TidyPlan.Build(root, items, options, DateTimeOffset.Now, System.IO.File.Exists, duplicates, guessed);
+        draft.Rebuild();
+        return draft;
     }
 
-    private void Show(string root)
+    // ── 卡片 ──────────────────────────────────────────────────────────────
+
+    /// <summary>Draws whichever card is now at the head of the queue.</summary>
+    private void Show()
     {
-        var moves = _plan.Where(action => action.Moves).ToList();
+        if (_draft is null) return;
 
-        Results.Visibility = Visibility.Visible;
-        ResultList.Children.Clear();
+        _card = TidyQueue.Current(_draft);
+        var (at, total) = TidyQueue.Progress(_draft);
 
-        ResultHeader.Text = TidyReport.Summary(_plan, applied: false);
+        CardBody.Children.Clear();
+        CardExtra.Children.Clear();
+        _nameBox = null;
+        _folderBox = null;
 
-        for (int i = 0; i < moves.Count && i < Shown; i++)
+        BackButton.IsEnabled = _draft.CanUndo;
+        SkipButton.Visibility = _card.Kind == TidyCardKind.Summary ? Visibility.Collapsed : Visibility.Visible;
+        RestButton.Visibility = SkipButton.Visibility;
+
+        Step.Text = _card.Kind == TidyCardKind.Summary ? "最后一步" : $"第 {at} / {total} 项";
+        CardTitle.Text = _card.Title;
+        CardDetail.Text = _card.Detail;
+
+        switch (_card.Kind)
         {
-            ResultList.Children.Add(Row(moves[i], root, i > 0));
+            case TidyCardKind.Project:
+                ShowProject(_draft.Projects.First(project => project.Id == _card.ProjectId));
+                Host.RightLabel = "收下这个项目";
+                break;
+
+            case TidyCardKind.Summary:
+                ShowSummary();
+                Host.RightLabel = "开始整理";
+                break;
+
+            default:
+                ShowBucket(_card);
+                Host.RightLabel = "就这么放";
+                break;
+        }
+    }
+
+    private void ShowProject(DraftProject project)
+    {
+        _nameBox = new TextBox { Text = project.Name, Width = 240, Style = Style("FormTextBoxLeftStyle") };
+        _folderBox = new TextBox { Text = project.Destination, Width = 240, Style = Style("FormTextBoxLeftStyle") };
+
+        CardBody.Children.Add(new FormRow { Label = "名字", Trailing = _nameBox, ShowSeparator = false });
+        CardBody.Children.Add(new FormRow { Label = "放到", Trailing = _folderBox });
+
+        int n = 0;
+        foreach (var path in project.Members.OrderBy(path => path, StringComparer.Ordinal))
+        {
+            var row = new CheckRow(System.IO.Path.GetFileName(path), Size(path), isChecked: true, showSeparator: true);
+            string member = path;
+
+            // Unticking a member is an edit to the draft, not to this screen:
+            // it changes what the later type cards contain.
+            row.Toggled += (_, on) =>
+            {
+                if (on) _draft!.AddToProject(project.Id, member);
+                else _draft!.RemoveFromProject(project.Id, member);
+            };
+
+            CardBody.Children.Add(row);
+            if (++n >= Listed) break;
         }
 
-        MoreNote.Visibility = moves.Count > Shown ? Visibility.Visible : Visibility.Collapsed;
-        MoreNote.Text = $"还有 {moves.Count - Shown} 个没列出来，整理后会全部写进报告。";
+        var loose = _draft!.Loose().Take(Listed).ToList();
+        if (loose.Count == 0) return;
 
-        PreviewButton.Visibility = Visibility.Collapsed;
-        Host.IsRightEnabled = moves.Count > 0;
+        CardExtra.Children.Add(new TextBlock
+        {
+            Text = "把这些也算进来？",
+            Margin = new Thickness(4, 16, 4, 6),
+            Style = Style("GroupHeaderTextStyle"),
+        });
 
-        if (moves.Count == 0) _viewModel.Say("这个目录已经很整齐了");
+        var card = new Border { Style = Style("CardStyle") };
+        var list = new StackPanel();
+        card.Child = list;
+
+        for (int i = 0; i < loose.Count; i++)
+        {
+            var item = loose[i];
+            var row = new CheckRow(item.Name, FormatHelpers.Bytes(item.Size), isChecked: false, showSeparator: i > 0);
+
+            row.Toggled += (_, on) =>
+            {
+                if (on) _draft!.AddToProject(project.Id, item.Path);
+                else _draft!.RemoveFromProject(project.Id, item.Path);
+            };
+
+            list.Children.Add(row);
+        }
+
+        CardExtra.Children.Add(card);
     }
 
-    private static FormRow Row(TidyAction action, string root, bool separator)
+    private void ShowBucket(TidyCard card)
     {
-        var row = new FormRow
-        {
-            Label = action.Item.Name,
-            Value = System.IO.Path.GetDirectoryName(System.IO.Path.GetRelativePath(root, action.Destination!)),
-            ShowSeparator = separator,
-        };
+        var categories = card.Categories ?? Array.Empty<TidyCategory>();
+        var files = categories.SelectMany(_draft!.InBucket).ToList();
 
-        ToolTipService.SetToolTip(row, $"{action.Reason} · {FormatHelpers.Bytes(action.Item.Size)}");
-        return row;
+        if (categories.Count == 1)
+        {
+            var bucket = _draft.Buckets[categories[0]];
+
+            _folderBox = new TextBox { Text = bucket.Folder, Width = 240, Style = Style("FormTextBoxLeftStyle") };
+            CardBody.Children.Add(new FormRow { Label = "放到", Trailing = _folderBox, ShowSeparator = false });
+
+            var month = new IosSwitch { IsOn = bucket.ByMonth };
+            month.Toggled += (_, on) => _draft!.SetBucketByMonth(categories[0], on);
+
+            CardBody.Children.Add(new FormRow { Label = "再按月份分一层", Trailing = month });
+        }
+
+        for (int i = 0; i < files.Count && i < Listed; i++)
+        {
+            CardBody.Children.Add(new FormRow
+            {
+                Label = files[i].Name,
+                Value = categories.Count == 1 ? FormatHelpers.Bytes(files[i].Size) : TidyCategories.Folder(_draft.CategoryOf(files[i])),
+                ShowSeparator = true,
+            });
+        }
+
+        if (files.Count > Listed)
+        {
+            CardExtra.Children.Add(new TextBlock
+            {
+                Text = $"还有 {files.Count - Listed} 个没列出来。",
+                Margin = new Thickness(4, 6, 4, 0),
+                Style = Style("NoteTextStyle"),
+            });
+        }
+    }
+
+    private void ShowSummary()
+    {
+        var plan = TidyPlan.Build(_draft!, DateTimeOffset.Now, System.IO.File.Exists);
+        var moves = plan.Where(action => action.Moves).ToList();
+
+        CardDetail.Text = TidyReport.Summary(plan, applied: false);
+
+        for (int i = 0; i < moves.Count && i < 40; i++)
+        {
+            var action = moves[i];
+
+            var row = new FormRow
+            {
+                Label = action.Item.Name,
+                Value = System.IO.Path.GetDirectoryName(System.IO.Path.GetRelativePath(_draft!.Root, action.Destination!)),
+                ShowSeparator = i > 0,
+            };
+
+            ToolTipService.SetToolTip(row, $"{action.Reason} · {FormatHelpers.Bytes(action.Item.Size)}");
+            CardBody.Children.Add(row);
+        }
+
+        if (moves.Count == 0)
+        {
+            CardBody.Children.Add(new FormRow { Label = "没有需要动的文件", ShowSeparator = false });
+        }
+
+        Host.IsRightEnabled = moves.Count > 0;
+    }
+
+    // ── 回答 ──────────────────────────────────────────────────────────────
+
+    /// <summary>下一个: take the card as it stands, edits in its boxes included.</summary>
+    private void Accept()
+    {
+        if (_draft is null || _card is null) return;
+
+        if (_card.Kind == TidyCardKind.Project && _card.ProjectId is { } id)
+        {
+            var project = _draft.Projects.First(entry => entry.Id == id);
+
+            if (_nameBox?.Text.Trim() is { Length: > 0 } name && name != project.Name) _draft.RenameProject(id, name);
+            if (_folderBox?.Text.Trim() is { Length: > 0 } folder && folder != project.Destination) _draft.SetProjectDestination(id, folder);
+
+            _draft.AcceptProject(id);
+        }
+        else
+        {
+            foreach (var category in _card.Categories ?? Array.Empty<TidyCategory>())
+            {
+                if (_folderBox?.Text.Trim() is { Length: > 0 } folder && folder != _draft.Buckets[category].Folder)
+                {
+                    _draft.SetBucketFolder(category, folder);
+                }
+
+                _draft.AcceptBucket(category);
+            }
+        }
+
+        Show();
+    }
+
+    private void OnSkipClick(object sender, RoutedEventArgs e)
+    {
+        if (_draft is null || _card is null) return;
+
+        if (_card.Kind == TidyCardKind.Project && _card.ProjectId is { } id) _draft.SkipProject(id);
+        else foreach (var category in _card.Categories ?? Array.Empty<TidyCategory>()) _draft.SkipBucket(category);
+
+        Show();
+    }
+
+    private void OnBackClick(object sender, RoutedEventArgs e)
+    {
+        _draft?.Undo();
+        Show();
+    }
+
+    private void OnRestClick(object sender, RoutedEventArgs e)
+    {
+        _draft?.AcceptRest();
+        Show();
+    }
+
+    private async Task ApplyAsync()
+    {
+        if (_draft is null) return;
+
+        Host.IsRightEnabled = false;
+
+        var plan = TidyPlan.Build(_draft, DateTimeOffset.Now, System.IO.File.Exists);
+        var result = await Task.Run(() => TidyRunner.Apply(plan));
+
+        if (result.Moved.Count > 0)
+        {
+            _store.Journal.Add(new TidyBatch
+            {
+                Id = DateTime.Now.ToString("yyyyMMdd-HHmmss"),
+                When = DateTimeOffset.Now,
+                Roots = new List<string> { _draft.Root },
+                Moves = result.Moved.ToList(),
+            });
+
+            _store.Flush();
+        }
+
+        _viewModel.Say(result.Failed.Count > 0
+            ? $"整理了 {result.Moved.Count} 个，{result.Failed.Count} 个没能移动"
+            : $"整理了 {result.Moved.Count} 个文件，可以从这里还原");
+
+        _viewModel.ActiveSheet = null;
     }
 
     private async void OnUndoClick(object sender, RoutedEventArgs e)
@@ -219,8 +416,6 @@ public sealed partial class TidySheet : UserControl
         _viewModel.Say(refused.Count > 0
             ? $"还原了 {restored} 个，{refused.Count} 个没能还原"
             : $"还原了 {restored} 个文件");
-
-        Invalidate();
     }
 
     private void OnCancelled(object? sender, EventArgs e)
@@ -229,32 +424,22 @@ public sealed partial class TidySheet : UserControl
         _viewModel.ActiveSheet = null;
     }
 
-    private async void OnConfirmed(object? sender, EventArgs e)
+    private static string Size(string path)
     {
-        if (_plan.Count == 0) return;
-
-        Host.IsRightEnabled = false;
-
-        var plan = _plan;
-        var result = await Task.Run(() => TidyRunner.Apply(plan));
-
-        if (result.Moved.Count > 0)
+        try
         {
-            _store.Journal.Add(new TidyBatch
-            {
-                Id = DateTime.Now.ToString("yyyyMMdd-HHmmss"),
-                When = DateTimeOffset.Now,
-                Roots = new List<string> { PathBox.Text.Trim() },
-                Moves = result.Moved.ToList(),
-            });
-
-            _store.Flush();
+            return FormatHelpers.Bytes(new System.IO.FileInfo(path).Length);
         }
-
-        _viewModel.Say(result.Failed.Count > 0
-            ? $"整理了 {result.Moved.Count} 个，{result.Failed.Count} 个没能移动"
-            : $"整理了 {result.Moved.Count} 个文件，可以从这里还原");
-
-        _viewModel.ActiveSheet = null;
+        catch (Exception)
+        {
+            return "";
+        }
     }
+
+    /// <summary>
+    /// A style from the app's dictionaries. Card bodies are built in code
+    /// rather than markup because their shape depends on the card -- and the
+    /// styles still have to be the same ones the rest of the sheet uses.
+    /// </summary>
+    private static Style Style(string key) => (Style)Application.Current.Resources[key];
 }

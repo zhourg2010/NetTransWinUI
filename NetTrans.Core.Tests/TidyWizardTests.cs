@@ -134,31 +134,37 @@ public class TidyWizardTests : IDisposable
         Assert.Equal(TidyCardKind.Summary, cards[^1].Kind);
     }
 
-    /// <summary>Accepting a project can remove a question nobody now needs to answer.</summary>
+    /// <summary>
+    /// A file held by a proposed project is not also asked about by type: it
+    /// would be the same question twice, and the project would win anyway.
+    /// </summary>
     [Fact]
-    public void The_queue_shrinks_when_a_project_swallows_a_whole_type()
+    public void A_proposed_project_holds_its_files_until_it_is_skipped()
     {
         var draft = Draft(Item("建筑报告.png"), Item("建筑报告v1.docx"), Item("发票.pdf"), Item("合同.pdf"));
 
-        Assert.Contains(TidyQueue.Pending(draft), card => card.Title == TidyCategories.Folder(TidyCategory.Image));
+        var cards = TidyQueue.Pending(draft);
+        Assert.DoesNotContain(cards, card => card.Title == TidyCategories.Folder(TidyCategory.Image));
+        Assert.Equal(2, cards.Single(card => card.Title == TidyCategories.Folder(TidyCategory.Document)).Count);
 
-        draft.AcceptProject(draft.Projects[0].Id);
+        draft.SkipProject(draft.Projects[0].Id);
+        cards = TidyQueue.Pending(draft);
 
-        // The only image was inside the project, so there is no 图片 card left.
-        Assert.DoesNotContain(TidyQueue.Pending(draft), card => card.Title == TidyCategories.Folder(TidyCategory.Image));
-        Assert.Contains(TidyQueue.Pending(draft), card => card.Title == TidyCategories.Folder(TidyCategory.Document));
+        // The .docx rejoins 文档, and the lone .png turns up on the 零散文件 card.
+        Assert.Equal(3, cards.Single(card => card.Title == TidyCategories.Folder(TidyCategory.Document)).Count);
+        Assert.Contains(cards, card => card.Kind == TidyCardKind.Loose && card.Categories!.Contains(TidyCategory.Image));
     }
 
     [Fact]
-    public void Skipping_a_project_puts_its_files_back_among_the_types()
+    public void Accepting_a_project_takes_its_card_off_the_queue()
     {
-        var draft = Draft(Item("建筑报告.png"), Item("建筑报告v1.docx"));
+        var draft = Draft(Item("建筑报告.png"), Item("建筑报告v1.docx"), Item("发票.pdf"), Item("合同.pdf"));
 
-        draft.SkipProject(draft.Projects[0].Id);
+        draft.AcceptProject(draft.Projects[0].Id);
         var cards = TidyQueue.Pending(draft);
 
         Assert.DoesNotContain(cards, card => card.Kind == TidyCardKind.Project);
-        Assert.Equal(2, cards.Count(card => card.Kind is TidyCardKind.Bucket or TidyCardKind.Loose));
+        Assert.Contains(cards, card => card.Title == TidyCategories.Folder(TidyCategory.Document));
     }
 
     /// <summary>Ten cards holding one file each is not a wizard, it is a chore.</summary>

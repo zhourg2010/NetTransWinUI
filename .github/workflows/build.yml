@@ -230,16 +230,17 @@ jobs:
 
           if ($tool.ExitCode -ne 0) { throw "大文件核对退出码 $($tool.ExitCode)，应为 0" }
 
-      # 深度整理 moves people's files, so the check is end to end: tidy a
-      # fixture, prove every file landed where the rules say, then --undo and
-      # prove every one of them came back.
-      - name: Tidy and undo (--tidy)
+      # 深度整理 moves people's files, so the check is end to end, and it goes
+      # through the draft: build one, apply exactly it, then undo. That is the
+      # same path the wizard takes, minus the clicking.
+      - name: Tidy through a draft, then undo (--tidy --plan)
         shell: pwsh
         run: |
           $dir = Join-Path $PWD 'tidy-fixture'
           New-Item -ItemType Directory -Force $dir | Out-Null
 
-          $names = @('setup.exe', 'invoice.pdf', 'Screenshot_20260102.png', 'movie.mkv.part', 'mystery.zzz')
+          # The first two are one piece of work in two files; the rest are not.
+          $names = @('建筑报告.png', '建筑报告v1.0.1.docx', 'invoice.pdf', 'setup.exe', 'movie.mkv.part')
           foreach ($name in $names) {
             $path = Join-Path $dir $name
             Set-Content -Path $path -Value 'x' -Encoding UTF8
@@ -248,27 +249,30 @@ jobs:
             (Get-Item $path).LastWriteTimeUtc = (Get-Date).AddDays(-1).ToUniversalTime()
           }
 
-          $exe = Join-Path $PWD 'publish/NetTrans/NetTrans.exe'
-          $report = Join-Path $PWD 'tidy-report.md'
+          $exe  = Join-Path $PWD 'publish/NetTrans/NetTrans.exe'
+          $plan = Join-Path $PWD 'tidy-plan.json'
 
-          $tidy = Start-Process $exe -ArgumentList '--tidy',$dir,'--apply','--no-wait','--report',$report -PassThru -Wait
-          if ($tidy.ExitCode -ne 0) { throw "深度整理退出码 $($tidy.ExitCode)，应为 0" }
+          $draft = Start-Process $exe -ArgumentList '--tidy',$dir,'--plan',$plan,'--no-wait' -PassThru -Wait
+          if (-not (Test-Path $plan)) { throw '没有产出草稿' }
 
-          Get-Content $report | Write-Host
+          $json = Get-Content $plan -Raw
+          if ($json -notmatch '建筑报告') { throw '草稿里没有「建筑报告」这个项目 —— 项目识别没生效' }
+          Write-Host $json
 
-          $expected = @{
-            '安装包\setup.exe'               = $true
-            '文档\invoice.pdf'               = $true
-            '图片\截图\Screenshot_20260102.png' = $true
-            '其他\mystery.zzz'               = $true
-            'movie.mkv.part'                 = $true   # 没下完的，原地不动
-          }
+          $apply = Start-Process $exe -ArgumentList '--tidy','--plan',$plan,'--apply','--no-wait' -PassThru -Wait
+          if ($apply.ExitCode -ne 0) { throw "按草稿执行退出码 $($apply.ExitCode)，应为 0" }
 
-          foreach ($relative in $expected.Keys) {
+          $expected = @(
+            '项目\建筑报告\建筑报告.png'
+            '项目\建筑报告\建筑报告v1.0.1.docx'
+            '文档\invoice.pdf'
+            '安装包\setup.exe'
+            'movie.mkv.part'          # 没下完的，原地不动
+          )
+
+          foreach ($relative in $expected) {
             if (-not (Test-Path (Join-Path $dir $relative))) { throw "整理后没找到 $relative" }
           }
-
-          if (Test-Path (Join-Path $dir 'setup.exe')) { throw 'setup.exe 还在原地，没有被整理' }
 
           $undo = Start-Process $exe -ArgumentList '--tidy','--undo','--no-wait' -PassThru -Wait
           if ($undo.ExitCode -ne 0) { throw "还原退出码 $($undo.ExitCode)，应为 0" }
@@ -283,7 +287,7 @@ jobs:
             throw '深度整理写进了主程序的哈希库'
           }
 
-          Remove-Item $journal, (Join-Path $PWD 'publish/NetTrans/NetTrans.tidy.md') -ErrorAction SilentlyContinue
+          Remove-Item $journal, $plan, (Join-Path $PWD 'publish/NetTrans/NetTrans.tidy.md') -ErrorAction SilentlyContinue
           Remove-Item $dir -Recurse -Force
 
       # Last, so it is the easy thing to find when the smoke test above failed.

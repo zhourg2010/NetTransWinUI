@@ -7,91 +7,98 @@
     <controls:SheetHost
         x:Name="Host"
         Title="深度整理"
-        RightLabel="整理"
-        IsRightEnabled="False"
+        RightLabel="看看有什么"
         Cancelled="OnCancelled"
         Confirmed="OnConfirmed">
 
         <StackPanel>
-            <Border Style="{StaticResource CardStyle}">
-                <StackPanel>
-                    <controls:FormRow Label="位置" ShowSeparator="False">
-                        <ComboBox x:Name="RootBox" Style="{StaticResource FormSelectStyle}" SelectedIndex="0"
-                                  SelectionChanged="OnRootChanged">
-                            <x:String>桌面</x:String>
-                            <x:String>下载</x:String>
-                            <x:String>自定义</x:String>
-                        </ComboBox>
-                    </controls:FormRow>
-
-                    <controls:FormRow Label="">
-                        <TextBox x:Name="PathBox" Width="360" Style="{StaticResource FormTextBoxLeftStyle}"
-                                 PlaceholderText="要整理的目录" TextChanged="OnSettingsChanged"/>
-                    </controls:FormRow>
-                </StackPanel>
-            </Border>
-
-            <TextBlock Margin="4,18,4,6" Style="{StaticResource GroupHeaderTextStyle}" Text="方式"/>
-            <Border Style="{StaticResource CardStyle}">
-                <StackPanel>
-                    <controls:FormRow Label="分组" ShowSeparator="False">
-                        <ComboBox x:Name="GroupBox" Style="{StaticResource FormSelectStyle}" SelectedIndex="0"
-                                  SelectionChanged="OnSettingsChanged">
-                            <x:String>按类型</x:String>
-                            <x:String>按月份</x:String>
-                            <x:String>类型 + 月份</x:String>
-                        </ComboBox>
-                    </controls:FormRow>
-
-                    <controls:FormRow Label="连子目录一起">
-                        <ComboBox x:Name="DepthBox" Style="{StaticResource FormSelectStyle}" SelectedIndex="0"
-                                  SelectionChanged="OnSettingsChanged">
-                            <x:String>只看这一层</x:String>
-                            <x:String>再进 1 层</x:String>
-                            <x:String>再进 2 层</x:String>
-                        </ComboBox>
-                    </controls:FormRow>
-
-                    <controls:FormRow Label="久未使用的归档">
-                        <ComboBox x:Name="StaleBox" Style="{StaticResource FormSelectStyle}" SelectedIndex="0"
-                                  SelectionChanged="OnSettingsChanged">
-                            <x:String>不归档</x:String>
-                            <x:String>半年没动</x:String>
-                            <x:String>一年没动</x:String>
-                            <x:String>两年没动</x:String>
-                        </ComboBox>
-                    </controls:FormRow>
-
-                    <controls:FormRow Label="找出重复文件">
-                        <controls:IosSwitch x:Name="DupesSwitch" Toggled="OnSwitchToggled"/>
-                    </controls:FormRow>
-
-                    <controls:FormRow Label="认不出的交给 AI">
-                        <controls:IosSwitch x:Name="AiSwitch" Toggled="OnSwitchToggled"/>
-                    </controls:FormRow>
-                </StackPanel>
-            </Border>
-
-            <TextBlock Margin="4,6,4,0" Style="{StaticResource NoteTextStyle}" TextWrapping="Wrap"
-                       Text="AI 只在扩展名认不出时才用，而且只发送文件名，不发送文件内容。默认连本机 Ollama，也可以用 NETTRANS_AI_URL / MODEL / KEY 指向别的服务。"/>
-
-            <Button x:Name="PreviewButton" Margin="0,16,0,0" Style="{StaticResource BigButtonStyle}"
-                    Content="预演" Click="OnPreviewClick"/>
-
-            <StackPanel x:Name="Results" Visibility="Collapsed">
-                <TextBlock x:Name="ResultHeader" Margin="4,18,4,6" Style="{StaticResource GroupHeaderTextStyle}"/>
+            <!-- 第一屏：选目录和方式。之后整屏换成一张张卡片。 -->
+            <StackPanel x:Name="Setup">
                 <Border Style="{StaticResource CardStyle}">
-                    <StackPanel x:Name="ResultList"/>
+                    <StackPanel>
+                        <controls:FormRow Label="位置" ShowSeparator="False">
+                            <ComboBox x:Name="RootBox" Style="{StaticResource FormSelectStyle}" SelectedIndex="0"
+                                      SelectionChanged="OnRootChanged">
+                                <x:String>桌面</x:String>
+                                <x:String>下载</x:String>
+                                <x:String>自定义</x:String>
+                            </ComboBox>
+                        </controls:FormRow>
+
+                        <controls:FormRow Label="">
+                            <TextBox x:Name="PathBox" Width="360" Style="{StaticResource FormTextBoxLeftStyle}"
+                                     PlaceholderText="要整理的目录"/>
+                        </controls:FormRow>
+                    </StackPanel>
                 </Border>
-                <TextBlock x:Name="MoreNote" Margin="4,6,4,0" Style="{StaticResource NoteTextStyle}"
-                           Visibility="Collapsed"/>
+
+                <TextBlock Margin="4,18,4,6" Style="{StaticResource GroupHeaderTextStyle}" Text="方式"/>
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <controls:FormRow Label="连子目录一起" ShowSeparator="False">
+                            <ComboBox x:Name="DepthBox" Style="{StaticResource FormSelectStyle}" SelectedIndex="0">
+                                <x:String>只看这一层</x:String>
+                                <x:String>再进 1 层</x:String>
+                                <x:String>再进 2 层</x:String>
+                            </ComboBox>
+                        </controls:FormRow>
+
+                        <controls:FormRow Label="久未使用的归档">
+                            <ComboBox x:Name="StaleBox" Style="{StaticResource FormSelectStyle}" SelectedIndex="0">
+                                <x:String>不归档</x:String>
+                                <x:String>半年没动</x:String>
+                                <x:String>一年没动</x:String>
+                                <x:String>两年没动</x:String>
+                            </ComboBox>
+                        </controls:FormRow>
+
+                        <controls:FormRow Label="找出重复文件">
+                            <controls:IosSwitch x:Name="DupesSwitch"/>
+                        </controls:FormRow>
+
+                        <controls:FormRow Label="认不出的交给 AI">
+                            <controls:IosSwitch x:Name="AiSwitch"/>
+                        </controls:FormRow>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Margin="4,6,4,0" Style="{StaticResource NoteTextStyle}" TextWrapping="Wrap"
+                           Text="先找出属于同一件事的文件，再一类一类过。全程只是在攒一份计划，最后一步才动手。AI 只在扩展名认不出时用，而且只发文件名。"/>
+
+                <Button x:Name="UndoButton" Margin="0,16,0,0" Style="{StaticResource BigPlainButtonStyle}"
+                        Content="还原上一次整理" Visibility="Collapsed" Click="OnUndoClick"/>
             </StackPanel>
 
-            <Button x:Name="UndoButton" Margin="0,12,0,0" Style="{StaticResource BigPlainButtonStyle}"
-                    Content="还原上一次整理" Visibility="Collapsed" Click="OnUndoClick"/>
+            <!-- 一张卡：项目 / 类型 / 总览，内容在代码里按当前卡搭出来 -->
+            <StackPanel x:Name="Card" Visibility="Collapsed">
+                <TextBlock x:Name="Step" Margin="4,0,4,4" Style="{StaticResource NoteTextStyle}"/>
+                <TextBlock x:Name="CardTitle" Margin="4,0,4,2" Style="{StaticResource NavTitleTextStyle}"/>
+                <TextBlock x:Name="CardDetail" Margin="4,0,4,10" Style="{StaticResource NoteTextStyle}" TextWrapping="Wrap"/>
 
-            <TextBlock Margin="4,10,4,0" Style="{StaticResource NoteTextStyle}" TextWrapping="Wrap"
-                       Text="预演不会动任何文件。整理只移动、从不删除；看着像垃圾的会放进「待清理」等你处置，正在写入和没下完的文件不碰。"/>
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel x:Name="CardBody"/>
+                </Border>
+
+                <StackPanel x:Name="CardExtra"/>
+
+                <Grid Margin="0,14,0,0" ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button x:Name="BackButton" Grid.Column="0" Style="{StaticResource BigPlainButtonStyle}"
+                            Content="上一个" Click="OnBackClick"/>
+                    <Button x:Name="SkipButton" Grid.Column="1" Style="{StaticResource BigPlainButtonStyle}"
+                            Content="跳过" Click="OnSkipClick"/>
+                    <Button x:Name="RestButton" Grid.Column="2" Style="{StaticResource BigPlainButtonStyle}"
+                            Content="剩下都按默认" Click="OnRestClick"/>
+                </Grid>
+
+                <TextBlock Margin="4,10,4,0" Style="{StaticResource NoteTextStyle}" TextWrapping="Wrap"
+                           Text="这些都还只是计划。只移动、不删除；看着像垃圾的放进「待清理」等你处置，正在写入和没下完的文件不碰。"/>
+            </StackPanel>
         </StackPanel>
     </controls:SheetHost>
 </UserControl>

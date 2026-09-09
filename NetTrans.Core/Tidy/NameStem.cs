@@ -127,8 +127,36 @@ public static partial class NameStem
     {
         if (Stopwords.Contains(token)) return false;
 
+        // Han runs are one token -- there is no space in 新建文档 to split on --
+        // so a token built entirely out of stopwords has to be recognised as
+        // the sum of its parts, or "新建文档" would key a group that swallows
+        // every untitled file on the desktop.
+        if (AllStopwords(token)) return false;
+
         bool han = token.Length > 0 && Kind(token[0]) == 2;
         return token.Length >= (han ? 2 : 3);
+    }
+
+    private static bool AllStopwords(string token)
+    {
+        var rest = token.AsSpan();
+
+        while (rest.Length > 0)
+        {
+            int matched = 0;
+
+            foreach (var word in Stopwords)
+            {
+                // Longest first, so 屏幕截图 is not read as 截图 with 屏幕 left over.
+                if (word.Length > matched && rest.StartsWith(word, StringComparison.OrdinalIgnoreCase)) matched = word.Length;
+            }
+
+            if (matched == 0) return false;
+
+            rest = rest[matched..];
+        }
+
+        return true;
     }
 
     /// <summary>

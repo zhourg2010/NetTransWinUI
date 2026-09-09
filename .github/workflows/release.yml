@@ -11,7 +11,15 @@ on:
   push:
     tags:
       - "v*"
+
+  # 手动触发时自己给版本号：不是每个人都能往仓库推 tag，而 gh release create
+  # 本来就会在目标提交上把 tag 建出来。
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 版本号（例如 v0.1.0）
+        required: true
+        default: v0.1.0
 
 # 建 Release 要写权限；默认只读。
 permissions:
@@ -39,7 +47,7 @@ jobs:
       - name: Record what this build is
         shell: pwsh
         run: |
-          $tag = "${{ github.ref_name }}"
+          $tag = "${{ inputs.tag || github.ref_name }}"
           @(
             "NetTrans $tag"
             ""
@@ -83,7 +91,7 @@ jobs:
       - name: Zip it
         shell: pwsh
         run: |
-          $name = "NetTrans-${{ github.ref_name }}-win-x64.zip"
+          $name = "NetTrans-${{ inputs.tag || github.ref_name }}-win-x64.zip"
           Compress-Archive -Path publish/NetTrans/* -DestinationPath $name -CompressionLevel Optimal
 
           "zip: $name  $([math]::Round((Get-Item $name).Length/1MB,1)) MB"
@@ -103,4 +111,5 @@ jobs:
             "- 深度整理：先按项目、再按类型，一张卡一张卡地问，随时还原"
           ) -join "`n"
 
-          gh release create "${{ github.ref_name }}" "$env:NAME" --title "NetTrans ${{ github.ref_name }}" --notes $notes
+          $tag = "${{ inputs.tag || github.ref_name }}"
+          gh release create $tag "$env:NAME" --target "${{ github.sha }}" --title "NetTrans $tag" --notes $notes

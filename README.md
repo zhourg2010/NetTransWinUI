@@ -105,12 +105,17 @@ NetTrans.Core/              No WinUI, no Windows — buildable and testable anyw
     PlaylistUrl.cs          Whether a URL is a manifest, and which kind
   Verify/
     HashKind.cs             MD5 / SHA-1 / SHA-256 / SHA-512, recognised by length
+    JsonStore.cs            Atomic write, tolerant read: both of NetTrans' own files
     ChecksumFile.cs         coreutils, BSD and bare-hash checksum files
     ChecksumSources.cs      Where a published digest might be, given the file's URL
     OnlineChecksums.cs      联网核对: fetch those, take the first that names the file
     HashRecord.cs           One row of the 哈希库, and how much its origin is worth
     HashDatabase.cs         The local database: name+size to digest, bounded, on disk
     FileVerifier.cs         完成后校验 end to end: expectation, hash, verdict, record
+    BigFileScan.cs          Files over a gigabyte, minus the machine's own scratch
+    BigFileLedger.cs        大文件账本: keyed by path, deliberately not 哈希库
+    BigFileAudit.cs         Hash each one once, check it, record it
+    BigFileReport.cs        The verdict line and the table it prints
   Services/
     FormatHelpers.cs        mb() / spd() / eta() from the handoff
     TaskPresenter.cs        Every string the design derives from a task
@@ -354,6 +359,33 @@ network or real files.
   the publisher said — the retry gets checked without going back to the server.
   Every probe may 404, which is the normal answer; a download that succeeded is
   never reported as suspect because a checksum file was missing.
+- **大文件核对（`--bigfiles`）** is the same hashing, pointed at the disk instead
+  of at a download. It walks the fixed drives for single files over a gigabyte,
+  hashes each one, and writes what it found to its own ledger — with the
+  machine's own working files left alone: a page file, a hibernation image and a
+  crash dump are gigabytes of live RAM, so hashing one costs an hour of disk to
+  produce a number that is already wrong. Half-finished downloads (`.part`,
+  `.crdownload`) are skipped for the same reason. What a file *should* hash to
+  is looked for in the ledger, then in 哈希库 (read, never written), then at the
+  site the file's mark of the web says it came from — `Zone.Identifier` is the
+  only thing on a machine that still remembers where a five-year-old ISO was
+  downloaded from. Most big files have no published digest at all; that is the
+  designed outcome, not a failure. The hash is recorded and left to stand, and
+  next month's run compares against it, which is how a bit-rotted archive or a
+  swapped file announces itself. A file whose size and modification time have
+  not changed is not read again — hashing a terabyte of ISOs is an hour, and
+  doing it weekly because nothing checked is the difference between a tool and
+  a chore.
+
+  ```
+  NetTrans.exe --bigfiles                          扫描所有固定磁盘
+  NetTrans.exe --bigfiles D:\ISO --min-size 4GB     只看这个目录，门槛 4 GB
+  NetTrans.exe --bigfiles --rehash --offline       重算一遍，不联网
+  ```
+
+  It borrows the console it was launched from, prints a line per file, and
+  writes `NetTrans.bigfiles.md` beside the ledger. Ctrl-C keeps what it has
+  already computed. Exit code 2 means something did not match.
 - **批量下载** really crawls: 抓取深度, 仅限本站 and 后缀筛选 are honoured, every
   found link is probed for its size (which is what 最小文件 filters on), pages are
   never fetched twice, and pages that could not be read are reported rather than

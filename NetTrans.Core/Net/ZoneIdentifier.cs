@@ -38,4 +38,48 @@ public static class ZoneIdentifier
 
     /// <summary>The alternate stream path for a file. Windows only; NTFS only.</summary>
     public static string StreamPath(string filePath) => filePath + ":Zone.Identifier";
+
+    /// <summary>
+    /// Reads the URL back out of a file's mark of the web.
+    ///
+    /// This is the only thing on a machine that remembers where a downloaded
+    /// file came from -- which is what lets 大文件核对 go and ask that site what
+    /// the file should hash to, years after whatever downloaded it forgot.
+    /// </summary>
+    public static string? ReadSource(string filePath)
+    {
+        try
+        {
+            var stream = StreamPath(filePath);
+            return File.Exists(stream) ? SourceIn(File.ReadAllText(stream)) : null;
+        }
+        catch (Exception)
+        {
+            // No NTFS, no stream, no permission: all mean "we do not know".
+            return null;
+        }
+    }
+
+    /// <summary>HostUrl if the mark carries one, else ReferrerUrl, else nothing.</summary>
+    public static string? SourceIn(string content)
+    {
+        string? referrer = null;
+
+        foreach (var raw in content.Split('\n'))
+        {
+            var line = raw.Trim();
+
+            if (line.StartsWith("HostUrl=", StringComparison.OrdinalIgnoreCase))
+            {
+                var host = line["HostUrl=".Length..].Trim();
+                if (host.Length > 0) return host;
+            }
+            else if (line.StartsWith("ReferrerUrl=", StringComparison.OrdinalIgnoreCase))
+            {
+                referrer = line["ReferrerUrl=".Length..].Trim();
+            }
+        }
+
+        return string.IsNullOrEmpty(referrer) ? null : referrer;
+    }
 }

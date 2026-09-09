@@ -115,6 +115,20 @@ internal static partial class NativeMethods
     [LibraryImport("user32.dll", EntryPoint = "MessageBoxW", StringMarshalling = StringMarshalling.Utf16)]
     internal static partial int MessageBox(nint hWnd, string text, string caption, uint type);
 
+    /// <summary>ATTACH_PARENT_PROCESS: the console the app was started from, if it was started from one.</summary>
+    internal const uint ATTACH_PARENT_PROCESS = 0xFFFFFFFF;
+
+    // A WinExe has no console of its own. --大文件核对 is a command-line tool
+    // living inside a GUI app, so it borrows the console it was launched from
+    // and opens one only when there is none to borrow.
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool AttachConsole(uint dwProcessId);
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool AllocConsole();
+
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static partial bool GetCursorPos(out POINT lpPoint);

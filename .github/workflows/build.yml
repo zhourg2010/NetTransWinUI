@@ -168,6 +168,55 @@ jobs:
 
           Write-Host 'started, drew a window, and stayed up.'
 
+      # 大文件核对 is a command-line mode of the same executable, so this is the
+      # one step that runs the shipped binary as a tool rather than as an app:
+      # a directory with one file over the threshold, one under it, and one
+      # named like a page file. Only the first may come back.
+      - name: Big-file audit (--bigfiles)
+        shell: pwsh
+        run: |
+          $dir = Join-Path $PWD 'bigfile-fixture'
+          New-Item -ItemType Directory -Force $dir | Out-Null
+
+          $random = [System.Random]::new(7)
+          function New-Payload($name, $size) {
+            $bytes = [byte[]]::new($size)
+            $random.NextBytes($bytes)
+            [System.IO.File]::WriteAllBytes((Join-Path $dir $name), $bytes)
+          }
+
+          New-Payload 'archive.iso'  (12MB)
+          New-Payload 'small.txt'    (1MB)
+          New-Payload 'pagefile.sys' (12MB)
+
+          $exe = Join-Path $PWD 'publish/NetTrans/NetTrans.exe'
+          $report = Join-Path $PWD 'bigfile-report.md'
+
+          $tool = Start-Process $exe -ArgumentList '--bigfiles',$dir,'--min-size','8MB','--offline','--no-wait','--report',$report -PassThru -Wait
+          "exit code: $($tool.ExitCode)"
+
+          if (-not (Test-Path $report)) { throw '大文件核对没有写出报告' }
+          Get-Content $report | Write-Host
+
+          $text = Get-Content $report -Raw
+          if ($text -notmatch 'archive\.iso')  { throw '报告里没有 archive.iso —— 超过门槛的文件没被算' }
+          if ($text -match 'small\.txt')       { throw '报告里有 small.txt —— 门槛没生效' }
+          if ($text -match 'pagefile\.sys')    { throw '报告里有 pagefile.sys —— 系统文件没被排除' }
+
+          $ledger = Join-Path $PWD 'publish/NetTrans/NetTrans.bigfiles.json'
+          if (-not (Test-Path $ledger)) { throw '账本没写出来' }
+
+          # Its own file, not 哈希库. If the audit ever starts writing into the
+          # download database this is where it gets caught.
+          if (Test-Path (Join-Path $PWD 'publish/NetTrans/NetTrans.hashes.json')) {
+            throw '大文件核对写进了主程序的哈希库'
+          }
+
+          Remove-Item $ledger, (Join-Path $PWD 'publish/NetTrans/NetTrans.bigfiles.md') -ErrorAction SilentlyContinue
+          Remove-Item $dir -Recurse -Force
+
+          if ($tool.ExitCode -ne 0) { throw "大文件核对退出码 $($tool.ExitCode)，应为 0" }
+
       # Last, so it is the easy thing to find when the smoke test above failed.
       # A compiled XAML page is found through the app's own PRI index; without
       # it every ms-appx:/// lookup fails and every page throws the same parse

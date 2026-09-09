@@ -32,6 +32,22 @@ public partial class App : Application
     {
         Startup.Log("OnLaunched");
 
+        // 大文件核对 is a command-line tool that happens to live in a GUI app:
+        // it runs, prints, writes its ledger and exits, without ever building a
+        // window. On a pool thread, so the progress callbacks are not posted to
+        // a UI thread that is blocked waiting for them.
+        var argv = Environment.GetCommandLineArgs();
+        if (Tools.BigFileCommand.Wanted(argv))
+        {
+            Startup.Log("大文件核对（命令行）");
+
+            int code = Task.Run(() => Tools.BigFileCommand.Run(argv)).GetAwaiter().GetResult();
+
+            Startup.Log($"大文件核对结束，退出码 {code}");
+            Environment.Exit(code);
+            return;
+        }
+
         ISettingsStore? settingsStore = null;
         Models.AppSettings? settings = null;
         IDownloadEngine? downloadEngine = null;

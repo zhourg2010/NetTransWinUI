@@ -1,6 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
-
 namespace NetTrans.Verify;
 
 /// <summary>
@@ -21,12 +18,6 @@ public sealed class HashDatabase
 {
     /// <summary>Rows are small; this is about a megabyte of JSON, and years of downloads.</summary>
     public const int DefaultCapacity = 4000;
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = false,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-    };
 
     private readonly object _gate = new();
 
@@ -130,42 +121,26 @@ public sealed class HashDatabase
     {
         var database = new HashDatabase(capacity);
 
-        try
-        {
-            if (!File.Exists(path)) return database;
+        // A file truncated by a power cut, edited by hand, or written by some
+        // future version reads as null; that costs the history, not the app.
+        var file = JsonStore.Read<HashFile>(path);
 
-            var file = JsonSerializer.Deserialize<HashFile>(File.ReadAllText(path), JsonOptions);
-            foreach (var row in file?.Records ?? Enumerable.Empty<HashRecord>())
-            {
-                if (string.IsNullOrWhiteSpace(row.Sha256) || string.IsNullOrWhiteSpace(row.Name)) continue;
-                database.Store(HashRecord.KeyFor(row.Name, row.Size), row);
-            }
-
-            database.Evict();
-            database.Dirty = false;
-        }
-        catch (Exception)
+        foreach (var row in file?.Records ?? Enumerable.Empty<HashRecord>())
         {
-            // Truncated by a power cut, edited by hand, written by a future
-            // version: none of that is a reason to lose the app.
-            return new HashDatabase(capacity);
+            if (string.IsNullOrWhiteSpace(row.Sha256) || string.IsNullOrWhiteSpace(row.Name)) continue;
+            database.Store(HashRecord.KeyFor(row.Name, row.Size), row);
         }
+
+        database.Evict();
+        database.Dirty = false;
 
         return database;
     }
 
-    /// <summary>
-    /// Writes through a temporary file. Downloads finish while the app is being
-    /// closed, and a half-written database would be thrown away on next start.
-    /// </summary>
+    /// <summary>Writes the database. Atomic, because downloads finish while the app is being closed.</summary>
     public void Save(string path)
     {
-        var file = new HashFile { Version = 1, Records = Snapshot().ToList() };
-        string json = JsonSerializer.Serialize(file, JsonOptions);
-
-        string temporary = path + ".tmp";
-        File.WriteAllText(temporary, json);
-        File.Move(temporary, path, overwrite: true);
+        JsonStore.Write(path, new HashFile { Version = 1, Records = Snapshot().ToList() });
 
         lock (_gate) Dirty = false;
     }

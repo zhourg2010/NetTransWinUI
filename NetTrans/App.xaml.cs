@@ -84,6 +84,17 @@ public partial class App : Application
             shellViewModel = new ShellViewModel(downloadEngine!, clipboardWatcher!, settingsStore!, settings!);
         })) return;
 
+        // --xamlprobe builds every control on its own instead of starting, so a
+        // XAML failure names the control that threw rather than the window that
+        // contained it. Sheets are included, which is where the resources are.
+        if (argv.Contains("--xamlprobe"))
+        {
+            XamlProbe.Run(shellViewModel);
+            Startup.Log("逐个构造结束");
+            Environment.Exit(0);
+            return;
+        }
+
         if (!Startup.Step("建立窗口", () =>
         {
             _shell = new ShellHost(shellViewModel!);

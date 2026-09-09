@@ -28,6 +28,25 @@ public sealed record AiOptions
     public int Batch { get; init; } = 40;
 
     public TimeSpan Timeout { get; init; } = TimeSpan.FromSeconds(60);
+
+    /// <summary>
+    /// Endpoint, model and key from the environment.
+    ///
+    /// The key is read each run and never written to any NetTrans file: it is
+    /// somebody's paid credential, and a portable app that quietly stores one
+    /// in a JSON next to its executable is a leak waiting for a shared folder.
+    /// </summary>
+    public static AiOptions FromEnvironment()
+    {
+        var fallback = new AiOptions();
+
+        return new AiOptions
+        {
+            BaseUrl = Environment.GetEnvironmentVariable("NETTRANS_AI_URL") is { Length: > 0 } url ? url : fallback.BaseUrl,
+            Model = Environment.GetEnvironmentVariable("NETTRANS_AI_MODEL") is { Length: > 0 } model ? model : fallback.Model,
+            ApiKey = Environment.GetEnvironmentVariable("NETTRANS_AI_KEY"),
+        };
+    }
 }
 
 /// <summary>

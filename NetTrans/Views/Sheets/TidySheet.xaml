@@ -1,0 +1,97 @@
+<UserControl
+    x:Class="NetTrans.Views.Sheets.TidySheet"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:NetTrans.Views.Controls">
+
+    <controls:SheetHost
+        x:Name="Host"
+        Title="深度整理"
+        RightLabel="整理"
+        IsRightEnabled="False"
+        Cancelled="OnCancelled"
+        Confirmed="OnConfirmed">
+
+        <StackPanel>
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel>
+                    <controls:FormRow Label="位置" ShowSeparator="False">
+                        <ComboBox x:Name="RootBox" Style="{StaticResource FormSelectStyle}" SelectedIndex="0"
+                                  SelectionChanged="OnRootChanged">
+                            <x:String>桌面</x:String>
+                            <x:String>下载</x:String>
+                            <x:String>自定义</x:String>
+                        </ComboBox>
+                    </controls:FormRow>
+
+                    <controls:FormRow Label="">
+                        <TextBox x:Name="PathBox" Width="360" Style="{StaticResource FormTextBoxLeftStyle}"
+                                 PlaceholderText="要整理的目录" TextChanged="OnSettingsChanged"/>
+                    </controls:FormRow>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Margin="4,18,4,6" Style="{StaticResource GroupHeaderTextStyle}" Text="方式"/>
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel>
+                    <controls:FormRow Label="分组" ShowSeparator="False">
+                        <ComboBox x:Name="GroupBox" Style="{StaticResource FormSelectStyle}" SelectedIndex="0"
+                                  SelectionChanged="OnSettingsChanged">
+                            <x:String>按类型</x:String>
+                            <x:String>按月份</x:String>
+                            <x:String>类型 + 月份</x:String>
+                        </ComboBox>
+                    </controls:FormRow>
+
+                    <controls:FormRow Label="连子目录一起">
+                        <ComboBox x:Name="DepthBox" Style="{StaticResource FormSelectStyle}" SelectedIndex="0"
+                                  SelectionChanged="OnSettingsChanged">
+                            <x:String>只看这一层</x:String>
+                            <x:String>再进 1 层</x:String>
+                            <x:String>再进 2 层</x:String>
+                        </ComboBox>
+                    </controls:FormRow>
+
+                    <controls:FormRow Label="久未使用的归档">
+                        <ComboBox x:Name="StaleBox" Style="{StaticResource FormSelectStyle}" SelectedIndex="0"
+                                  SelectionChanged="OnSettingsChanged">
+                            <x:String>不归档</x:String>
+                            <x:String>半年没动</x:String>
+                            <x:String>一年没动</x:String>
+                            <x:String>两年没动</x:String>
+                        </ComboBox>
+                    </controls:FormRow>
+
+                    <controls:FormRow Label="找出重复文件">
+                        <controls:IosSwitch x:Name="DupesSwitch" Toggled="OnSwitchToggled"/>
+                    </controls:FormRow>
+
+                    <controls:FormRow Label="认不出的交给 AI">
+                        <controls:IosSwitch x:Name="AiSwitch" Toggled="OnSwitchToggled"/>
+                    </controls:FormRow>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Margin="4,6,4,0" Style="{StaticResource NoteTextStyle}" TextWrapping="Wrap"
+                       Text="AI 只在扩展名认不出时才用，而且只发送文件名，不发送文件内容。默认连本机 Ollama，也可以用 NETTRANS_AI_URL / MODEL / KEY 指向别的服务。"/>
+
+            <Button x:Name="PreviewButton" Margin="0,16,0,0" Style="{StaticResource BigButtonStyle}"
+                    Content="预演" Click="OnPreviewClick"/>
+
+            <StackPanel x:Name="Results" Visibility="Collapsed">
+                <TextBlock x:Name="ResultHeader" Margin="4,18,4,6" Style="{StaticResource GroupHeaderTextStyle}"/>
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel x:Name="ResultList"/>
+                </Border>
+                <TextBlock x:Name="MoreNote" Margin="4,6,4,0" Style="{StaticResource NoteTextStyle}"
+                           Visibility="Collapsed"/>
+            </StackPanel>
+
+            <Button x:Name="UndoButton" Margin="0,12,0,0" Style="{StaticResource BigPlainButtonStyle}"
+                    Content="还原上一次整理" Visibility="Collapsed" Click="OnUndoClick"/>
+
+            <TextBlock Margin="4,10,4,0" Style="{StaticResource NoteTextStyle}" TextWrapping="Wrap"
+                       Text="预演不会动任何文件。整理只移动、从不删除；看着像垃圾的会放进「待清理」等你处置，正在写入和没下完的文件不碰。"/>
+        </StackPanel>
+    </controls:SheetHost>
+</UserControl>

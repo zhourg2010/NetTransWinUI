@@ -385,6 +385,10 @@ network or real files.
   doing it weekly because nothing checked is the difference between a tool and
   a chore.
 
+  In the app it is 添加菜单 → **大文件核对…**, which shows which file it is on
+  and how far in — the run is minutes to hours, and 取消 keeps everything
+  already hashed. From a prompt:
+
   ```
   NetTrans.exe --bigfiles                          扫描所有固定磁盘
   NetTrans.exe --bigfiles D:\ISO --min-size 4GB     只看这个目录，门槛 4 GB
@@ -412,6 +416,10 @@ network or real files.
   Program Files directories and the profile root are refused outright. The
   folders it creates are never walked into, so a second run has nothing to
   shuffle.
+
+  In the app it is 添加菜单 → **深度整理…**: pick 桌面 / 下载 / a path, choose how
+  to group, press 预演, read the table of what would move where, and only then
+  press 整理. 还原上一次整理 sits under it. From a prompt or a scheduled task:
 
   ```
   NetTrans.exe --tidy                          预演：桌面和下载

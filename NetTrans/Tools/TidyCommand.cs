@@ -108,7 +108,7 @@ internal static class TidyCommand
 
         if (unknown.Count == 0) return null;
 
-        var settings = AiSettings();
+        var settings = AiOptions.FromEnvironment();
 
         Console.WriteLine($"把 {unknown.Count} 个认不出的文件名（只有名字，没有内容）发给 {settings.BaseUrl} 的 {settings.Model}…");
 
@@ -120,25 +120,6 @@ internal static class TidyCommand
             : $"AI 没帮上忙（{classifier.LastError ?? "没有可用的答案"}），这些文件按原样归到「其他」。");
 
         return answers;
-    }
-
-    /// <summary>
-    /// Endpoint, model and key, from the command line or the environment.
-    ///
-    /// The key is never written to any NetTrans file: it is somebody's paid
-    /// credential, and a portable app that quietly stores one in a JSON next to
-    /// its executable is a leak waiting for a shared folder.
-    /// </summary>
-    private static AiOptions AiSettings()
-    {
-        var fallback = new AiOptions();
-
-        return new AiOptions
-        {
-            BaseUrl = Environment.GetEnvironmentVariable("NETTRANS_AI_URL") is { Length: > 0 } url ? url : fallback.BaseUrl,
-            Model = Environment.GetEnvironmentVariable("NETTRANS_AI_MODEL") is { Length: > 0 } model ? model : fallback.Model,
-            ApiKey = Environment.GetEnvironmentVariable("NETTRANS_AI_KEY"),
-        };
     }
 
     private static int Undo(TidyStore store)

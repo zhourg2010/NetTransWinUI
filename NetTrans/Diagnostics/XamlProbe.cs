@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.UI.Xaml;
+using NetTrans.ViewModels;
 
 namespace NetTrans.Diagnostics;
 
@@ -18,25 +19,38 @@ namespace NetTrans.Diagnostics;
 /// </summary>
 public static class XamlProbe
 {
-    public static void Run()
+    /// <param name="viewModel">
+    /// The demo shell, when there is one. Sheets take it as their only
+    /// constructor argument, so without it every sheet -- the half of the app
+    /// most likely to reference a resource that is not there -- would be
+    /// skipped by the one check that would have caught it.
+    /// </param>
+    public static void Run(ShellViewModel? viewModel = null)
     {
         Startup.Log("── XAML 逐个构造 ──");
+
+        var available = new Dictionary<Type, object?>
+        {
+            [typeof(ShellViewModel)] = viewModel,
+            [typeof(DownloadItemViewModel)] = viewModel?.VisibleTasks.FirstOrDefault(),
+        };
 
         var types = typeof(XamlProbe).Assembly
             .GetTypes()
             .Where(type => !type.IsAbstract && typeof(FrameworkElement).IsAssignableFrom(type))
-            .Where(type => type.GetConstructor(Type.EmptyTypes) is not null)
-            .OrderBy(type => Depth(type))
-            .ThenBy(type => type.FullName, StringComparer.Ordinal)
+            .Select(type => (Type: type, Arguments: Arguments(type, available)))
+            .Where(entry => entry.Arguments is not null)
+            .OrderBy(entry => Depth(entry.Type))
+            .ThenBy(entry => entry.Type.FullName, StringComparer.Ordinal)
             .ToList();
 
         int failed = 0;
 
-        foreach (var type in types)
+        foreach (var (type, arguments) in types)
         {
             try
             {
-                _ = Activator.CreateInstance(type);
+                _ = Activator.CreateInstance(type, arguments!);
                 Startup.Log($"  ok     {type.FullName}");
             }
             catch (Exception exception)
@@ -54,6 +68,25 @@ public static class XamlProbe
         }
 
         Startup.Log($"── {types.Count} 个控件，{failed} 个失败 ──");
+    }
+
+    /// <summary>
+    /// What to pass this type's constructor, or null when nothing here can
+    /// satisfy it. A parameterless constructor answers with an empty array.
+    /// </summary>
+    private static object?[]? Arguments(Type type, IReadOnlyDictionary<Type, object?> available)
+    {
+        foreach (var constructor in type.GetConstructors().OrderBy(c => c.GetParameters().Length))
+        {
+            var parameters = constructor.GetParameters();
+
+            if (parameters.All(parameter => available.GetValueOrDefault(parameter.ParameterType) is not null))
+            {
+                return parameters.Select(parameter => available[parameter.ParameterType]).ToArray();
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

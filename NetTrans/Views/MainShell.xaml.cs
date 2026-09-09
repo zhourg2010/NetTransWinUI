@@ -185,6 +185,12 @@ public sealed partial class MainShell : UserControl
             new PopoverItem("批量下载…", Glyph("IconLayers"), Invoke: () => ViewModel.ActiveSheet = "batch"),
             new PopoverItem("打开种子 / 磁力链…", Glyph("IconMagnet"), Invoke: () => ViewModel.ActiveSheet = "torrent"),
             new PopoverItem("视频嗅探…", Glyph("IconFilm"), Invoke: () => ViewModel.ActiveSheet = "sniff"),
+
+            // Tools rather than downloads, but this is the menu people open.
+            new PopoverItem("深度整理…", Glyph("IconFolder"), SeparatorBefore: true,
+                Invoke: () => ViewModel.ActiveSheet = "tidy"),
+            new PopoverItem("大文件核对…", Glyph("IconCheck"),
+                Invoke: () => ViewModel.ActiveSheet = "bigfiles"),
         }, new Point(536 - 222 - 12, 40), width: 222);
     }
 
@@ -395,6 +401,8 @@ public sealed partial class MainShell : UserControl
             "torrent" => new TorrentSheet(ViewModel),
             "sniff" => new SniffSheet(ViewModel),
             "rename" => new RenameSheet(ViewModel, ViewModel.RenameTarget!),
+            "tidy" => new TidySheet(ViewModel),
+            "bigfiles" => new BigFileSheet(ViewModel),
             _ => new SettingsSheet(ViewModel),
         };
 

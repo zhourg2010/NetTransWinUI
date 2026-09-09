@@ -1,0 +1,68 @@
+<UserControl
+    x:Class="NetTrans.Views.Sheets.BigFileSheet"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:NetTrans.Views.Controls">
+
+    <controls:SheetHost
+        x:Name="Host"
+        Title="大文件核对"
+        RightLabel="完成"
+        Cancelled="OnCancelled"
+        Confirmed="OnConfirmed">
+
+        <StackPanel>
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel>
+                    <controls:FormRow Label="范围" ShowSeparator="False">
+                        <ComboBox x:Name="ScopeBox" Style="{StaticResource FormSelectStyle}" SelectedIndex="0"
+                                  SelectionChanged="OnScopeChanged">
+                            <x:String>所有固定磁盘</x:String>
+                            <x:String>下载目录</x:String>
+                            <x:String>自定义</x:String>
+                        </ComboBox>
+                    </controls:FormRow>
+
+                    <controls:FormRow Label="">
+                        <TextBox x:Name="PathBox" Width="360" Style="{StaticResource FormTextBoxLeftStyle}"
+                                 PlaceholderText="留空表示所有固定磁盘" IsEnabled="False"/>
+                    </controls:FormRow>
+
+                    <controls:FormRow Label="门槛">
+                        <ComboBox x:Name="SizeBox" Style="{StaticResource FormSelectStyle}" SelectedIndex="0">
+                            <x:String>1 GB 以上</x:String>
+                            <x:String>2 GB 以上</x:String>
+                            <x:String>4 GB 以上</x:String>
+                            <x:String>8 GB 以上</x:String>
+                        </ComboBox>
+                    </controls:FormRow>
+
+                    <controls:FormRow Label="联网核对校验值">
+                        <controls:IosSwitch x:Name="OnlineSwitch" IsOn="True"/>
+                    </controls:FormRow>
+
+                    <controls:FormRow Label="全部重新计算">
+                        <controls:IosSwitch x:Name="RehashSwitch"/>
+                    </controls:FormRow>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Margin="4,6,4,0" Style="{StaticResource NoteTextStyle}" TextWrapping="Wrap"
+                       Text="页面文件、休眠文件、崩溃转储和没下完的文件不在其中：它们边读边变，算出来的值一落地就是错的。大小和修改时间都没变的文件不会重算。"/>
+
+            <Button x:Name="ScanButton" Margin="0,16,0,0" Style="{StaticResource BigButtonStyle}"
+                    Content="开始核对" Click="OnScanClick"/>
+
+            <TextBlock x:Name="Progress" Margin="4,10,4,0" Style="{StaticResource NoteTextStyle}"
+                       Visibility="Collapsed" TextTrimming="CharacterEllipsis"/>
+
+            <StackPanel x:Name="Results" Visibility="Collapsed">
+                <TextBlock x:Name="ResultHeader" Margin="4,18,4,6" Style="{StaticResource GroupHeaderTextStyle}"/>
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel x:Name="ResultList"/>
+                </Border>
+                <TextBlock x:Name="LedgerNote" Margin="4,6,4,0" Style="{StaticResource NoteTextStyle}" TextWrapping="Wrap"/>
+            </StackPanel>
+        </StackPanel>
+    </controls:SheetHost>
+</UserControl>

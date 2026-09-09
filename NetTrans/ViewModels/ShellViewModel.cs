@@ -104,7 +104,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
     [ObservableProperty] private bool _watchClipboard;
     [ObservableProperty] private bool _bossMode;
-    [ObservableProperty] private string? _activeSheet;          // add | batch | torrent | sniff | prefs
+    [ObservableProperty] private string? _activeSheet;          // add | batch | torrent | sniff | rename | tidy | bigfiles | prefs
     [ObservableProperty] private string? _toast;
     [ObservableProperty] private DownloadItemViewModel? _banner;
     [ObservableProperty] private bool _isDropTarget;

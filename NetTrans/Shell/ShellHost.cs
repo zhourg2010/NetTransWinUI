@@ -253,6 +253,10 @@ public sealed class ShellHost : IDisposable
         _mainChrome.ApplyCorners(_viewModel.ShowInspector ? dock : null);
         _inspectorChrome.ApplyCorners(_viewModel.ShowInspector ? DockGeometry.Opposite(dock) : null);
         _inspectorShell.SetDocked(dock is not null);
+
+        // The neighbour's shadow across the shared edge, which two separate
+        // top-level windows do not get for free.
+        _mainShell.SetBondShadow(_viewModel.ShowInspector ? dock : null);
     }
 
     // ── shell toggles ─────────────────────────────────────────────────────

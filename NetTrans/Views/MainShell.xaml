@@ -296,6 +296,27 @@
             <Border Grid.ColumnSpan="13" Margin="-18,0" Style="{StaticResource HairlineStyle}" VerticalAlignment="Top"/>
         </Grid>
 
+        <!--
+            贴合处的投影.
+
+            Two bonded frames in the handoff do not just abut: the inspector's
+            box-shadow falls across the task frame's shared edge, ~40px of it,
+            reaching black at 16% right at the seam. Measured off its own render,
+            242 group grey is pressed down to 203 at the edge while the other
+            side of the seam stays flat.
+
+            Ours had none of it, because these are two separate top-level
+            windows and the corner region clips away the DWM shadow along
+            exactly that edge. So the frame underneath draws the gradient
+            itself. Only this side gets it: in the design the inspector's own
+            edge is flat.
+        -->
+        <Rectangle
+            x:Name="BondShadow"
+            Grid.RowSpan="4"
+            Visibility="Collapsed"
+            IsHitTestVisible="False"/>
+
         <!-- ── overlays: sheet / popover / toast / banner / drop ──────────── -->
         <Grid Grid.RowSpan="4">
 

@@ -5,12 +5,14 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using NetTrans.Interop;
+using NetTrans.Models;
 using NetTrans.Services;
 using NetTrans.ViewModels;
 using NetTrans.Views.Controls;
 using NetTrans.Views.Sheets;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Foundation;
+using Windows.UI;
 
 namespace NetTrans.Views;
 
@@ -206,6 +208,68 @@ public sealed partial class MainShell : UserControl
     /// evidence.
     /// </summary>
     internal void ClosePopover() => DismissPopover();
+
+    /// <summary>How far the neighbour's shadow reaches in, measured off the handoff's render.</summary>
+    private const double BondShadowReach = 40;
+
+    /// <summary>Black at 16% right at the seam: 242 group grey reads 203 there.</summary>
+    private const byte BondShadowAlpha = 0x29;
+
+    /// <summary>
+    /// Draws the bonded neighbour's shadow across the shared edge.
+    ///
+    /// Null when nothing is attached. Only the frame underneath carries it —
+    /// in the handoff the inspector's own edge stays flat.
+    /// </summary>
+    internal void SetBondShadow(DockSide? side)
+    {
+        if (side is not { } edge)
+        {
+            BondShadow.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var (from, to) = edge switch
+        {
+            DockSide.Right => (new Point(0, 0.5), new Point(1, 0.5)),
+            DockSide.Left => (new Point(1, 0.5), new Point(0, 0.5)),
+            DockSide.Bottom => (new Point(0.5, 0), new Point(0.5, 1)),
+            _ => (new Point(0.5, 1), new Point(0.5, 0)),
+        };
+
+        bool horizontal = edge is DockSide.Right or DockSide.Left;
+
+        BondShadow.Width = horizontal ? BondShadowReach : double.NaN;
+        BondShadow.Height = horizontal ? double.NaN : BondShadowReach;
+
+        BondShadow.HorizontalAlignment = edge switch
+        {
+            DockSide.Right => HorizontalAlignment.Right,
+            DockSide.Left => HorizontalAlignment.Left,
+            _ => HorizontalAlignment.Stretch,
+        };
+
+        BondShadow.VerticalAlignment = edge switch
+        {
+            DockSide.Bottom => VerticalAlignment.Bottom,
+            DockSide.Top => VerticalAlignment.Top,
+            _ => VerticalAlignment.Stretch,
+        };
+
+        BondShadow.Fill = new LinearGradientBrush
+        {
+            StartPoint = from,
+            EndPoint = to,
+            GradientStops =
+            {
+                new GradientStop { Offset = 0, Color = Color.FromArgb(0, 0, 0, 0) },
+                new GradientStop { Offset = 0.55, Color = Color.FromArgb((byte)(BondShadowAlpha * 0.35), 0, 0, 0) },
+                new GradientStop { Offset = 1, Color = Color.FromArgb(BondShadowAlpha, 0, 0, 0) },
+            },
+        };
+
+        BondShadow.Visibility = Visibility.Visible;
+    }
 
     /// <summary>The sheet currently open, so the walk can drive it into its other states.</summary>
     internal FrameworkElement? OpenSheet => _sheet;

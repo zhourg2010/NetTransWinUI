@@ -274,6 +274,32 @@ jobs:
           Stop-Process -Id $app.Id -Force
           Remove-Item $log -ErrorAction SilentlyContinue
 
+          # 第一次打开是什么样: the frame above is --demo, which seeds the
+          # handoff's six tasks. Nobody's first run looks like that -- they get
+          # an empty queue, and the handoff never draws that screen, so it is
+          # the one nothing has ever been compared against. Grab it too.
+          Remove-Item (Join-Path $PWD 'publish/NetTrans/NetTrans.settings.json') -ErrorAction SilentlyContinue
+          Remove-Item (Join-Path $PWD 'publish/NetTrans/NetTrans.state.json') -ErrorAction SilentlyContinue
+
+          $fresh = Start-Process $exe -PassThru
+          $ready = $false
+          foreach ($attempt in 1..60) {
+            Start-Sleep -Seconds 1
+            if ((Test-Path $log) -and (Select-String -Path $log -SimpleMatch -Pattern '启动完成' -Quiet)) { $ready = $true; break }
+          }
+          if (-not $ready) { throw '空队列那一次没有在 60 秒内启动完成' }
+          Start-Sleep -Seconds 5
+
+          $blank = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+          $canvas = [System.Drawing.Graphics]::FromImage($blank)
+          $canvas.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+          $canvas.Dispose()
+          $blank.Save((Join-Path $shots 'first-run.png'), [System.Drawing.Imaging.ImageFormat]::Png)
+          $blank.Dispose()
+
+          Stop-Process -Id $fresh.Id -Force
+          Remove-Item $log -ErrorAction SilentlyContinue
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -488,6 +514,11 @@ jobs:
             ls -lh "NetTrans-$TAG-screenshot.png"
           fi
 
+          if [ -f screenshots/first-run.png ]; then
+            cp screenshots/first-run.png "NetTrans-$TAG-first-run.png"
+            ls -lh "NetTrans-$TAG-first-run.png"
+          fi
+
       - name: Publish the release
         run: |
           notes=$(cat <<'TEXT'
@@ -502,10 +533,11 @@ jobs:
           TEXT
           )
 
-          shot=""
-          [ -f "NetTrans-$TAG-screenshot.png" ] && shot="NetTrans-$TAG-screenshot.png"
+          shots=""
+          [ -f "NetTrans-$TAG-screenshot.png" ] && shots="$shots NetTrans-$TAG-screenshot.png"
+          [ -f "NetTrans-$TAG-first-run.png" ] && shots="$shots NetTrans-$TAG-first-run.png"
 
-          gh release create "$TAG" "NetTrans-$TAG-win-x64.zip" $shot \
+          gh release create "$TAG" "NetTrans-$TAG-win-x64.zip" $shots \
             --target "${{ github.sha }}" \
             --title "NetTrans $TAG" \
             --notes "$notes"

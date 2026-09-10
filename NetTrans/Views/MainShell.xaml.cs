@@ -175,6 +175,29 @@ public sealed partial class MainShell : UserControl
     }
 
     // ── menus ─────────────────────────────────────────────────────────────
+    /// <summary>
+    /// The overlays the screenshot walker cannot reach through the view model,
+    /// because they are opened by a click rather than by state.
+    /// </summary>
+    internal void ShowAddMenu() => OnAddMenuClick(this, new RoutedEventArgs());
+
+    internal void ShowSortMenu() => ShowViewMenu("view");
+
+    internal void ShowRowMenu(DownloadItemViewModel task) =>
+        ShowContextMenu(new RowContextRequest(task, new Point(150, 150)));
+
+    internal void ShowDropTarget(bool on) =>
+        DropOverlay.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+
+    /// <summary>Every task row currently realised, so the walker can open one's hover actions.</summary>
+    internal IEnumerable<TaskRow> RealisedRows()
+    {
+        for (int i = 0; i < Rows.ItemsSourceView?.Count; i++)
+        {
+            if (Rows.TryGetElement(i) is TaskRow row) yield return row;
+        }
+    }
+
     private void OnAddMenuClick(object sender, RoutedEventArgs e)
     {
         if (ViewModel is null) return;

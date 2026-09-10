@@ -186,6 +186,13 @@ public sealed partial class TaskRow : UserControl
         if (!_isPointerOver) SwipeOffset.X = e.NewSize.Width;
     }
 
+    /// <summary>Slides the hover actions in without a pointer, for the screenshot walker.</summary>
+    internal void ShowSwipe()
+    {
+        _isPointerOver = true;
+        SwipeOffset.X = 0;
+    }
+
     private void OnPointerEntered(object sender, PointerRoutedEventArgs e)
     {
         _isPointerOver = true;

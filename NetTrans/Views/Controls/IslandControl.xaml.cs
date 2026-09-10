@@ -80,7 +80,7 @@ public sealed partial class IslandControl : UserControl
 
     private void OnPointerExited(object sender, PointerRoutedEventArgs e) => SetExpanded(false);
 
-    private void SetExpanded(bool expanded)
+    internal void SetExpanded(bool expanded)
     {
         if (IsExpanded == expanded) return;
         IsExpanded = expanded;

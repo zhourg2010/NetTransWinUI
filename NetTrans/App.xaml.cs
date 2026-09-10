@@ -104,5 +104,28 @@ public partial class App : Application
         MainAppWindow = _shell!.MainWindow;
 
         Startup.Log("启动完成");
+
+        // --screens 目录: walks every state the handoff specifies and renders
+        // each to a PNG, then exits. Every screen the app has, as a picture --
+        // which until now only one of them was.
+        int screens = Array.IndexOf(argv, "--screens");
+        if (screens >= 0 && screens + 1 < argv.Length)
+        {
+            string directory = argv[screens + 1];
+
+            _ = _shell.MainWindow.DispatcherQueue.TryEnqueue(async () =>
+            {
+                try
+                {
+                    await _shell.CaptureScreensAsync(directory);
+                }
+                catch (Exception exception)
+                {
+                    Startup.Log($"逐屏截图失败：{exception.GetType().Name}: {exception.Message}");
+                }
+
+                Environment.Exit(0);
+            });
+        }
     }
 }

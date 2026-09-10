@@ -434,6 +434,100 @@ public sealed class ShellHost : IDisposable
         timer.Start();
     }
 
+    /// <summary>
+    /// 逐屏截图: drives the shell through every state the handoff specifies and
+    /// writes each one to a PNG.
+    ///
+    /// The order is the order the files come out in, so the directory listing
+    /// reads as a tour of the app. Everything reachable through the view model
+    /// is driven that way; the four overlays that only a click can open get an
+    /// internal hook on the frame that owns them.
+    /// </summary>
+    public async Task CaptureScreensAsync(string directory)
+    {
+        var walk = new ScreenWalk(directory);
+        var model = _viewModel;
+
+        int w = (int)FrameWidth;
+        int h = (int)FrameHeight;
+
+        // ── the task frame ────────────────────────────────────────────────
+        await walk.CaptureAsync("main-list", _mainShell, w, h);
+
+        model.IsListExpanded = true;
+        await walk.CaptureAsync("main-list-expanded", _mainShell, w, h);
+        model.IsListExpanded = false;
+
+        model.DenseRows = true;
+        await walk.CaptureAsync("main-dense", _mainShell, w, h);
+        model.DenseRows = false;
+
+        model.Tab = "done";
+        await walk.CaptureAsync("main-tab-done", _mainShell, w, h);
+        model.Tab = "all";
+
+        model.Query = "没有这个东西";
+        await walk.CaptureAsync("main-filtered-empty", _mainShell, w, h);
+        model.Query = "";
+
+        if (_mainShell.RealisedRows().FirstOrDefault() is { } row)
+        {
+            row.ShowSwipe();
+            await walk.CaptureAsync("main-row-hover", _mainShell, w, h);
+        }
+
+        _mainShell.ShowAddMenu();
+        await walk.CaptureAsync("main-menu-add", _mainShell, w, h);
+        model.ActiveSheet = null;
+
+        _mainShell.ShowSortMenu();
+        await walk.CaptureAsync("main-menu-sort", _mainShell, w, h);
+        model.ActiveSheet = null;
+
+        if (model.VisibleTasks.FirstOrDefault() is { } task)
+        {
+            _mainShell.ShowRowMenu(task);
+            await walk.CaptureAsync("main-menu-row", _mainShell, w, h);
+            model.ActiveSheet = null;
+        }
+
+        _mainShell.ShowDropTarget(true);
+        await walk.CaptureAsync("main-drop", _mainShell, w, h);
+        _mainShell.ShowDropTarget(false);
+
+        model.Toast = "链接已复制";
+        await walk.CaptureAsync("main-toast", _mainShell, w, h);
+
+        // ── the sheets ────────────────────────────────────────────────────
+        foreach (var sheet in new[] { "add", "batch", "torrent", "sniff", "prefs", "tidy", "bigfiles" })
+        {
+            model.ActiveSheet = sheet;
+            await walk.CaptureAsync("sheet-" + sheet, _mainShell, w, h);
+        }
+
+        model.ActiveSheet = null;
+
+        // ── the inspector ─────────────────────────────────────────────────
+        foreach (var (tab, name) in new[] { ("info", "overview"), ("blocks", "blocks"), ("conn", "connections"), ("log", "log") })
+        {
+            _inspectorShell.ShowTab(tab);
+            await walk.CaptureAsync("inspector-" + name, _inspectorShell, w, h);
+        }
+
+        _inspectorShell.ShowTab("info");
+
+        // ── the island ────────────────────────────────────────────────────
+        await walk.CaptureAsync("island-collapsed", _island,
+            (int)IslandCollapsedWidth, (int)IslandCollapsedHeight);
+
+        _island.SetExpanded(true);
+        await walk.CaptureAsync("island-expanded", _island,
+            (int)IslandExpandedWidth, (int)IslandExpandedHeight);
+        _island.SetExpanded(false);
+
+        Startup.Log("逐屏截图结束");
+    }
+
     public void Dispose()
     {
         _edgeTimer?.Stop();

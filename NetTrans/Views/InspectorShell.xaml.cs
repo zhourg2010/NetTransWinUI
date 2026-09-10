@@ -110,6 +110,13 @@ public sealed partial class InspectorShell : UserControl
 
     private void OnAttachClick(object sender, RoutedEventArgs e) => AttachToggleRequested?.Invoke(this, EventArgs.Empty);
 
+    /// <summary>Switches tab from code, which is how the screenshot walker reaches the other three.</summary>
+    internal void ShowTab(string tab)
+    {
+        Tabs.SelectedId = tab;
+        OnTabChanged(this, tab);
+    }
+
     private void OnTabChanged(object? sender, string tab)
     {
         _tab = tab;

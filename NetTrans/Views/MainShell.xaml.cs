@@ -189,6 +189,17 @@ public sealed partial class MainShell : UserControl
     internal void ShowDropTarget(bool on) =>
         DropOverlay.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
 
+    /// <summary>
+    /// Closes whatever popover is open.
+    ///
+    /// A popover is dismissed by a click, so the screenshot walker had no way
+    /// to close one: it opened the row menu, moved on, and every frame after
+    /// that had a stale menu sitting on top of it. Evidence that carries the
+    /// last screen's leftovers is worse than no evidence, because it looks like
+    /// evidence.
+    /// </summary>
+    internal void ClosePopover() => DismissPopover();
+
     /// <summary>Every task row currently realised, so the walker can open one's hover actions.</summary>
     internal IEnumerable<TaskRow> RealisedRows()
     {

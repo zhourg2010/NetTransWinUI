@@ -478,17 +478,17 @@ public sealed class ShellHost : IDisposable
 
         _mainShell.ShowAddMenu();
         await walk.CaptureAsync("main-menu-add", _mainShell, w, h);
-        model.ActiveSheet = null;
+        _mainShell.ClosePopover();
 
         _mainShell.ShowSortMenu();
         await walk.CaptureAsync("main-menu-sort", _mainShell, w, h);
-        model.ActiveSheet = null;
+        _mainShell.ClosePopover();
 
         if (model.VisibleTasks.FirstOrDefault() is { } task)
         {
             _mainShell.ShowRowMenu(task);
             await walk.CaptureAsync("main-menu-row", _mainShell, w, h);
-            model.ActiveSheet = null;
+            _mainShell.ClosePopover();
         }
 
         _mainShell.ShowDropTarget(true);
@@ -497,6 +497,7 @@ public sealed class ShellHost : IDisposable
 
         model.Toast = "链接已复制";
         await walk.CaptureAsync("main-toast", _mainShell, w, h);
+        model.Toast = null;
 
         // ── the sheets ────────────────────────────────────────────────────
         foreach (var sheet in new[] { "add", "batch", "torrent", "sniff", "prefs", "tidy", "bigfiles" })

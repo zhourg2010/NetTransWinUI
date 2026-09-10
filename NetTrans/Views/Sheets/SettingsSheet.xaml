@@ -63,13 +63,6 @@
                         <TimePicker Grid.Column="2" x:Name="OffPeakEndPicker" ClockIdentifier="24HourClock" SelectedTimeChanged="OnScheduleChanged"/>
                     </Grid>
 
-                    <controls:FormRow Label="代理">
-                        <ComboBox x:Name="ProxyBox" Style="{StaticResource FormSelectStyle}" SelectionChanged="OnProxyChanged">
-                            <x:String>系统代理</x:String>
-                            <x:String>不使用代理</x:String>
-                        </ComboBox>
-                    </controls:FormRow>
-
                     <controls:FormRow Label="失败自动重试">
                         <ComboBox x:Name="RetryBox" Style="{StaticResource FormSelectStyle}" SelectionChanged="OnRetryChanged">
                             <x:String>不重试</x:String>
@@ -84,6 +77,24 @@
                             <x:String>退出程序</x:String>
                             <x:String>休眠</x:String>
                             <x:String>关机</x:String>
+                        </ComboBox>
+                    </controls:FormRow>
+                </StackPanel>
+            </Border>
+
+            <!--
+                 网络 is not in the handoff: its 设置 has 下载 / 队列与计划 / 行为
+                 and no proxy row at all. The proxy is ours, so it gets a group
+                 of its own rather than sitting under 队列与计划, where it had
+                 nothing to do with either queueing or scheduling.
+            -->
+            <TextBlock Margin="4,18,4,6" Style="{StaticResource GroupHeaderTextStyle}" Text="网络"/>
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel>
+                    <controls:FormRow Label="代理">
+                        <ComboBox x:Name="ProxyBox" Style="{StaticResource FormSelectStyle}" SelectionChanged="OnProxyChanged">
+                            <x:String>系统代理</x:String>
+                            <x:String>不使用代理</x:String>
                         </ComboBox>
                     </controls:FormRow>
                 </StackPanel>

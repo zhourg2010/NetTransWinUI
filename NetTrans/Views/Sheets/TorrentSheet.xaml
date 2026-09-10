@@ -54,15 +54,37 @@
                 </StackPanel>
             </Border>
 
-            <Border x:Name="FilesCard" Margin="0,12,0,0" Visibility="Collapsed" Style="{StaticResource CardStyle}">
-                <StackPanel>
-                    <controls:FormRow x:Name="FilesHeaderRow" Label="选择文件"/>
+            <!--
+                种子内容: what the handoff draws once a torrent is loaded, which
+                is the only state of this sheet it draws at all. The rows above
+                are the state before one is loaded, which the design leaves out
+                and a real app cannot.
+            -->
+            <StackPanel x:Name="ContentsSection" Visibility="Collapsed">
+                <Border Margin="0,14,0,0" Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <controls:FormRow x:Name="TorrentNameRow" Label="名称"/>
+                        <controls:FormRow x:Name="TorrentSizeRow" Label="总大小"/>
+                        <controls:FormRow x:Name="TorrentPeersRow" Label="节点 / 种子" ShowSeparator="False"/>
+                    </StackPanel>
+                </Border>
 
-                    <ScrollViewer MaxHeight="196" Margin="14,4,14,12" VerticalScrollBarVisibility="Auto">
-                        <StackPanel x:Name="FilesPanel" Spacing="2"/>
+                <TextBlock
+                    Margin="4,18,4,6"
+                    Style="{StaticResource GroupHeaderTextStyle}"
+                    Text="选择要下载的文件"/>
+
+                <Border Style="{StaticResource CardStyle}">
+                    <ScrollViewer x:Name="FilesCard" MaxHeight="196" VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="FilesPanel"/>
                     </ScrollViewer>
-                </StackPanel>
-            </Border>
+                </Border>
+
+                <TextBlock
+                    Margin="4,6,4,0"
+                    Style="{StaticResource NoteTextStyle}"
+                    Text="未勾选的文件不会占用磁盘空间。"/>
+            </StackPanel>
 
             <TextBlock
                 x:Name="Summary"

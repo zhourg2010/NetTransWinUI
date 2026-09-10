@@ -6,6 +6,7 @@ using NetTrans.Models;
 using NetTrans.Services;
 using NetTrans.Torrent;
 using NetTrans.ViewModels;
+using NetTrans.Views.Controls;
 
 namespace NetTrans.Views.Sheets;
 
@@ -25,7 +26,7 @@ public sealed partial class TorrentSheet : UserControl
     private string _saveTo;
 
     /// <summary>One checkbox per file of a .torrent that could be read up front.</summary>
-    private readonly List<(CheckBox Box, TorrentEntry File)> _files = new();
+    private readonly List<(CheckRow Row, TorrentEntry File)> _files = new();
 
     private TorrentMetainfo? _metainfo;
 
@@ -77,31 +78,38 @@ public sealed partial class TorrentSheet : UserControl
         _files.Clear();
         FilesPanel.Children.Clear();
 
-        // One file is not a choice, so the card stays out of the way.
+        // One file is not a choice, so the whole 种子内容 section stays out of
+        // the way.
         if (_metainfo is not { Files.Count: > 1 })
         {
-            FilesCard.Visibility = Visibility.Collapsed;
+            ContentsSection.Visibility = Visibility.Collapsed;
             return;
         }
 
-        foreach (var file in _metainfo.Files)
+        // CheckRow, not CheckBox: the handoff's file list is .frow rows --
+        // name with an ellipsis, size on the right, a blue check that dims when
+        // unselected. This control was written for exactly this list and then
+        // never used here; a stock CheckBox looks nothing like it.
+        for (int i = 0; i < _metainfo.Files.Count; i++)
         {
-            var box = new CheckBox
-            {
-                IsChecked = true,
-                Content = $"{file.Path}  ·  {FormatHelpers.Bytes(file.Length)}",
-                MinHeight = 30,
-                FontSize = 13,
-            };
+            var file = _metainfo.Files[i];
 
-            box.Checked += OnFileToggled;
-            box.Unchecked += OnFileToggled;
+            var row = new CheckRow(
+                file.Path,
+                FormatHelpers.Bytes(file.Length),
+                isChecked: true,
+                showSeparator: i < _metainfo.Files.Count - 1);
 
-            _files.Add((box, file));
-            FilesPanel.Children.Add(box);
+            row.Toggled += (_, _) => UpdateFilesHeader();
+
+            _files.Add((row, file));
+            FilesPanel.Children.Add(row);
         }
 
-        FilesCard.Visibility = Visibility.Visible;
+        TorrentNameRow.Value = _metainfo.Name;
+        TorrentSizeRow.Value = FormatHelpers.Bytes(_metainfo.Files.Sum(f => f.Length));
+
+        ContentsSection.Visibility = Visibility.Visible;
         UpdateFilesHeader();
     }
 
@@ -122,8 +130,6 @@ public sealed partial class TorrentSheet : UserControl
         }
     }
 
-    private void OnFileToggled(object sender, RoutedEventArgs e) => UpdateFilesHeader();
-
     /// <summary>
     /// The count and what it will actually cost.
     ///
@@ -141,11 +147,13 @@ public sealed partial class TorrentSheet : UserControl
 
         long bytes = chosen.Count == 0 ? 0 : FileSelection.BytesFor(_metainfo, chosen);
 
-        FilesHeaderRow.Value = $"{chosen.Count}/{_metainfo.Files.Count} · {FormatHelpers.Bytes(bytes)}";
+        // 节点 / 种子 is the design's third row; until a swarm is joined the
+        // count is not known, so it says so rather than showing a made-up 0.
+        TorrentPeersRow.Value = $"已选 {chosen.Count}/{_metainfo.Files.Count} · {FormatHelpers.Bytes(bytes)}";
     }
 
     private List<TorrentEntry> Chosen() =>
-        _files.Where(entry => entry.Box.IsChecked == true).Select(entry => entry.File).ToList();
+        _files.Where(entry => entry.Row.IsChecked).Select(entry => entry.File).ToList();
 
     private async void OnPickFileTapped(object sender, TappedRoutedEventArgs e)
     {

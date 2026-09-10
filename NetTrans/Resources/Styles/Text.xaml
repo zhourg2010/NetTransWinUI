@@ -90,6 +90,16 @@
 
 
     <!-- .fnote -->
+    <!-- The first-run screen's headline. The handoff never draws an empty app,
+         so this is the one size not taken from it; 17/600 is the iOS grouped
+         empty-state title the rest of the frame is built to. -->
+    <Style x:Key="EmptyTitleTextStyle" TargetType="TextBlock" BasedOn="{StaticResource BaseTextStyle}">
+        <Setter Property="LineHeight" Value="22"/>
+        <Setter Property="FontSize" Value="17"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="CharacterSpacing" Value="-13"/>
+    </Style>
+
     <Style x:Key="NoteTextStyle" TargetType="TextBlock" BasedOn="{StaticResource BaseTextStyle}">
         <Setter Property="FontSize" Value="12.5"/>
         <Setter Property="Foreground" Value="{ThemeResource Label2Brush}"/>

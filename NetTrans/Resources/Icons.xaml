@@ -63,6 +63,12 @@
     <x:String x:Key="IconArrowUp">M 12 5 v 14 M 6 11 l 6 -6 6 6</x:String>
     <x:String x:Key="IconArrowDown">M 12 19 V 5 M 6 13 l 6 6 6 -6</x:String>
 
+    <!-- The handoff's own app mark, from the thumbnail in its HTML
+         (M50 32v26m0 0l-10-10m10 10l10-10M32 70h36 on a 100 viewBox, stroke 5.5),
+         scaled to the 24 box every icon here is drawn in. Stroke 1.32 keeps the
+         same weight-to-size ratio at any size. -->
+    <x:String x:Key="IconDownloadMark">M 12 7.68 v 6.24 M 12 13.92 l -2.4 -2.4 M 12 13.92 l 2.4 -2.4 M 7.68 16.8 h 8.64</x:String>
+
     <!-- filled icons: drawn with StrokeIcon IsFilled="True" -->
     <x:String x:Key="IconPlayFill">M 7 4.5 l 13 7.5 -13 7.5 z</x:String>
     <x:String x:Key="IconPauseFill">M 7 4 h 4 v 16 H 7 z M 13 4 h 4 v 16 h -4 z</x:String>

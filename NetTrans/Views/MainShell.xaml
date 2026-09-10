@@ -107,8 +107,8 @@
             SelectionChanged="OnTabChanged"/>
 
         <!-- ── .scroll ───────────────────────────────────────────────────── -->
+        <Grid Grid.Row="2">
         <ScrollViewer
-            Grid.Row="2"
             Padding="16,0,16,4"
             VerticalScrollBarVisibility="Auto"
             HorizontalScrollMode="Disabled">
@@ -171,14 +171,69 @@
                     </StackPanel>
                 </Border>
 
+                <!-- The handoff's own empty state, and it is the filtered one:
+                     padding 34px 0, .fnote, centred. -->
                 <TextBlock
                     Margin="0,34"
                     HorizontalAlignment="Center"
                     Style="{StaticResource NoteTextStyle}"
                     Text="没有符合条件的任务"
-                    Visibility="{x:Bind conv:BindingHelpers.Visible(ViewModel.IsEmpty), Mode=OneWay}"/>
+                    Visibility="{x:Bind conv:BindingHelpers.Visible(ViewModel.IsFilteredEmpty), Mode=OneWay}"/>
             </Grid>
         </ScrollViewer>
+
+        <!--
+            第一次打开.
+
+            The handoff has no screen for this: every frame it draws is full of
+            tasks, and its only empty state is the filtered line above. A fresh
+            install has no tasks and no filter, so that line left a grey box —
+            which is the first thing anyone sees of this app.
+
+            Built out of the frame's own vocabulary rather than invented: the
+            tile is the app mark from the handoff's HTML on a 72px rounded
+            square in the design's blue, and the button is .big, which is the
+            sheets' own primary action.
+        -->
+        <StackPanel
+            x:Name="FirstRun"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Margin="0,0,0,24"
+            Visibility="{x:Bind conv:BindingHelpers.Visible(ViewModel.HasNoTasks), Mode=OneWay}">
+
+            <Border
+                Width="72"
+                Height="72"
+                CornerRadius="16"
+                HorizontalAlignment="Center"
+                Background="{ThemeResource BlueBrush}">
+                <controls:StrokeIcon Data="{StaticResource IconDownloadMark}" IconSize="40" Thickness="1.32" Foreground="White"/>
+            </Border>
+
+            <TextBlock
+                Margin="0,18,0,0"
+                HorizontalAlignment="Center"
+                Style="{StaticResource EmptyTitleTextStyle}"
+                Text="还没有下载任务"/>
+
+            <TextBlock
+                Width="300"
+                Margin="0,6,0,0"
+                TextAlignment="Center"
+                Style="{StaticResource NoteTextStyle}"
+                Text="复制一个链接就会自动识别，也可以把链接、种子文件直接拖进这个窗口。"/>
+
+            <Button
+                Width="196"
+                Margin="0,22,0,0"
+                HorizontalAlignment="Center"
+                Style="{StaticResource BigButtonStyle}"
+                Content="新建下载"
+                Command="{x:Bind ViewModel.OpenSheetCommand}"
+                CommandParameter="add"/>
+        </StackPanel>
+        </Grid>
 
         <!-- ── .bar: the seven ───────────────────────────────────────────── -->
         <Grid x:Name="Toolbar" Grid.Row="3" Background="{ThemeResource BarBrush}" Padding="18,0">

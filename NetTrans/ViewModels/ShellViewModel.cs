@@ -92,6 +92,19 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty] private int _hiddenCount;
     [ObservableProperty] private bool _canFold;
     [ObservableProperty] private bool _isEmpty;
+
+    /// <summary>
+    /// Nothing in the queue at all, as opposed to nothing matching the filter.
+    ///
+    /// The handoff draws one empty state -- a line of 没有符合条件的任务 -- and it
+    /// is the filtered one: every screen it draws has tasks in it. A first run
+    /// has neither tasks nor a filter, and showing that line for it left the
+    /// window blank, which is what everybody actually sees first.
+    /// </summary>
+    [ObservableProperty] private bool _hasNoTasks = true;
+
+    /// <summary>A filter or a search that matched nothing, which is the handoff's own empty line.</summary>
+    [ObservableProperty] private bool _isFilteredEmpty;
     [ObservableProperty] private DownloadItemViewModel? _current;
 
     // ── shell layers ──────────────────────────────────────────────────────
@@ -389,6 +402,8 @@ public sealed partial class ShellViewModel : ObservableObject
         CanFold = fold.CanFold;
         HiddenCount = fold.Hidden;
         IsEmpty = target.Count == 0;
+        HasNoTasks = Engine.Tasks.Count == 0;
+        IsFilteredEmpty = IsEmpty && !HasNoTasks;
 
         var shown = target.Take(fold.Shown).ToList();
 

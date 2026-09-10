@@ -13,8 +13,8 @@
 
         <StackPanel>
             <Border Style="{StaticResource CardStyle}">
-                <controls:FormRow Label="" ShowSeparator="False">
-                    <TextBox x:Name="NameBox" Width="420" Style="{StaticResource FormTextBoxLeftStyle}"/>
+                <controls:FormRow Label="" StretchContent="True" ShowSeparator="False">
+                    <TextBox x:Name="NameBox" HorizontalAlignment="Stretch" Style="{StaticResource FormTextBoxLeftStyle}"/>
                 </controls:FormRow>
             </Border>
 

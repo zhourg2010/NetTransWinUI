@@ -14,10 +14,10 @@
 
         <StackPanel>
             <Border Style="{StaticResource CardStyle}">
-                <controls:FormRow Label="" ShowSeparator="False">
+                <controls:FormRow Label="" StretchContent="True" ShowSeparator="False">
                     <TextBox
                         x:Name="UrlBox"
-                        Width="420"
+                        HorizontalAlignment="Stretch"
                         Style="{StaticResource FormTextBoxLeftStyle}"
                         PlaceholderText="https://"/>
                 </controls:FormRow>

@@ -14,8 +14,8 @@
 
         <StackPanel>
             <Border Style="{StaticResource CardStyle}">
-                <controls:FormRow Label="" ShowSeparator="False">
-                    <TextBox x:Name="PageBox" Width="420" Style="{StaticResource FormTextBoxLeftStyle}"
+                <controls:FormRow Label="" StretchContent="True" ShowSeparator="False">
+                    <TextBox x:Name="PageBox" HorizontalAlignment="Stretch" Style="{StaticResource FormTextBoxLeftStyle}"
                              PlaceholderText="粘贴网页地址" Text="https://video-host.net/watch/8841"
                              TextChanged="OnPageChanged"/>
                 </controls:FormRow>

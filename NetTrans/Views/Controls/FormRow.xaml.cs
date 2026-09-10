@@ -21,6 +21,33 @@ public partial class FormRow : UserControl
     public static readonly DependencyProperty TrailingProperty =
         DependencyProperty.Register(nameof(Trailing), typeof(object), typeof(FormRow), new PropertyMetadata(null));
 
+    /// <summary>
+    /// Gives the content the whole row instead of the trailing column.
+    ///
+    /// The handoff's URL field is a .frow holding nothing but an input with
+    /// flex:1 -- it fills the row and its text starts at the row's own 13px
+    /// padding. Ours sat in the trailing Auto column, so a fixed width was the
+    /// only way to make it visible at all, and that width centred it: every URL
+    /// in every sheet started 33px further in than the design has it.
+    /// </summary>
+    public static readonly DependencyProperty StretchContentProperty =
+        DependencyProperty.Register(nameof(StretchContent), typeof(bool), typeof(FormRow),
+            new PropertyMetadata(false, (d, _) => ((FormRow)d).ApplyStretch()));
+
+    public bool StretchContent
+    {
+        get => (bool)GetValue(StretchContentProperty);
+        set => SetValue(StretchContentProperty, value);
+    }
+
+    private void ApplyStretch()
+    {
+        Grid.SetColumn(TrailingHost, StretchContent ? 0 : 2);
+        Grid.SetColumnSpan(TrailingHost, StretchContent ? 2 : 1);
+        TrailingHost.HorizontalAlignment = StretchContent ? HorizontalAlignment.Stretch : HorizontalAlignment.Right;
+        LabelText.Visibility = StretchContent ? Visibility.Collapsed : Visibility.Visible;
+    }
+
     public static readonly DependencyProperty ShowChevronProperty =
         DependencyProperty.Register(nameof(ShowChevron), typeof(bool), typeof(FormRow), new PropertyMetadata(false));
 

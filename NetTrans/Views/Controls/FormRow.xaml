@@ -34,6 +34,7 @@
                 Visibility="{x:Bind conv:BindingHelpers.VisibleIfNotNull(Value), Mode=OneWay}"/>
 
             <ContentPresenter
+                x:Name="TrailingHost"
                 Grid.Column="2"
                 VerticalAlignment="Center"
                 Content="{x:Bind Trailing, Mode=OneWay}"/>

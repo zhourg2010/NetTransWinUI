@@ -83,6 +83,46 @@ public sealed class WindowChrome : IDisposable
     }
 
     /// <summary>
+    /// The rectangle the frame actually paints, in screen pixels.
+    ///
+    /// Not the same as <see cref="BoundsPx"/>: the resize border is kept for
+    /// the DWM shadow, so the window rect is larger than the client area by a
+    /// few invisible pixels. Docking two frames by their window rects leaves
+    /// exactly that much daylight between the two visible edges, which is why
+    /// everything about docking measures this instead.
+    /// </summary>
+    public RectInt32 ClientBoundsPx
+    {
+        get
+        {
+            NativeMethods.GetClientRect(Handle, out var c);
+
+            var origin = new NativeMethods.POINT();
+            NativeMethods.ClientToScreen(Handle, ref origin);
+
+            return new RectInt32(origin.X, origin.Y, c.Width, c.Height);
+        }
+    }
+
+    /// <summary>How far the painted area sits inside the window rect.</summary>
+    public (int X, int Y) FramePx
+    {
+        get
+        {
+            var outer = BoundsPx;
+            var client = ClientBoundsPx;
+            return (client.X - outer.X, client.Y - outer.Y);
+        }
+    }
+
+    /// <summary>Moves the frame so its painted top-left lands on the given screen point.</summary>
+    public void MoveClientTo(int xPx, int yPx)
+    {
+        var (offsetX, offsetY) = FramePx;
+        MoveTo(xPx - offsetX, yPx - offsetY);
+    }
+
+    /// <summary>
     /// Chrome-less frame. The border is kept (and then clipped away by the
     /// corner region) because dropping WS_THICKFRAME also drops the DWM drop
     /// shadow, and the design leans on that shadow heavily.
@@ -124,7 +164,13 @@ public sealed class WindowChrome : IDisposable
         _dipHeight = dipHeight;
         _cornerRadius = cornerRadius;
         double s = Scale;
-        _window.AppWindow.Resize(new SizeInt32((int)Math.Round(dipWidth * s), (int)Math.Round(dipHeight * s)));
+
+        // ResizeClient, not Resize: Resize sets the *window* rect, and with the
+        // resize border still on, that leaves the client -- everything XAML
+        // paints -- smaller than the frame by a few pixels. The corner region
+        // below is cut to the design's size either way, so those pixels showed
+        // up as an unpainted strip down the right edge and along the bottom.
+        _window.AppWindow.ResizeClient(new SizeInt32((int)Math.Round(dipWidth * s), (int)Math.Round(dipHeight * s)));
         ApplyCorners(_squared);
     }
 
@@ -142,17 +188,23 @@ public sealed class WindowChrome : IDisposable
         int h = (int)Math.Round(_dipHeight * s);
         int r = (int)Math.Round(_cornerRadius * s);
 
+        // SetWindowRgn works in window coordinates, where (0,0) is the outside
+        // of the border -- but what is painted starts at the client origin. The
+        // region has to be shifted there, or it exposes border on one side and
+        // clips content on the other.
+        var (x, y) = FramePx;
+
         // CreateRoundRectRgn is exclusive on right/bottom, hence the +1.
-        nint region = NativeMethods.CreateRoundRectRgn(0, 0, w + 1, h + 1, r * 2, r * 2);
+        nint region = NativeMethods.CreateRoundRectRgn(x, y, x + w + 1, y + h + 1, r * 2, r * 2);
 
         if (squaredSide is { } side)
         {
             nint patch = side switch
             {
-                DockSide.Right => NativeMethods.CreateRectRgn(w - r, 0, w + 1, h + 1),
-                DockSide.Left => NativeMethods.CreateRectRgn(0, 0, r, h + 1),
-                DockSide.Bottom => NativeMethods.CreateRectRgn(0, h - r, w + 1, h + 1),
-                _ => NativeMethods.CreateRectRgn(0, 0, w + 1, r),
+                DockSide.Right => NativeMethods.CreateRectRgn(x + w - r, y, x + w + 1, y + h + 1),
+                DockSide.Left => NativeMethods.CreateRectRgn(x, y, x + r, y + h + 1),
+                DockSide.Bottom => NativeMethods.CreateRectRgn(x, y + h - r, x + w + 1, y + h + 1),
+                _ => NativeMethods.CreateRectRgn(x, y, x + w + 1, y + r),
             };
             NativeMethods.CombineRgn(region, region, patch, NativeMethods.RGN_OR);
             NativeMethods.DeleteObject(patch);

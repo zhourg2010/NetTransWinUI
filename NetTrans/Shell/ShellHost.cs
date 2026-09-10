@@ -220,13 +220,16 @@ public sealed class ShellHost : IDisposable
     {
         if (!_viewModel.ShowIsland) return;
 
-        var main = _mainChrome.BoundsPx;
-        var island = _islandChrome.BoundsPx;
+        // Painted rects, not window rects: the invisible resize border is not
+        // the same width on every side, so centring the window rects leaves the
+        // island visibly off-centre over the frame below it.
+        var main = _mainChrome.ClientBoundsPx;
+        var island = _islandChrome.ClientBoundsPx;
         double scale = _mainChrome.Scale;
 
         int x = main.X + (main.Width - island.Width) / 2;
         int y = main.Y - island.Height - (int)Math.Round(IslandGap * scale);
-        _islandChrome.MoveTo(x, y);
+        _islandChrome.MoveClientTo(x, y);
     }
 
     private void RefreshIsland()

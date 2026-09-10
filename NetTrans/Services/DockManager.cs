@@ -129,17 +129,39 @@ public sealed class DockManager : IDisposable
         RaiseDockChanged();
     }
 
-    /// <summary>Nearest dock edge within the 18px threshold; the maths lives in DockGeometry so it can be tested.</summary>
+    /// <summary>
+    /// Nearest dock edge within the 18px threshold, measured between what the
+    /// two frames actually paint.
+    ///
+    /// Every rectangle here is a client rect. Using the window rects instead
+    /// snaps the invisible borders together, which is a gap of two borders
+    /// between the two visible edges -- and the design's bonded frames are
+    /// meant to read as one continuous surface.
+    /// </summary>
     private DockSide? Nearest(RectInt32 proposed)
     {
         int threshold = (int)Math.Round(DockGeometry.SnapThresholdDips * _side.Scale);
-        return DockGeometry.Nearest(ToFrame(proposed), ToFrame(_main.BoundsPx), threshold);
+
+        return DockGeometry.Nearest(ToFrame(ToClient(proposed, _side)), ToFrame(_main.ClientBoundsPx), threshold);
     }
 
+    /// <summary>Where the inspector's window has to go for its painted edge to meet the main frame's.</summary>
     private PointInt32 DockPosition(DockSide side)
     {
-        var position = DockGeometry.DockPosition(side, ToFrame(_main.BoundsPx), ToFrame(_side.BoundsPx));
-        return new PointInt32(position.X, position.Y);
+        var position = DockGeometry.DockPosition(side, ToFrame(_main.ClientBoundsPx), ToFrame(_side.ClientBoundsPx));
+        var (offsetX, offsetY) = _side.FramePx;
+
+        // Back into window coordinates, which is what MoveTo speaks.
+        return new PointInt32(position.X - offsetX, position.Y - offsetY);
+    }
+
+    /// <summary>A proposed window rect as the client rect it would produce.</summary>
+    private static RectInt32 ToClient(RectInt32 window, WindowChrome chrome)
+    {
+        var (offsetX, offsetY) = chrome.FramePx;
+        var client = chrome.ClientBoundsPx;
+
+        return new RectInt32(window.X + offsetX, window.Y + offsetY, client.Width, client.Height);
     }
 
     /// <summary>The `.snapline` rect: 3px thick, inset 8px from the shared edge's ends.</summary>
@@ -148,7 +170,7 @@ public sealed class DockManager : IDisposable
         double scale = _main.Scale;
         var guide = DockGeometry.GuideRect(
             side,
-            ToFrame(_main.BoundsPx),
+            ToFrame(_main.ClientBoundsPx),
             thickness: Math.Max(1, (int)Math.Round(3 * scale)),
             inset: (int)Math.Round(8 * scale));
 

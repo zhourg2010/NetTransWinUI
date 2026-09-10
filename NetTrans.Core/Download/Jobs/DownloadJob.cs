@@ -156,7 +156,7 @@ public sealed class DownloadJob : ITransferJob
             await PersistAsync(CancellationToken.None).ConfigureAwait(false);
             Item.Speed = 0;
             Item.Connections = 0;
-            Item.ErrorMessage = Describe(exception);
+            Item.ErrorMessage = Describe(exception) + await HintAsync(exception).ConfigureAwait(false);
             Item.Status = DownloadStatus.Error;
             Item.Log.Add(new LogEntry(Stamp(), Item.ErrorMessage, IsError: true));
             _meter.Reset();
@@ -408,6 +408,36 @@ public sealed class DownloadJob : ITransferJob
     private string Stamp() => _clock.UtcNow.ToLocalTime().ToString("HH:mm");
 
     private static string FormatBytes(long bytes) => Services.FormatHelpers.Bytes(bytes);
+
+    /// <summary>
+    /// 源地址失效时，同目录里找一下有没有新版本.
+    ///
+    /// A publisher deletes the old edition the day the new one ships, so most
+    /// 404s are a link that has been superseded rather than a link that was
+    /// ever wrong. Naming the file that replaced it turns a dead end into one
+    /// paste. It only ever appends to the message: nothing is downloaded in
+    /// the dead link's place without being asked.
+    ///
+    /// Best effort throughout -- this runs while a task is already failing, so
+    /// it gets ten seconds and swallows everything.
+    /// </summary>
+    private async Task<string> HintAsync(Exception exception)
+    {
+        if (!ReplacementLink.WorthLooking(exception)) return "";
+        if (!Uri.TryCreate(Item.Url, UriKind.Absolute, out var url)) return "";
+
+        try
+        {
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var found = await ReplacementLink.FindAsync(_transport, url, deadline.Token).ConfigureAwait(false);
+
+            return found is null ? "" : $"；同目录里有 {found.Name}，可能是它的新版本";
+        }
+        catch (Exception)
+        {
+            return "";
+        }
+    }
 
     /// <summary>Turns an exception into the one line the row's error state shows.</summary>
     internal static string Describe(Exception exception) => exception switch

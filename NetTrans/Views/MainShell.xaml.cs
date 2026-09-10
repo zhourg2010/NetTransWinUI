@@ -30,6 +30,13 @@ public sealed partial class MainShell : UserControl
 
     private ShellViewModel? _viewModel;
     private WindowChrome? _chrome;
+    /// <summary>
+    /// .ctx is one class at one width, and the handoff draws all three menus
+    /// with it. The 222 / 226 / 244 that used to be here were guesses; the
+    /// README's "244px 宽" is prose, the CSS is the design.
+    /// </summary>
+    private const double PopoverWidth = 232;
+
     private PopoverControl? _popover;
     private FrameworkElement? _sheet;
 
@@ -225,7 +232,7 @@ public sealed partial class MainShell : UserControl
                 Invoke: () => ViewModel.ActiveSheet = "tidy"),
             new PopoverItem("大文件核对…", Glyph("IconCheck"),
                 Invoke: () => ViewModel.ActiveSheet = "bigfiles"),
-        }, new Point(536 - 222 - 12, 40), width: 222);
+        }, new Point(536 - 232 - 12, 40), width: PopoverWidth);
     }
 
     private void OnViewMenuClick(object sender, RoutedEventArgs e) => ShowViewMenu(page: "view");
@@ -290,7 +297,7 @@ public sealed partial class MainShell : UserControl
             }
         }
 
-        ShowPopover(items, new Point(536 - 242, 46), width: 226);
+        ShowPopover(items, new Point(536 - 232 - 16, 46), width: PopoverWidth);
     }
 
     /// <summary>
@@ -320,7 +327,7 @@ public sealed partial class MainShell : UserControl
                 Invoke: () => ViewModel.ToggleBossModeCommand.Execute(null)),
             new PopoverItem("退出", IsDestructive: true, SeparatorBefore: true,
                 Invoke: () => CloseRequested?.Invoke(this, EventArgs.Empty)),
-        }, new Point(14, 52), width: 226);
+        }, new Point(14, 52), width: PopoverWidth);
     }
 
     private void ShowContextMenu(RowContextRequest request)
@@ -375,7 +382,7 @@ public sealed partial class MainShell : UserControl
             Math.Min(request.Position.X, ActualWidth - 244),
             Math.Min(request.Position.Y, ActualHeight - 380));
 
-        ShowPopover(items, position, width: 244);
+        ShowPopover(items, position, width: PopoverWidth);
     }
 
     private void CopyLink(DownloadItemViewModel item)

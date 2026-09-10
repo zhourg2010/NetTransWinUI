@@ -131,6 +131,7 @@
             </Button>
 
             <Button
+                x:Name="RemoveButton"
                 Style="{StaticResource SwipeButtonStyle}"
                 Background="{ThemeResource RedBrush}"
                 Click="OnRemoveClick">

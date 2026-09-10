@@ -156,10 +156,17 @@ public sealed partial class TaskRow : UserControl
         Track.Height = dense ? 2 : 3;
         Track.Margin = new Thickness(0, dense ? 4 : 6, 0, 0);
 
+        // Both of them: .card.dense narrows .swipe button, not one of the two.
+        // Only 暂停 was being narrowed, so 删除 stayed 64 beside a 46 -- a
+        // ragged pair that only shows up on hover in 小图.
         ToggleButton.Width = dense ? 46 : 64;
+        RemoveButton.Width = dense ? 46 : 64;
         ToggleGlyph.IconSize = dense ? 13 : 17;
         RemoveGlyph.IconSize = dense ? 13 : 17;
         RemoveLabel.FontSize = dense ? 11 : 12.5;
+
+        // .card.dense .badge{padding:1px 6px;font-size:10px}
+        DoneBadge.Padding = new Thickness(dense ? 6 : 7, dense ? 1 : 2, dense ? 6 : 7, dense ? 1 : 2);
 
         ApplySeparator();
         ApplyProgress(animate: false);

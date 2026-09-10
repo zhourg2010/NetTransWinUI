@@ -205,6 +205,82 @@ jobs:
 
           Write-Host 'started, drew a window, and stayed up.'
 
+      # 和设计稿逐像素比对: the smoke test proves a window appeared; it says
+      # nothing about what is on it. This grabs the desktop while the app is
+      # up, so the app's own render can be put next to the handoff's render
+      # instead of arguing from memory about what it looks like.
+      #
+      # continue-on-error: a screenshot is evidence, not a gate. A runner that
+      # will not hand over its framebuffer must not turn the build red.
+      - name: Screenshot (--demo)
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          # The handoff is 536x680 per window plus the island above it, and two
+          # of them side by side. The runner boots at 1024x768, which cannot
+          # hold that.
+          try {
+            Set-DisplayResolution -Width 1920 -Height 1080 -Force
+            Start-Sleep -Seconds 3
+          } catch {
+            Write-Host "分辨率没能改，按原样截：$_"
+          }
+
+          $exe = Join-Path $PWD 'publish/NetTrans/NetTrans.exe'
+          $log = Join-Path $PWD 'publish/NetTrans/NetTrans.startup.log'
+
+          $app = Start-Process $exe -ArgumentList '--demo' -PassThru
+
+          # Wait for the app's own "finished starting" line, then a little
+          # longer: the entry animations are .34s and a frame grabbed mid
+          # animation is not what the design shows.
+          $ready = $false
+          foreach ($attempt in 1..60) {
+            Start-Sleep -Seconds 1
+            if ((Test-Path $log) -and (Select-String -Path $log -SimpleMatch -Pattern '启动完成' -Quiet)) { $ready = $true; break }
+          }
+          if (-not $ready) { throw '应用没有在 60 秒内启动完成' }
+          Start-Sleep -Seconds 5
+
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+
+          $bounds = [System.Windows.Forms.SystemInformation]::VirtualScreen
+          "desktop: $($bounds.Width)x$($bounds.Height)"
+
+          $shot = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+          $canvas = [System.Drawing.Graphics]::FromImage($shot)
+          $canvas.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+          $canvas.Dispose()
+
+          $shots = Join-Path $PWD 'screenshots'
+          New-Item -ItemType Directory -Force $shots | Out-Null
+          $shot.Save((Join-Path $shots 'desktop.png'), [System.Drawing.Imaging.ImageFormat]::Png)
+
+          # Where the app put itself, so whoever compares knows what to crop.
+          Get-Process -Id $app.Id | ForEach-Object { "main window handle: $($_.MainWindowHandle)" }
+
+          # A black frame is the failure mode worth naming: it means the runner
+          # handed over a framebuffer nothing had drawn into, and the PNG is
+          # evidence of nothing.
+          $sum = 0.0; $n = 0
+          for ($x = 0; $x -lt $shot.Width; $x += 17) {
+            for ($y = 0; $y -lt $shot.Height; $y += 17) {
+              $sum += $shot.GetPixel($x, $y).GetBrightness(); $n++
+            }
+          }
+          "mean brightness: $([math]::Round($sum / $n, 3)) over $n samples"
+
+          $shot.Dispose()
+          Stop-Process -Id $app.Id -Force
+          Remove-Item $log -ErrorAction SilentlyContinue
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NetTrans-screenshots
+          path: screenshots
+          retention-days: 30
+
       # 大文件核对 is a command-line mode of the same executable, so this is the
       # one step that runs the shipped binary as a tool rather than as an app:
       # a directory with one file over the threshold, one under it, and one

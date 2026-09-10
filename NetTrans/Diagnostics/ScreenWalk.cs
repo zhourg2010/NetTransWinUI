@@ -51,7 +51,11 @@ public sealed class ScreenWalk
             var bitmap = new RenderTargetBitmap();
             await bitmap.RenderAsync(element, width, height);
 
-            var pixels = await bitmap.GetPixelsAsync();
+            // IBuffer, not a byte[]: LINQ's ToArray is not the one you want here,
+            // and picking it up by accident is a compile error, not a bug.
+            var buffer = await bitmap.GetPixelsAsync();
+            var pixels = new byte[buffer.Length];
+            using (var source = DataReader.FromBuffer(buffer)) source.ReadBytes(pixels);
 
             using var stream = new InMemoryRandomAccessStream();
             var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, stream);
@@ -62,7 +66,7 @@ public sealed class ScreenWalk
                 (uint)bitmap.PixelHeight,
                 96,
                 96,
-                pixels.ToArray());
+                pixels);
             await encoder.FlushAsync();
 
             var bytes = new byte[stream.Size];

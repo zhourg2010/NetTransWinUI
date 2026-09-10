@@ -14,6 +14,7 @@ import glob
 import os
 import re
 import sys
+import xml.etree.ElementTree as ElementTree
 
 
 def markup(path: str) -> str:
@@ -60,6 +61,16 @@ def main() -> int:
             key = m.group(1).strip()
             if key not in defined:
                 problems.append(f"{name}: {{StaticResource {key}}} — no x:Key defines it")
+
+        # Well-formed as XML at all. A tag closed in the wrong place is not a
+        # key or a type error, so nothing above sees it; the XAML compiler
+        # reports it as "Duplication assignment to the 'Body' property", which
+        # names neither the line nor the tag that actually moved. Costs a
+        # Windows build to find and a millisecond to catch.
+        try:
+            ElementTree.parse(path)
+        except ElementTree.ParseError as broken:
+            problems.append(f"{name}: 不是合法的 XML — {broken}")
 
         # XML forbids "--" inside a comment, and the XAML compiler reports it as
         # "Xaml Internal Error WMC9999" against a file in the SDK rather than

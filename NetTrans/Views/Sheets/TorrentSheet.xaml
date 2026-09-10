@@ -67,7 +67,6 @@
                         Text="上传是真实统计并上报 tracker 的。PT 站还需要把客户端加入白名单，NetTrans 目前不在任何站点的名单里。"/>
                 </StackPanel>
             </Border>
-        </StackPanel>
             <Border Style="{StaticResource CardStyle}">
                 <StackPanel>
                     <controls:FormRow Label="" StretchContent="True" ShowSeparator="False">
@@ -108,6 +107,7 @@
                     </controls:FormRow>
                 </StackPanel>
             </Border>
+        </StackPanel>
 
     </controls:SheetHost>
 </UserControl>

@@ -16,6 +16,18 @@
     <ResourceDictionary.ThemeDictionaries>
 
         <ResourceDictionary x:Key="Light">
+
+            <!--
+                WinUI pins the dropdown's height through these two theme
+                resources, and no property on the control can reach them:
+                MinHeight="0" on the style did nothing and neither did the same
+                key declared outside a theme dictionary, because ThemeResource
+                resolves per theme. .frow select is font 14 + padding 4, so it
+                asks for 25; leaving it at 32 made every settings row with a
+                dropdown 52px where the handoff's is 46.
+            -->
+            <x:Double x:Key="ComboBoxMinHeight">25</x:Double>
+            <x:Double x:Key="TextControlThemeMinHeight">25</x:Double>
             <!-- accents -->
             <Color x:Key="BlueColor">#007AFF</Color>
             <SolidColorBrush x:Key="BlueBrush" Color="#007AFF"/>
@@ -37,7 +49,15 @@
             <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF"/>
             <SolidColorBrush x:Key="NavBrush" Color="#D1F9F9F9"/>
             <SolidColorBrush x:Key="BarBrush" Color="#DBF9F9F9"/>
-            <SolidColorBrush x:Key="PopoverBrush" Color="#D1FAFAFA"/>
+            <!--
+                 The handoff's .ctx is rgba(250,250,250,.82) over a 24px
+                 backdrop blur, and the blur is what makes it readable: at .82
+                 with nothing blurred behind it, the task names underneath come
+                 through the menu sharp enough to read. WinUI has no
+                 backdrop-filter, so what is matched here is the result the
+                 design produces, not the number it uses.
+            -->
+            <SolidColorBrush x:Key="PopoverBrush" Color="#F7FAFAFA"/>
             <SolidColorBrush x:Key="BannerBrush" Color="#E0FAFAFA"/>
             <SolidColorBrush x:Key="ToastBrush" Color="#E61E1E20"/>
             <SolidColorBrush x:Key="IslandBrush" Color="#000000"/>
@@ -66,6 +86,18 @@
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="Dark">
+
+            <!--
+                WinUI pins the dropdown's height through these two theme
+                resources, and no property on the control can reach them:
+                MinHeight="0" on the style did nothing and neither did the same
+                key declared outside a theme dictionary, because ThemeResource
+                resolves per theme. .frow select is font 14 + padding 4, so it
+                asks for 25; leaving it at 32 made every settings row with a
+                dropdown 52px where the handoff's is 46.
+            -->
+            <x:Double x:Key="ComboBoxMinHeight">25</x:Double>
+            <x:Double x:Key="TextControlThemeMinHeight">25</x:Double>
             <Color x:Key="BlueColor">#0A84FF</Color>
             <SolidColorBrush x:Key="BlueBrush" Color="#0A84FF"/>
             <SolidColorBrush x:Key="GreenBrush" Color="#30D158"/>
@@ -84,7 +116,7 @@
             <SolidColorBrush x:Key="CardBrush" Color="#1C1C1E"/>
             <SolidColorBrush x:Key="NavBrush" Color="#D11E1E1E"/>
             <SolidColorBrush x:Key="BarBrush" Color="#DB1E1E1E"/>
-            <SolidColorBrush x:Key="PopoverBrush" Color="#D128282A"/>
+            <SolidColorBrush x:Key="PopoverBrush" Color="#F728282A"/>
             <SolidColorBrush x:Key="BannerBrush" Color="#E028282A"/>
             <SolidColorBrush x:Key="ToastBrush" Color="#E61E1E20"/>
             <SolidColorBrush x:Key="IslandBrush" Color="#000000"/>

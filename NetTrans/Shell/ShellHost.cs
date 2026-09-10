@@ -454,6 +454,21 @@ public sealed class ShellHost : IDisposable
         // ── the task frame ────────────────────────────────────────────────
         await walk.CaptureAsync("main-list", _mainShell, w, h);
 
+        // Before anything touches the list. Every filter and tab change below
+        // rebuilds the rows, and the first attempt at this screen came after
+        // one -- so it grabbed a row the repeater had already recycled, set the
+        // hover on that, and captured a frame with nothing on it.
+        //
+        // A screen the walk cannot reach has to say so rather than vanish.
+        var row = _mainShell.RealisedRows().FirstOrDefault();
+        if (row is null) Startup.Log("拍 main-row-hover 跳过：一行都没找到");
+        else
+        {
+            row.ShowSwipe();
+            await walk.CaptureAsync("main-row-hover", _mainShell, w, h);
+            row.HideSwipe();
+        }
+
         model.IsListExpanded = true;
         await walk.CaptureAsync("main-list-expanded", _mainShell, w, h);
         model.IsListExpanded = false;
@@ -469,17 +484,6 @@ public sealed class ShellHost : IDisposable
         model.Query = "没有这个东西";
         await walk.CaptureAsync("main-filtered-empty", _mainShell, w, h);
         model.Query = "";
-
-        // A screen the walk cannot reach must say so, not vanish: the hover
-        // frame went missing for a whole round because this quietly found no
-        // rows and moved on.
-        var row = _mainShell.RealisedRows().FirstOrDefault();
-        if (row is null) Startup.Log("拍 main-row-hover 跳过：一行都没找到");
-        else
-        {
-            row.ShowSwipe();
-            await walk.CaptureAsync("main-row-hover", _mainShell, w, h);
-        }
 
         _mainShell.ShowAddMenu();
         await walk.CaptureAsync("main-menu-add", _mainShell, w, h);

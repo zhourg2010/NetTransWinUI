@@ -200,6 +200,13 @@ public sealed partial class TaskRow : UserControl
         SwipeOffset.X = 0;
     }
 
+    /// <summary>Parks them again, so the next screen is not captured mid-hover.</summary>
+    internal void HideSwipe()
+    {
+        _isPointerOver = false;
+        SwipeOffset.X = Swipe.ActualWidth;
+    }
+
     private void OnPointerEntered(object sender, PointerRoutedEventArgs e)
     {
         _isPointerOver = true;

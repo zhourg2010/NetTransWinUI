@@ -33,6 +33,30 @@ jobs:
         # tests that passed -- which is what anyone reading a red run wants.
         run: dotnet test NetTrans.Core.Tests/NetTrans.Core.Tests.csproj -c Release --logger "console;verbosity=minimal"
 
+  # 实际下载: everything above answers a fake server, which always honours a
+  # range request and never 404s. This job downloads a real file from
+  # releases.ubuntu.com through the same engine the app runs, and checks that a
+  # release Canonical has deleted fails with 404 in the message instead of
+  # hanging. The mirror speed test is deliberately not in the filter — it takes
+  # ten minutes and measures the runner's link, not our code.
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Download from releases.ubuntu.com for real
+        env:
+          NETTRANS_LIVE: "1"
+        run: >
+          dotnet test NetTrans.Core.Tests/NetTrans.Core.Tests.csproj -c Release
+          --filter FullyQualifiedName~UbuntuDownloadTests
+          --logger "console;verbosity=detailed"
+
   build:
     runs-on: windows-latest
     strategy:

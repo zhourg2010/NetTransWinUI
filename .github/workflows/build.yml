@@ -513,7 +513,7 @@ jobs:
       contents: write
 
     env:
-      TAG: v0.1.9
+      TAG: v0.1.10
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_REPO: ${{ github.repository }}
 

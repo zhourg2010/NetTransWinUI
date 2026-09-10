@@ -5,8 +5,14 @@
     xmlns:ui="using:CommunityToolkit.WinUI">
 
     <!-- `.seg`: 2px-inset white thumb sliding under N equal-width buttons. -->
+    <!--
+        Height is the design's own 32px rather than whatever the button text
+        measures to: the CSS pins it through padding on a font this platform
+        does not have, and letting Segoe decide gave 28.
+    -->
     <Border
         x:Name="Track"
+        Height="32"
         Background="{ThemeResource FillBrush}"
         CornerRadius="{StaticResource RadiusSeg}"
         SizeChanged="OnTrackSizeChanged">

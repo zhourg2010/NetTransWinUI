@@ -133,7 +133,6 @@
     <CornerRadius x:Key="RadiusNotice">12</CornerRadius>
     <CornerRadius x:Key="RadiusIconButton">10</CornerRadius>
     <CornerRadius x:Key="RadiusToolButton">8</CornerRadius>
-    <CornerRadius x:Key="RadiusPill">999</CornerRadius>
     <CornerRadius x:Key="RadiusIsland">22</CornerRadius>
 
     <!-- typography: Windows has no SF Pro; the handoff's own fallback chain is

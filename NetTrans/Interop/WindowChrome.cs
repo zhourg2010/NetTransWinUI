@@ -170,7 +170,32 @@ public sealed class WindowChrome : IDisposable
         // paints -- smaller than the frame by a few pixels. The corner region
         // below is cut to the design's size either way, so those pixels showed
         // up as an unpainted strip down the right edge and along the bottom.
-        _window.AppWindow.ResizeClient(new SizeInt32((int)Math.Round(dipWidth * s), (int)Math.Round(dipHeight * s)));
+        int wantWidth = (int)Math.Round(dipWidth * s);
+        int wantHeight = (int)Math.Round(dipHeight * s);
+
+        _window.AppWindow.ResizeClient(new SizeInt32(wantWidth, wantHeight));
+
+        // ResizeClient is documented to leave the client exactly that size, and
+        // on a frame with no title bar it does not: the caption it assumes is
+        // there gets counted anyway, so the client came back 31px taller. XAML
+        // laid out into all 711 of them -- putting the toolbar at 711-49 -- and
+        // the corner region below then clipped the window back to 680, which is
+        // why the seven toolbar icons were sliced off at the bottom edge.
+        //
+        // So measure and correct through the window rect, which is unambiguous.
+        // Twice at most: if it has not converged by then it is not going to.
+        for (int attempt = 0; attempt < 2; attempt++)
+        {
+            NativeMethods.GetClientRect(Handle, out var client);
+
+            int growWidth = wantWidth - client.Width;
+            int growHeight = wantHeight - client.Height;
+            if (growWidth == 0 && growHeight == 0) break;
+
+            var outer = BoundsPx;
+            _window.AppWindow.Resize(new SizeInt32(outer.Width + growWidth, outer.Height + growHeight));
+        }
+
         ApplyCorners(_squared);
     }
 

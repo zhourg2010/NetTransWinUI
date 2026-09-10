@@ -28,10 +28,18 @@
         <Setter Property="Background" Value="{ThemeResource BlueWash14Brush}"/>
     </Style>
 
-    <!-- .badge: 完成 -->
+    <!--
+        .badge: 完成
+
+        The CSS is border-radius:20px on a 19px-tall pill, which CSS clamps to
+        half the box. WinUI does not clamp: a radius larger than half the side
+        makes the two arcs meet past each other and the badge drew as a lens.
+        So the clamped value is written out -- half of 15px line + 2px padding
+        top and bottom.
+    -->
     <Style x:Key="BadgeStyle" TargetType="Border">
         <Setter Property="Background" Value="{ThemeResource GreenBrush}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource RadiusPill}"/>
+        <Setter Property="CornerRadius" Value="9.5"/>
         <Setter Property="Padding" Value="7,2"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>

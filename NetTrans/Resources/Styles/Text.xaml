@@ -6,10 +6,21 @@
          CSS class it comes from. Numbers use tabular figures throughout, per
          "数字一律 font-variant-numeric: tabular-nums". -->
 
+    <!--
+        LineHeight, not TextLineBounds="Tight".
+
+        Tight sizes a line to the ink of the glyphs that happen to be in it, so
+        the same style measured 11px for a Latin name and more for a CJK one,
+        and a stack of name + sub + progress came out 31px where the design's
+        is 44 -- the row collapsed from 62px to 54px and the sub line's
+        descenders painted straight through the progress bar. Every line box
+        below is the height the handoff's own render reports for that class,
+        with BlockLineHeight so the box is exactly that and nothing else.
+    -->
     <Style x:Key="BaseTextStyle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamily}"/>
         <Setter Property="Foreground" Value="{ThemeResource LabelBrush}"/>
-        <Setter Property="TextLineBounds" Value="Tight"/>
+        <Setter Property="LineStackingStrategy" Value="BlockLineHeight"/>
         <Setter Property="OpticalMarginAlignment" Value="TrimSideBearings"/>
     </Style>
 
@@ -22,6 +33,7 @@
 
     <!-- .nav__t -->
     <Style x:Key="NavTitleTextStyle" TargetType="TextBlock" BasedOn="{StaticResource BaseTextStyle}">
+        <Setter Property="LineHeight" Value="19"/>
         <Setter Property="FontSize" Value="15"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="CharacterSpacing" Value="-13"/>
@@ -31,6 +43,7 @@
 
     <!-- .rname -->
     <Style x:Key="RowNameTextStyle" TargetType="TextBlock" BasedOn="{StaticResource BaseTextStyle}">
+        <Setter Property="LineHeight" Value="17"/>
         <Setter Property="FontSize" Value="14.5"/>
         <Setter Property="FontWeight" Value="Medium"/>
         <Setter Property="CharacterSpacing" Value="-10"/>
@@ -39,6 +52,7 @@
 
     <!-- .rsub -->
     <Style x:Key="RowSubTextStyle" TargetType="TextBlock" BasedOn="{StaticResource TabularTextStyle}">
+        <Setter Property="LineHeight" Value="17"/>
         <Setter Property="FontSize" Value="12.5"/>
         <Setter Property="Foreground" Value="{ThemeResource Label2Brush}"/>
         <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
@@ -46,6 +60,7 @@
 
     <!-- .rpct -->
     <Style x:Key="RowPercentTextStyle" TargetType="TextBlock" BasedOn="{StaticResource TabularTextStyle}">
+        <Setter Property="LineHeight" Value="15"/>
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="Foreground" Value="{ThemeResource Label2Brush}"/>
         <Setter Property="TextAlignment" Value="Right"/>
@@ -114,6 +129,7 @@
 
     <!-- .tag2 -->
     <Style x:Key="TagTextStyle" TargetType="TextBlock" BasedOn="{StaticResource BaseTextStyle}">
+        <Setter Property="LineHeight" Value="12"/>
         <Setter Property="FontSize" Value="10.5"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="CharacterSpacing" Value="10"/>
@@ -122,6 +138,7 @@
 
     <!-- .badge -->
     <Style x:Key="BadgeTextStyle" TargetType="TextBlock" BasedOn="{StaticResource BaseTextStyle}">
+        <Setter Property="LineHeight" Value="15"/>
         <Setter Property="FontSize" Value="11"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="CharacterSpacing" Value="10"/>

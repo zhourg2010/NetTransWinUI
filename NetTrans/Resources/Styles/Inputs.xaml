@@ -39,7 +39,23 @@
         the chrome is retinted, so this restyles rather than retemplates — a
         full template would have to reimplement the popup for no visual gain.
     -->
+    <!--
+        Height, not MinHeight, and not a theme resource.
+
+        WinUI floors the dropdown at 32px from inside its own template, which
+        made every settings row with one 52px where the handoff's is 46 — six
+        pixels a row, compounding until the sheet no longer holds what the
+        design holds. Three things do not reach it: MinHeight="0" on the style,
+        ComboBoxMinHeight declared in a merged dictionary, and the same key
+        declared inside both theme dictionaries. All three were tried and all
+        three left the row at 52.
+
+        An explicit Height does reach it, because it is the control's own
+        layout size rather than something its template negotiates. .frow select
+        is font 14 + 4px padding, which is 25.
+    -->
     <Style x:Key="FormSelectStyle" TargetType="ComboBox">
+        <Setter Property="Height" Value="25"/>
         <Setter Property="Background" Value="{ThemeResource FillBrush}"/>
         <Setter Property="Foreground" Value="{ThemeResource LabelBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>

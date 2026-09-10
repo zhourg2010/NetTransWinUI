@@ -112,7 +112,16 @@
             HorizontalScrollMode="Disabled">
 
             <Grid>
-                <Border x:Name="ListCard" Style="{StaticResource CardStyle}">
+                <!--
+                    Top, not stretched: the card in the design hugs its rows, so
+                    an empty list is a line of text on the group background, not
+                    a card-shaped hole the height of the window.
+                -->
+                <Border
+                    x:Name="ListCard"
+                    VerticalAlignment="Top"
+                    Style="{StaticResource CardStyle}"
+                    Visibility="{x:Bind conv:BindingHelpers.Collapsed(ViewModel.IsEmpty), Mode=OneWay}">
                     <StackPanel>
                         <ItemsRepeater
                             x:Name="Rows"

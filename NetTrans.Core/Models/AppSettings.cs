@@ -48,5 +48,10 @@ public sealed class AppSettings
     public bool DenseRows { get; set; }
     public string SortKey { get; set; } = "added";
     public string SortDirection { get; set; } = "asc";
-    public string Theme { get; set; } = "auto"; // light | dark | auto
+    /// <summary>
+    /// light | dark | auto. 浅色 by default, because the handoff is light: it
+    /// defines one palette and no dark one, so 跟随系统 on a machine set to dark
+    /// shows colours the design never specified.
+    /// </summary>
+    public string Theme { get; set; } = "light";
 }

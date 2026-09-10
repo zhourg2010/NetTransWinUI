@@ -44,6 +44,12 @@ public sealed partial class TorrentSheet : UserControl
         if (TorrentUrl.IsTorrent(viewModel.PendingUrl)) LinkBox.Text = viewModel.PendingUrl;
     }
 
+    /// <summary>
+    /// Loads a torrent as if it had been typed, so the screenshot walk can
+    /// reach 种子内容 — the half of this sheet the handoff actually draws.
+    /// </summary>
+    internal void LoadForScreenshot(string path) => LinkBox.Text = path;
+
     private void OnLinkChanged(object sender, TextChangedEventArgs e)
     {
         // A magnet pasted as thunder:// is still a magnet.

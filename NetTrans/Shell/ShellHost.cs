@@ -513,6 +513,16 @@ public sealed class ShellHost : IDisposable
         {
             model.ActiveSheet = sheet;
             await walk.CaptureAsync("sheet-" + sheet, _mainShell, w, h);
+
+            // 种子内容 is the half of the torrent sheet the handoff draws, and
+            // it only exists once a torrent is loaded -- so the walk was
+            // photographing the other half and the file list kept going
+            // unlooked-at.
+            if (sheet == "torrent" && _mainShell.OpenSheet is Views.Sheets.TorrentSheet torrent)
+            {
+                torrent.LoadForScreenshot(SampleTorrent.Write(Path.Combine(directory, "fixtures")));
+                await walk.CaptureAsync("sheet-torrent-contents", _mainShell, w, h);
+            }
         }
 
         model.ActiveSheet = null;

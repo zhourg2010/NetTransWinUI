@@ -324,7 +324,7 @@ jobs:
 
           # A walk that silently captured nothing is the failure mode that
           # matters; every screen it does produce is evidence either way.
-          if ($shots.Count -lt 15) { throw "只拍到 $($shots.Count) 屏，应有二十屏上下 —— 走查没跑完" }
+          if ($shots.Count -lt 24) { throw "只拍到 $($shots.Count) 屏，应有二十五屏上下 —— 走查没跑完" }
 
           Remove-Item $log -ErrorAction SilentlyContinue
 
@@ -513,7 +513,7 @@ jobs:
       contents: write
 
     env:
-      TAG: v0.1.10
+      TAG: v0.1.11
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_REPO: ${{ github.repository }}
 

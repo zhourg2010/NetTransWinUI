@@ -207,6 +207,9 @@ public sealed partial class MainShell : UserControl
     /// </summary>
     internal void ClosePopover() => DismissPopover();
 
+    /// <summary>The sheet currently open, so the walk can drive it into its other states.</summary>
+    internal FrameworkElement? OpenSheet => _sheet;
+
     /// <summary>
     /// Every task row on screen, so the walker can open one's hover actions.
     ///

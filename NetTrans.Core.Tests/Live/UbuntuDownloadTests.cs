@@ -87,6 +87,7 @@ public class UbuntuDownloadTests : IDisposable
             Name = probe.FileName,
             Host = manifest.Host,
             Kind = FileKind.Doc,
+            Size = 0, // the probe fills it in, exactly as it does for a pasted URL
             Category = "doc",
             Url = manifest.AbsoluteUri,
             SavePath = _directory,
@@ -196,6 +197,7 @@ public class UbuntuDownloadTests : IDisposable
             Name = "ubuntu-24.04.2-desktop-amd64.iso",
             Host = dead.Host,
             Kind = FileKind.Disc,
+            Size = 0,
             Category = "soft",
             Url = dead.AbsoluteUri,
             SavePath = _directory,

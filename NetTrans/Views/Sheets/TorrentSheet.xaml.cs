@@ -128,10 +128,15 @@ public sealed partial class TorrentSheet : UserControl
         {
             return TorrentMetainfo.Parse(System.IO.File.ReadAllBytes(text));
         }
-        catch (Exception)
+        catch (Exception exception)
         {
             // Not readable, or not a torrent after all. The transfer will say
             // so properly; the sheet just does not offer a list.
+            //
+            // Logged all the same: swallowed silently, this cost a screenshot
+            // round where the walk photographed a sheet with no contents in it
+            // and nothing anywhere said why.
+            Diagnostics.Startup.Log($"读种子失败：{exception.GetType().Name}: {exception.Message}");
             return null;
         }
     }

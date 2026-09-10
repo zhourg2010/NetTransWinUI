@@ -36,9 +36,17 @@ public static class SampleTorrent
             }))
             .ToArray();
 
-        // One 20-byte SHA-1 per piece; the sheet never looks at them, but a
-        // metainfo without them is not one our parser will accept.
-        var pieces = new byte[20];
+        // One 20-byte SHA-1 per piece, and the count has to match the content:
+        // the parser checks it, and rightly so -- every offset after a mismatch
+        // would be wrong. The first cut of this fixture shipped a single hash
+        // for 3.3 GB, so the parse threw and the walk quietly photographed the
+        // sheet's other half again.
+        const long pieceLength = 262_144;
+
+        long total = files.Sum(file => file.Length);
+        long pieceCount = (total + pieceLength - 1) / pieceLength;
+
+        var pieces = new byte[pieceCount * 20];
 
         var metainfo = new BDictionary(new Dictionary<string, BValue>
         {
@@ -46,7 +54,7 @@ public static class SampleTorrent
             ["info"] = new BDictionary(new Dictionary<string, BValue>
             {
                 ["name"] = Bencode.String("archlinux-2026.08"),
-                ["piece length"] = Bencode.Number(262_144),
+                ["piece length"] = Bencode.Number(pieceLength),
                 ["pieces"] = Bencode.String(pieces),
                 ["files"] = new BList(entries),
             }),

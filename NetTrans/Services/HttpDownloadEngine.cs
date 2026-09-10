@@ -53,7 +53,7 @@ public sealed partial class HttpDownloadEngine : IDownloadEngine, IAsyncDisposab
         // ftp:// and ftps:// go to their own transport; everything above this
         // is written against the one interface and never learns the difference.
         _transport = new SchemeTransport(
-            new HttpTransport(userAgent: "NetTrans/1.0", profiles: _profiles, proxy: _proxy),
+            new HttpTransport(userAgent: "netX/1.0", profiles: _profiles, proxy: _proxy),
             new NetTrans.Net.Ftp.FtpTransport(profiles: _profiles));
 
         _engine = new CoreEngine(

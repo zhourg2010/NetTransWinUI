@@ -54,7 +54,7 @@ public static class PowerActions
             using var process = Process.Start(new ProcessStartInfo
             {
                 FileName = "shutdown.exe",
-                Arguments = "/s /t 30 /c \"NetTrans 下载已全部完成\"",
+                Arguments = "/s /t 30 /c \"netX 下载已全部完成\"",
                 CreateNoWindow = true,
                 UseShellExecute = false,
             });

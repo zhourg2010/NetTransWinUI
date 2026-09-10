@@ -122,7 +122,7 @@ public sealed partial class BigFileSheet : UserControl
     {
         var files = BigFileScan.Walk(roots, options, cancellationToken: _cancellation.Token).ToList();
 
-        using var transport = online ? new HttpTransport(userAgent: "NetTrans/1.0") : null;
+        using var transport = online ? new HttpTransport(userAgent: "netX/1.0") : null;
 
         var outcomes = BigFileAudit.RunAsync(
             files,

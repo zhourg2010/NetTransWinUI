@@ -11,7 +11,7 @@ public sealed class JsonSettingsStore : ISettingsStore
 
     /// <summary>Portable by default; see <see cref="PortableStorage"/> for where that lands.</summary>
     public JsonSettingsStore() =>
-        _filePath = PortableStorage.PathFor("NetTrans.settings.json", "settings.json");
+        _filePath = PortableStorage.PathFor("netX.settings.json", "settings.json");
 
     public AppSettings Load()
     {

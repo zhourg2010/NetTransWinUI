@@ -136,7 +136,7 @@ public sealed class ShellHost : IDisposable
     private void BuildMainFrame()
     {
         _mainShell = new MainShell { ViewModel = _viewModel };
-        _mainWindow = new Window { Title = "NetTrans", Content = _mainShell };
+        _mainWindow = new Window { Title = "netX", Content = _mainShell };
 
         _mainChrome = new WindowChrome(_mainWindow);
         _mainChrome.MakeFrameless();
@@ -175,7 +175,7 @@ public sealed class ShellHost : IDisposable
     private void BuildIsland()
     {
         _island = new IslandControl();
-        _islandWindow = new Window { Title = "NetTrans 悬浮窗", Content = _island };
+        _islandWindow = new Window { Title = "netX 悬浮窗", Content = _island };
 
         _islandChrome = new WindowChrome(_islandWindow);
         _islandChrome.MakeFrameless(resizable: false, keepShadow: false);

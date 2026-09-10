@@ -49,7 +49,7 @@ public static class Startup
             e.SetObserved();
         };
 
-        Log($"NetTrans starting · {Environment.OSVersion} · {(Environment.Is64BitProcess ? "x64" : "x86")}");
+        Log($"netX starting · {Environment.OSVersion} · {(Environment.Is64BitProcess ? "x64" : "x86")}");
         Log($"exe: {Environment.ProcessPath}");
         Log($"framework: {System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription}");
         Log($"args: {string.Join(' ', Environment.GetCommandLineArgs().Skip(1))}");
@@ -110,14 +110,14 @@ public static class Startup
         }
 
         string body =
-            $"NetTrans 启动失败。\n\n" +
+            $"netX 启动失败。\n\n" +
             $"位置：{where}\n\n" +
             $"{Describe(exception)}\n\n" +
             $"完整日志：{_path}";
 
         try
         {
-            NativeMethods.MessageBox(0, body, "NetTrans", NativeMethods.MB_ICONERROR | NativeMethods.MB_SETFOREGROUND);
+            NativeMethods.MessageBox(0, body, "netX", NativeMethods.MB_ICONERROR | NativeMethods.MB_SETFOREGROUND);
         }
         catch (Exception)
         {
@@ -162,7 +162,7 @@ public static class Startup
     /// </summary>
     private static string Resolve()
     {
-        const string name = "NetTrans.startup.log";
+        const string name = "netX.startup.log";
 
         try
         {
@@ -176,7 +176,7 @@ public static class Startup
             {
                 string directory = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "NetTrans");
+                    "netX");
 
                 Directory.CreateDirectory(directory);
 

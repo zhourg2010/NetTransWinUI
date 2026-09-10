@@ -32,7 +32,7 @@ public class UbuntuMirrorSpeedTests
     [LiveFact]
     public async Task Measures_every_regional_mirror()
     {
-        using var transport = new HttpTransport(userAgent: "NetTrans/1.0 (mirror speed test)");
+        using var transport = new HttpTransport(userAgent: "netX/1.0 (mirror speed test)");
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(10));
 
         var samples = new List<SpeedSample>();

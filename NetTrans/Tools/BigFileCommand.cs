@@ -51,7 +51,7 @@ internal static class BigFileCommand
             return 3;
         }
 
-        using var transport = options.Online ? new HttpTransport(userAgent: "NetTrans/1.0") : null;
+        using var transport = options.Online ? new HttpTransport(userAgent: "netX/1.0") : null;
 
         // 哈希库 is read for a published digest and never written to; the
         // ledger below is this tool's own file.

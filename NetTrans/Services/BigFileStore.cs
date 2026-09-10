@@ -17,7 +17,7 @@ public sealed class BigFileStore
 
     public BigFileStore()
     {
-        Path = PortableStorage.PathFor("NetTrans.bigfiles.json", "bigfiles.json");
+        Path = PortableStorage.PathFor("netX.bigfiles.json", "bigfiles.json");
         _ledger = new Lazy<BigFileLedger>(() => BigFileLedger.Load(Path));
     }
 

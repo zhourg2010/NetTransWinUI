@@ -15,7 +15,7 @@ public sealed class TidyStore
 
     public TidyStore()
     {
-        Path = PortableStorage.PathFor("NetTrans.tidy.json", "tidy.json");
+        Path = PortableStorage.PathFor("netX.tidy.json", "tidy.json");
         _journal = new Lazy<TidyJournal>(() => TidyJournal.Load(Path));
     }
 

@@ -99,44 +99,44 @@ jobs:
           -f net8.0-windows10.0.19041.0
           -r win-x64
           -p:Platform=x64
-          -o publish/NetTrans
+          -o publish/netX
 
       - name: Record what this build is
         shell: pwsh
         run: |
           $sha = "${{ github.sha }}".Substring(0, 7)
           @(
-            "NetTrans"
+            "netX"
             ""
             "commit: $sha ($env:GITHUB_REF_NAME)"
             "built:  $(Get-Date -Format 'yyyy-MM-dd HH:mm') UTC"
             ""
-            "双击 NetTrans.exe 运行，解压即用的绿色版：设置写在同目录的"
-            "NetTrans.settings.json，哈希库写在 NetTrans.hashes.json，没有安装程序、"
+            "双击 netX.exe 运行，解压即用的绿色版：设置写在同目录的"
+            "netX.settings.json，哈希库写在 netX.hashes.json，没有安装程序、"
             "不写注册表；不要的时候整个文件夹删掉即可。"
             ""
             "--demo 参数用手稿的示例数据填充界面，不联网、不写文件。"
             ""
             "自包含：.NET 与 Windows App SDK 都在包里。若提示缺少 VCRUNTIME140，"
             "装一次 Microsoft Visual C++ 2015-2022 Redistributable (x64) 即可。"
-          ) | Set-Content -Encoding UTF8 publish/NetTrans/关于这个版本.txt
+          ) | Set-Content -Encoding UTF8 publish/netX/关于这个版本.txt
 
       # What actually ended up in the box. A missing dependency is invisible
       # until the app dies on someone's machine with no message.
       - name: List what was published
         shell: pwsh
         run: |
-          Get-ChildItem publish/NetTrans -File |
+          Get-ChildItem publish/netX -File |
             Sort-Object Length -Descending |
             Select-Object -First 40 Name, @{n='MB';e={[math]::Round($_.Length/1MB,2)}} |
             Format-Table -AutoSize | Out-String -Width 200
 
-          Get-ChildItem publish/NetTrans -Directory |
+          Get-ChildItem publish/netX -Directory |
             Select-Object Name, @{n='MB';e={[math]::Round((Get-ChildItem $_.FullName -Recurse -File | Measure-Object Length -Sum).Sum/1MB,2)}} |
             Sort-Object MB -Descending |
             Format-Table -AutoSize | Out-String -Width 200
 
-          $total = (Get-ChildItem publish/NetTrans -Recurse -File | Measure-Object Length -Sum)
+          $total = (Get-ChildItem publish/netX -Recurse -File | Measure-Object Length -Sum)
           "total files: $($total.Count), $([math]::Round($total.Sum/1MB,1)) MB"
 
       # Builds every control on its own first, sheets included -- they take
@@ -149,8 +149,8 @@ jobs:
       - name: XAML probe
         shell: pwsh
         run: |
-          $exe = Join-Path $PWD 'publish/NetTrans/NetTrans.exe'
-          $log = Join-Path $PWD 'publish/NetTrans/NetTrans.startup.log'
+          $exe = Join-Path $PWD 'publish/netX/netX.exe'
+          $log = Join-Path $PWD 'publish/netX/netX.startup.log'
 
           $probe = Start-Process $exe -ArgumentList '--demo','--xamlprobe' -PassThru
           if (-not $probe.WaitForExit(60000)) { throw '逐个构造没有在 60 秒内结束' }
@@ -178,14 +178,14 @@ jobs:
       - name: Smoke test (--demo)
         shell: pwsh
         run: |
-          $exe = Join-Path $PWD 'publish/NetTrans/NetTrans.exe'
-          $log = Join-Path $PWD 'publish/NetTrans/NetTrans.startup.log'
+          $exe = Join-Path $PWD 'publish/netX/netX.exe'
+          $log = Join-Path $PWD 'publish/netX/netX.startup.log'
 
           $app = Start-Process $exe -ArgumentList '--demo' -PassThru
           Start-Sleep -Seconds 20
 
           if (Test-Path $log) {
-            Write-Host '--- NetTrans.startup.log ---'
+            Write-Host '--- netX.startup.log ---'
             Get-Content $log | Write-Host
             Write-Host '--- end ---'
           } else {
@@ -193,7 +193,7 @@ jobs:
           }
 
           if ($app.HasExited) {
-            throw "NetTrans exited on its own with code $($app.ExitCode) -- it should still be running."
+            throw "netX exited on its own with code $($app.ExitCode) -- it should still be running."
           }
 
           Stop-Process -Id $app.Id -Force
@@ -226,8 +226,8 @@ jobs:
             Write-Host "分辨率没能改，按原样截：$_"
           }
 
-          $exe = Join-Path $PWD 'publish/NetTrans/NetTrans.exe'
-          $log = Join-Path $PWD 'publish/NetTrans/NetTrans.startup.log'
+          $exe = Join-Path $PWD 'publish/netX/netX.exe'
+          $log = Join-Path $PWD 'publish/netX/netX.startup.log'
 
           $app = Start-Process $exe -ArgumentList '--demo' -PassThru
 
@@ -278,8 +278,8 @@ jobs:
           # handoff's six tasks. Nobody's first run looks like that -- they get
           # an empty queue, and the handoff never draws that screen, so it is
           # the one nothing has ever been compared against. Grab it too.
-          Remove-Item (Join-Path $PWD 'publish/NetTrans/NetTrans.settings.json') -ErrorAction SilentlyContinue
-          Remove-Item (Join-Path $PWD 'publish/NetTrans/NetTrans.state.json') -ErrorAction SilentlyContinue
+          Remove-Item (Join-Path $PWD 'publish/netX/netX.settings.json') -ErrorAction SilentlyContinue
+          Remove-Item (Join-Path $PWD 'publish/netX/netX.state.json') -ErrorAction SilentlyContinue
 
           $fresh = Start-Process $exe -PassThru
           $ready = $false
@@ -306,8 +306,8 @@ jobs:
       - name: Screens (--screens)
         shell: pwsh
         run: |
-          $exe = Join-Path $PWD 'publish/NetTrans/NetTrans.exe'
-          $log = Join-Path $PWD 'publish/NetTrans/NetTrans.startup.log'
+          $exe = Join-Path $PWD 'publish/netX/netX.exe'
+          $log = Join-Path $PWD 'publish/netX/netX.startup.log'
           $out = Join-Path $PWD 'screenshots/screens'
 
           $walk = Start-Process $exe -ArgumentList '--demo','--screens',$out -PassThru
@@ -331,7 +331,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: NetTrans-screenshots
+          name: netX-screenshots
           path: screenshots
           retention-days: 30
 
@@ -356,7 +356,7 @@ jobs:
           New-Payload 'small.txt'    (1MB)
           New-Payload 'pagefile.sys' (12MB)
 
-          $exe = Join-Path $PWD 'publish/NetTrans/NetTrans.exe'
+          $exe = Join-Path $PWD 'publish/netX/netX.exe'
           $report = Join-Path $PWD 'bigfile-report.md'
 
           $tool = Start-Process $exe -ArgumentList '--bigfiles',$dir,'--min-size','8MB','--offline','--no-wait','--report',$report -PassThru -Wait
@@ -370,16 +370,16 @@ jobs:
           if ($text -match 'small\.txt')       { throw '报告里有 small.txt —— 门槛没生效' }
           if ($text -match 'pagefile\.sys')    { throw '报告里有 pagefile.sys —— 系统文件没被排除' }
 
-          $ledger = Join-Path $PWD 'publish/NetTrans/NetTrans.bigfiles.json'
+          $ledger = Join-Path $PWD 'publish/netX/netX.bigfiles.json'
           if (-not (Test-Path $ledger)) { throw '账本没写出来' }
 
           # Its own file, not 哈希库. If the audit ever starts writing into the
           # download database this is where it gets caught.
-          if (Test-Path (Join-Path $PWD 'publish/NetTrans/NetTrans.hashes.json')) {
+          if (Test-Path (Join-Path $PWD 'publish/netX/netX.hashes.json')) {
             throw '大文件核对写进了主程序的哈希库'
           }
 
-          Remove-Item $ledger, (Join-Path $PWD 'publish/NetTrans/NetTrans.bigfiles.md') -ErrorAction SilentlyContinue
+          Remove-Item $ledger, (Join-Path $PWD 'publish/netX/netX.bigfiles.md') -ErrorAction SilentlyContinue
           Remove-Item $dir -Recurse -Force
 
           if ($tool.ExitCode -ne 0) { throw "大文件核对退出码 $($tool.ExitCode)，应为 0" }
@@ -403,7 +403,7 @@ jobs:
             (Get-Item $path).LastWriteTimeUtc = (Get-Date).AddDays(-1).ToUniversalTime()
           }
 
-          $exe  = Join-Path $PWD 'publish/NetTrans/NetTrans.exe'
+          $exe  = Join-Path $PWD 'publish/netX/netX.exe'
           $plan = Join-Path $PWD 'tidy-plan.json'
 
           $draft = Start-Process $exe -ArgumentList '--tidy',$dir,'--plan',$plan,'--no-wait' -PassThru -Wait
@@ -435,13 +435,13 @@ jobs:
             if (-not (Test-Path (Join-Path $dir $name))) { throw "还原后 $name 没有回到原位" }
           }
 
-          $journal = Join-Path $PWD 'publish/NetTrans/NetTrans.tidy.json'
+          $journal = Join-Path $PWD 'publish/netX/netX.tidy.json'
           if (-not (Test-Path $journal)) { throw '整理日志没写出来' }
-          if (Test-Path (Join-Path $PWD 'publish/NetTrans/NetTrans.hashes.json')) {
+          if (Test-Path (Join-Path $PWD 'publish/netX/netX.hashes.json')) {
             throw '深度整理写进了主程序的哈希库'
           }
 
-          Remove-Item $journal, $plan, (Join-Path $PWD 'publish/NetTrans/NetTrans.tidy.md') -ErrorAction SilentlyContinue
+          Remove-Item $journal, $plan, (Join-Path $PWD 'publish/netX/netX.tidy.md') -ErrorAction SilentlyContinue
           Remove-Item $dir -Recurse -Force
 
       # Last, so it is the easy thing to find when the smoke test above failed.
@@ -451,8 +451,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: NetTrans-win-x64
-          path: publish/NetTrans
+          name: netX-win-x64
+          path: publish/netX
           retention-days: 30
 
       # Dead last on purpose: whatever went wrong, this is the tail of the log.
@@ -460,11 +460,11 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          $root = 'publish/NetTrans'
-          $log  = Join-Path $root 'NetTrans.startup.log'
+          $root = 'publish/netX'
+          $log  = Join-Path $root 'netX.startup.log'
 
           "resources.pri : $(Test-Path (Join-Path $root 'resources.pri'))"
-          "NetTrans.pri  : $(Test-Path (Join-Path $root 'NetTrans.pri'))"
+          "netX.pri     : $(Test-Path (Join-Path $root 'netX.pri'))"
 
           if (Test-Path $log) {
             "--- last 12 lines of the startup log ---"
@@ -486,7 +486,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: NetTrans-screenshots
+          name: netX-screenshots
           path: screenshots
 
       - name: Measure the frame against the handoff
@@ -524,8 +524,8 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: NetTrans-win-x64
-          path: NetTrans
+          name: netX-win-x64
+          path: netX
 
       # The frame the app drew of itself on the runner. Attached to the release
       # so "像不像设计稿" can be settled by looking, from a URL that needs no
@@ -533,29 +533,29 @@ jobs:
       - uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          name: NetTrans-screenshots
+          name: netX-screenshots
           path: screenshots
 
       - name: Zip it
         run: |
-          zip -qr "NetTrans-$TAG-win-x64.zip" NetTrans
-          ls -lh "NetTrans-$TAG-win-x64.zip"
+          zip -qr "netX-$TAG-win-x64.zip" netX
+          ls -lh "netX-$TAG-win-x64.zip"
 
           if [ -f screenshots/desktop.png ]; then
-            cp screenshots/desktop.png "NetTrans-$TAG-screenshot.png"
-            ls -lh "NetTrans-$TAG-screenshot.png"
+            cp screenshots/desktop.png "netX-$TAG-screenshot.png"
+            ls -lh "netX-$TAG-screenshot.png"
           fi
 
           if [ -f screenshots/first-run.png ]; then
-            cp screenshots/first-run.png "NetTrans-$TAG-first-run.png"
-            ls -lh "NetTrans-$TAG-first-run.png"
+            cp screenshots/first-run.png "netX-$TAG-first-run.png"
+            ls -lh "netX-$TAG-first-run.png"
           fi
 
           if [ -d screenshots/screens ]; then
-            zip -qrj "NetTrans-$TAG-screens.zip" screenshots/screens
+            zip -qrj "netX-$TAG-screens.zip" screenshots/screens
             pip install --quiet pillow
-            python3 tools/contact-sheet.py screenshots/screens "NetTrans-$TAG-screens.png"
-            ls -lh "NetTrans-$TAG-screens.zip" "NetTrans-$TAG-screens.png"
+            python3 tools/contact-sheet.py screenshots/screens "netX-$TAG-screens.png"
+            ls -lh "netX-$TAG-screens.zip" "netX-$TAG-screens.png"
           fi
 
       - name: Publish the release
@@ -573,14 +573,14 @@ jobs:
           )
 
           shots=""
-          [ -f "NetTrans-$TAG-screenshot.png" ] && shots="$shots NetTrans-$TAG-screenshot.png"
-          [ -f "NetTrans-$TAG-first-run.png" ] && shots="$shots NetTrans-$TAG-first-run.png"
-          [ -f "NetTrans-$TAG-screens.png" ] && shots="$shots NetTrans-$TAG-screens.png"
-          [ -f "NetTrans-$TAG-screens.zip" ] && shots="$shots NetTrans-$TAG-screens.zip"
+          [ -f "netX-$TAG-screenshot.png" ] && shots="$shots netX-$TAG-screenshot.png"
+          [ -f "netX-$TAG-first-run.png" ] && shots="$shots netX-$TAG-first-run.png"
+          [ -f "netX-$TAG-screens.png" ] && shots="$shots netX-$TAG-screens.png"
+          [ -f "netX-$TAG-screens.zip" ] && shots="$shots netX-$TAG-screens.zip"
 
-          gh release create "$TAG" "NetTrans-$TAG-win-x64.zip" $shots \
+          gh release create "$TAG" "netX-$TAG-win-x64.zip" $shots \
             --target "${{ github.sha }}" \
-            --title "NetTrans $TAG" \
+            --title "netX $TAG" \
             --notes "$notes"
 
           gh release view "$TAG" --json url --jq .url

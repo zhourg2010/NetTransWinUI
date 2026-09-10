@@ -119,7 +119,13 @@ def find_frame(image):
     while right < width and is_light(px[right, middle]):
         right += 1
 
-    seam = left + FRAME_WIDTH - 4
+    # Just past the seam, not just before it: the task frame draws the bonded
+    # neighbour's shadow across its own last 40px, and a probe inside that
+    # gradient reads too dark to count as window surface at all — which
+    # measured the window as 587px tall. The inspector's side of the seam is
+    # flat, and square-cornered because it is bonded, so it is the one column
+    # that is neither rounded nor shadowed.
+    seam = left + FRAME_WIDTH + 4
     if 0 <= seam < width:
         top, bottom = span_through(image, seam, middle)
 
@@ -170,7 +176,10 @@ def separators(image, left, top, bottom):
     """
     px = image.load()
     start = left + 80
-    end = left + FRAME_WIDTH - 24
+
+    # Stop short of the bonded edge: the shadow there drags the surface down
+    # near the hairline range and there is nothing to measure in it anyway.
+    end = left + FRAME_WIDTH - 48
 
     found = []
     for y in range(top, bottom):

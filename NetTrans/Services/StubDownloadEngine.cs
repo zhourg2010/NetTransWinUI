@@ -32,7 +32,7 @@ public sealed class StubDownloadEngine : IDownloadEngine
     /// Real, even in demo mode: 批量下载 and 视频嗅探 read pages off the network,
     /// and there is nothing to fake about that.
     /// </summary>
-    public NetTrans.Net.IHttpTransport Transport { get; } = new NetTrans.Net.HttpTransport(userAgent: "NetTrans/1.0");
+    public NetTrans.Net.IHttpTransport Transport { get; } = new NetTrans.Net.HttpTransport(userAgent: "netX/1.0");
 
     public double TotalSpeed { get; private set; }
     public double UploadSpeed { get; private set; }

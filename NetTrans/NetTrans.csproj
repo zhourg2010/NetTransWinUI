@@ -46,8 +46,11 @@
     <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
 
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <AssemblyName>NetTrans</AssemblyName>
-    <Product>NetTrans</Product>
+    <AssemblyName>netX</AssemblyName>
+    <Product>netX</Product>
+    <Company>isixSoft</Company>
+    <Authors>isixSoft</Authors>
+    <Copyright>© isixSoft</Copyright>
   </PropertyGroup>
 
   <ItemGroup>

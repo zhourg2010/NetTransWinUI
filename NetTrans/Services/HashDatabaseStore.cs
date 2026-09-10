@@ -17,7 +17,7 @@ public sealed class HashDatabaseStore
 
     public HashDatabaseStore()
     {
-        _path = PortableStorage.PathFor("NetTrans.hashes.json", "hashes.json");
+        _path = PortableStorage.PathFor("netX.hashes.json", "hashes.json");
         _database = new Lazy<HashDatabase>(() => HashDatabase.Load(_path));
     }
 

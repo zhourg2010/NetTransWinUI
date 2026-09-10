@@ -1,4 +1,4 @@
-# NetTrans
+# netX
 
 A WinUI 3 download manager built to the **FlashGet Mini v2** design handoff
 (`FlashgetMini.zip` → `design_handoff_flashget_mini_v2/`): an iOS-idiom desktop
@@ -13,7 +13,7 @@ can be built and tested anywhere:
 
 | Project | Target | Runs on |
 | --- | --- | --- |
-| `NetTrans` | `net8.0/net10.0-windows10.0.19041.0` | Windows only — the WinUI shell |
+| `netX` | `net8.0/net10.0-windows10.0.19041.0` | Windows only — the WinUI shell |
 | `NetTrans.Core` | `net8.0` | anywhere — model, formatting, list, docking and progress rules |
 | `NetTrans.Core.Tests` | `net8.0` | anywhere — xunit tests over `NetTrans.Core` |
 
@@ -118,7 +118,7 @@ NetTrans.Core/              No WinUI, no Windows — buildable and testable anyw
     AiNameClassifier.cs     Optional, names-only, OpenAI-compatible
   Verify/
     HashKind.cs             MD5 / SHA-1 / SHA-256 / SHA-512, recognised by length
-    JsonStore.cs            Atomic write, tolerant read: both of NetTrans' own files
+    JsonStore.cs            Atomic write, tolerant read: both of netX' own files
     ChecksumFile.cs         coreutils, BSD and bare-hash checksum files
     ChecksumSources.cs      Where a published digest might be, given the file's URL
     OnlineChecksums.cs      联网核对: fetch those, take the first that names the file
@@ -180,8 +180,8 @@ SDK on any OS.
 ### Getting a build without a toolchain
 
 The `package` job on every `claude/**` push publishes a self-contained win-x64
-build and attaches it to the run as the **NetTrans-win-x64** artifact: download
-it from the run's page, unzip, double-click `NetTrans.exe`. It carries its own
+build and attaches it to the run as the **netX-win-x64** artifact: download
+it from the run's page, unzip, double-click `netX.exe`. It carries its own
 .NET and Windows App SDK, so there is nothing to install first — barring the
 Visual C++ runtime, which the Windows App SDK needs and most machines already
 have. `--demo` fills the window with the handoff's own seed data without
@@ -195,7 +195,7 @@ every PR into `main`:
 | Job | Runner | What it covers |
 | --- | --- | --- |
 | `test` | `ubuntu-latest` | `dotnet test NetTrans.Core.Tests` — the whole portable half, in ~15s |
-| `build` | `windows-latest` | `dotnet build NetTrans` for both target frameworks |
+| `build` | `windows-latest` | `dotnet build netX` for both target frameworks |
 
 This is the only place the WinUI shell gets compiled, since it was authored
 without a Windows toolchain to hand. It currently builds clean on both
@@ -276,7 +276,7 @@ learn to ignore.
 
 ```
 NETTRANS_LIVE=1 dotnet test NetTrans.Core.Tests/NetTrans.Core.Tests.csproj \
-  --filter FullyQualifiedName~NetTrans.Tests.Live -l "console;verbosity=detailed"
+  --filter FullyQualifiedName~netX.Tests.Live -l "console;verbosity=detailed"
 ```
 
 Twelve mirrors, 8 MB each with a 15-second cap, one at a time — several at once
@@ -363,7 +363,7 @@ network or real files.
   next to the file (`.sha256`, `.sha256sum`, `.sha512`, `.sha1`, `.md5`) and the
   directory's shared list (`SHA256SUMS`, `checksums.txt`) — coreutils, BSD and
   bare-hash formats, PGP-armoured lists included. Whatever it finds goes into
-  `NetTrans.hashes.json` next to the executable, keyed by file name and length.
+  `netX.hashes.json` next to the executable, keyed by file name and length.
   The digest of every finished file goes in too, so the same release downloaded
   again a year later is verified offline and instantly, and a file that comes
   back different from last time is called out even though nobody published a
@@ -395,13 +395,13 @@ network or real files.
   already hashed. From a prompt:
 
   ```
-  NetTrans.exe --bigfiles                          扫描所有固定磁盘
-  NetTrans.exe --bigfiles D:\ISO --min-size 4GB     只看这个目录，门槛 4 GB
-  NetTrans.exe --bigfiles --rehash --offline       重算一遍，不联网
+  netX.exe --bigfiles                          扫描所有固定磁盘
+  netX.exe --bigfiles D:\ISO --min-size 4GB     只看这个目录，门槛 4 GB
+  netX.exe --bigfiles --rehash --offline       重算一遍，不联网
   ```
 
   It borrows the console it was launched from, prints a line per file, and
-  writes `NetTrans.bigfiles.md` beside the ledger. Ctrl-C keeps what it has
+  writes `netX.bigfiles.md` beside the ledger. Ctrl-C keeps what it has
   already computed. Exit code 2 means something did not match.
 - **深度整理（`--tidy`）** files a folder — 桌面 and 下载 by default, or any
   directory named on the command line — into 安装包 / 文档 / 图片（截图 in its
@@ -412,7 +412,7 @@ network or real files.
 
   It is a **预演 by default** — the plan prints as a table of file, size,
   destination and the reason for it, and nothing moves until `--apply`. Every
-  move is written to `NetTrans.tidy.json`, and `--tidy --undo` replays the last
+  move is written to `netX.tidy.json`, and `--tidy --undo` replays the last
   run backwards, refusing any file that has since been moved or replaced rather
   than overwriting it. **Nothing is ever deleted**: what looks like rubbish goes
   to 待清理 and waits for a person. Files touched in the last five minutes are
@@ -446,12 +446,12 @@ network or real files.
   In the app it is 添加菜单 → **深度整理…**. From a prompt or a scheduled task:
 
   ```
-  NetTrans.exe --tidy                          预演：桌面和下载
-  NetTrans.exe --tidy D:\Downloads --ask       一张卡一张卡地问
-  NetTrans.exe --tidy D:\Downloads --plan p.json   产出草稿，人手改
-  NetTrans.exe --tidy --plan p.json --apply    严格按草稿执行
-  NetTrans.exe --tidy D:\Downloads --apply      不问，直接按默认整理
-  NetTrans.exe --tidy --undo                   把上一次整理整批还原
+  netX.exe --tidy                          预演：桌面和下载
+  netX.exe --tidy D:\Downloads --ask       一张卡一张卡地问
+  netX.exe --tidy D:\Downloads --plan p.json   产出草稿，人手改
+  netX.exe --tidy --plan p.json --apply    严格按草稿执行
+  netX.exe --tidy D:\Downloads --apply      不问，直接按默认整理
+  netX.exe --tidy --undo                   把上一次整理整批还原
   ```
 
   The draft is the interface between the two: the wizard writes one, a person
@@ -468,7 +468,7 @@ network or real files.
   which is the only kind of free that stays free and sends nothing anywhere) or
   with any hosted endpoint through `NETTRANS_AI_URL` / `NETTRANS_AI_MODEL` /
   `NETTRANS_AI_KEY`. The key is read from the environment each run and never
-  written to any NetTrans file. The model's reply is data, not instruction: only
+  written to any netX file. The model's reply is data, not instruction: only
   answers about files that were asked about, and only categories that already
   exist, are kept — an invented bucket is discarded. Every failure (no endpoint,
   no model, a timeout, prose instead of JSON) is silent and harmless: those
@@ -602,7 +602,7 @@ everything else.
 PEX, so a magnet with no trackers cannot find peers; MSE/PE encryption; and µTP.
 A private torrent is unaffected by the first of those — it is tracker-only by
 definition — and `PeerDiscoveryAllowed` is the gate any of them has to pass
-before being added. NetTrans is also not on any private tracker's client
+before being added. netX is also not on any private tracker's client
 whitelist, which some sites check at announce.
 
 ## Deliberate departures from the handoff
@@ -638,7 +638,7 @@ the site:
 - `StubDownloadEngine` is still there behind `--demo`, seeded with the handoff's
   own `SEED` array and ticking on the same 900ms cadence and growth curve.
 - Settings persist **portably**, next to the executable
-  (`NetTrans.settings.json`), falling back to `%LOCALAPPDATA%\NetTrans` when that
+  (`netX.settings.json`), falling back to `%LOCALAPPDATA%\netX` when that
   directory is read-only — matching the 设置 sheet's promise of no registry writes.
 - Clipboard URL detection is live (`Clipboard.ContentChanged`).
 - Still unimplemented: DHT / PEX, BitTorrent transport encryption, and live

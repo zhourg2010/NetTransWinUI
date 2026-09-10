@@ -37,9 +37,15 @@ PROBE = 6
 
 
 def is_light(pixel):
-    """A window surface: near-neutral and bright. The desktop behind it is a blue gradient."""
+    """A window surface: near-neutral and bright. The desktop behind it is a blue gradient.
+
+    The threshold has to be low enough to include a .5px separator (214) as well
+    as the surfaces either side of it (242 and 248): the title bar's rule and the
+    toolbar's run the full width of the frame, so a stricter test cuts the window
+    into three and measures only the middle.
+    """
     red, green, blue = pixel[:3]
-    return abs(red - green) < 10 and abs(green - blue) < 12 and red > 230
+    return abs(red - green) < 10 and abs(green - blue) < 12 and red > 205
 
 
 def is_hairline(colour):

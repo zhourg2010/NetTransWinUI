@@ -26,6 +26,8 @@ FRAME_HEIGHT = 680
 NAV_HEIGHT = 44
 BAR_HEIGHT = 49
 ROW_HEIGHT = 62
+SEG_TOP = 44      # the segmented control butts straight up under the title bar
+SEG_HEIGHT = 32
 
 TOLERANCE = 1
 
@@ -137,6 +139,28 @@ def bands(image, x, top, bottom):
     return out
 
 
+def seg_band(image, left, top, bottom):
+    """The segmented control's track: the one wide band of fill grey up top.
+
+    Its offset is worth checking on its own -- an 11px top margin that the CSS
+    does not have pushed everything below it down by 11px in the inspector, and
+    nothing else in this file would have noticed.
+    """
+    px = image.load()
+    start = left + 24
+    end = left + FRAME_WIDTH - 24
+
+    rows = []
+    for y in range(top, min(top + 140, bottom)):
+        hits = sum(1 for x in range(start, end, 3) if px[x, y][:3] == (228, 228, 233))
+        if hits > (end - start) // 3 * 0.5:
+            rows.append(y - top)
+
+    if not rows:
+        return None, None
+    return rows[0], rows[-1] - rows[0] + 1
+
+
 def separators(image, left, top, bottom):
     """Rows where the task card draws a divider between two rows.
 
@@ -169,21 +193,11 @@ def main():
     check = "--check" in sys.argv
     image = Image.open(sys.argv[1]).convert("RGB")
     left, right, top, bottom = find_frame(image)
+    height = bottom - top
 
     print(f"截图 {image.size[0]}x{image.size[1]}")
     print(f"窗口对 x={left}..{right}  宽 {right - left}")
-    print(f"主窗   y={top}..{bottom}  高 {bottom - top}")
-    print()
-
-    marks = bands(image, left + PROBE, top, bottom)
-    for offset, colour in marks:
-        print(f"  {offset:4d}  rgb{colour}")
-    print()
-
-    # Every full-width rule in the frame: the title bar's, the toolbar's, and
-    # the dividers between task rows.
-    rules = separators(image, left, top, bottom)
-    print(f"分隔线 @ {rules}")
+    print(f"上下   y={top}..{bottom}  高 {height}")
     print()
 
     problems = []
@@ -191,26 +205,45 @@ def main():
     def expect(name, actual, wanted):
         ok = actual is not None and abs(actual - wanted) <= TOLERANCE
         shown = "找不到" if actual is None else str(actual)
-        print(f"{'ok  ' if ok else 'FAIL'} {name:<24} {shown:>7}  应为 {wanted}")
+        print(f"{'ok  ' if ok else 'FAIL'} {name:<22} {shown:>7}  应为 {wanted}")
         if not ok:
             problems.append(f"{name}: {shown}，应为 {wanted}")
 
     expect("两窗合起来的宽度", right - left, FRAME_WIDTH * 2)
-    expect("主窗高度", bottom - top, FRAME_HEIGHT)
+    expect("窗口高度", height, FRAME_HEIGHT)
 
-    nav_rule = next((offset for offset in rules if 20 < offset < 70), None)
-    expect("标题栏高度", None if nav_rule is None else nav_rule + 1, NAV_HEIGHT)
+    for index, name in enumerate(("主窗", "详情窗")):
+        edge = left + index * FRAME_WIDTH
+        print()
+        print(f"── {name} ──")
 
-    bar_rule = next((offset for offset in reversed(rules) if offset > (bottom - top) * 3 // 4), None)
-    expect("工具栏高度", None if bar_rule is None else (bottom - top) - bar_rule, BAR_HEIGHT)
+        marks = bands(image, edge + PROBE, top, bottom)
+        for offset, colour in marks[:12]:
+            print(f"  {offset:4d}  rgb{colour}")
+        if len(marks) > 12:
+            print(f"  … 还有 {len(marks) - 12} 处变化")
 
-    # Row pitch, from the gaps between the dividers inside the card. The last
-    # one sits above 展开更多, which is a different height, so what is wanted is
-    # the gap that repeats, not the average.
-    dividers = [offset for offset in rules if offset != nav_rule and offset != bar_rule]
-    gaps = [b - a for a, b in zip(dividers, dividers[1:])]
-    pitch = max(set(gaps), key=gaps.count) if gaps else None
-    expect("任务行高", pitch, ROW_HEIGHT)
+        rules = separators(image, edge, top, bottom)
+        print(f"  分隔线 @ {rules}")
+
+        nav_rule = next((offset for offset in rules if 20 < offset < 70), None)
+        expect(f"{name}标题栏高度", None if nav_rule is None else nav_rule + 1, NAV_HEIGHT)
+
+        seg_top, seg_height = seg_band(image, edge, top, bottom)
+        expect(f"{name}分段控件位置", seg_top, SEG_TOP)
+        expect(f"{name}分段控件高度", seg_height, SEG_HEIGHT)
+
+        # Only the task frame has a toolbar and task rows.
+        if index != 0:
+            continue
+
+        bar_rule = next((offset for offset in reversed(rules) if offset > height * 3 // 4), None)
+        expect("工具栏高度", None if bar_rule is None else height - bar_rule, BAR_HEIGHT)
+
+        dividers = [offset for offset in rules if offset not in (nav_rule, bar_rule)]
+        gaps = [b - a for a, b in zip(dividers, dividers[1:])]
+        pitch = max(set(gaps), key=gaps.count) if gaps else None
+        expect("任务行高", pitch, ROW_HEIGHT)
 
     if check and problems:
         print()

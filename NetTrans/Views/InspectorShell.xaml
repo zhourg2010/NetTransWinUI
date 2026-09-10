@@ -61,14 +61,16 @@
                 <controls:StrokeIcon Data="{StaticResource IconClose}" IconSize="17" Thickness="2.3"/>
             </Button>
 
-            <Border Grid.ColumnSpan="3" Style="{StaticResource HairlineStyle}" VerticalAlignment="Bottom"/>
+            <!-- Negative margin cancels the bar's 12px padding: the rule runs
+                 the full 536, as it does in the task frame. -->
+            <Border Grid.ColumnSpan="3" Margin="-12,0" Style="{StaticResource HairlineStyle}" VerticalAlignment="Bottom"/>
         </Grid>
 
         <!-- ── .seg ──────────────────────────────────────────────────────── -->
         <controls:SegmentedControl
             x:Name="Tabs"
             Grid.Row="1"
-            Margin="12,11,12,11"
+            Margin="12,0,12,11"
             SelectionChanged="OnTabChanged"/>
 
         <!-- ── .side__body ───────────────────────────────────────────────── -->

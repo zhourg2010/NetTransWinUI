@@ -12,7 +12,7 @@
         Tight sizes a line to the ink of the glyphs that happen to be in it, so
         the same style measured 11px for a Latin name and more for a CJK one,
         and a stack of name + sub + progress came out 31px where the design's
-        is 44 -- the row collapsed from 62px to 54px and the sub line's
+        is 44 —— the row collapsed from 62px to 54px and the sub line's
         descenders painted straight through the progress bar. Every line box
         below is the height the handoff's own render reports for that class,
         with BlockLineHeight so the box is exactly that and nothing else.

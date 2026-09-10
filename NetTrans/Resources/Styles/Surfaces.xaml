@@ -34,7 +34,7 @@
         The CSS is border-radius:20px on a 19px-tall pill, which CSS clamps to
         half the box. WinUI does not clamp: a radius larger than half the side
         makes the two arcs meet past each other and the badge drew as a lens.
-        So the clamped value is written out -- half of 15px line + 2px padding
+        So the clamped value is written out —— half of 15px line + 2px padding
         top and bottom.
     -->
     <Style x:Key="BadgeStyle" TargetType="Border">

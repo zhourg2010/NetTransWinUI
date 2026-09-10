@@ -61,6 +61,18 @@ def main() -> int:
             if key not in defined:
                 problems.append(f"{name}: {{StaticResource {key}}} — no x:Key defines it")
 
+        # XML forbids "--" inside a comment, and the XAML compiler reports it as
+        # "Xaml Internal Error WMC9999" against a file in the SDK rather than
+        # against the file that has it. An em dash in a sentence is the way
+        # anyone writes into that trap.
+        raw = open(path, encoding="utf-8").read()
+        for m in re.finditer(r"<!--(.*?)-->", raw, re.S):
+            if "--" in m.group(1):
+                line = raw[: m.start()].count("\n") + 1
+                problems.append(
+                    f"{name}:{line}: 注释里有 '--' — XML 不允许，编译器会报成 WMC9999"
+                )
+
     for problem in problems:
         print(problem)
 

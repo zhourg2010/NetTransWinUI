@@ -470,7 +470,12 @@ public sealed class ShellHost : IDisposable
         await walk.CaptureAsync("main-filtered-empty", _mainShell, w, h);
         model.Query = "";
 
-        if (_mainShell.RealisedRows().FirstOrDefault() is { } row)
+        // A screen the walk cannot reach must say so, not vanish: the hover
+        // frame went missing for a whole round because this quietly found no
+        // rows and moved on.
+        var row = _mainShell.RealisedRows().FirstOrDefault();
+        if (row is null) Startup.Log("拍 main-row-hover 跳过：一行都没找到");
+        else
         {
             row.ShowSwipe();
             await walk.CaptureAsync("main-row-hover", _mainShell, w, h);

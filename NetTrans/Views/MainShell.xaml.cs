@@ -207,12 +207,29 @@ public sealed partial class MainShell : UserControl
     /// </summary>
     internal void ClosePopover() => DismissPopover();
 
-    /// <summary>Every task row currently realised, so the walker can open one's hover actions.</summary>
-    internal IEnumerable<TaskRow> RealisedRows()
+    /// <summary>
+    /// Every task row on screen, so the walker can open one's hover actions.
+    ///
+    /// Walks the tree rather than asking the repeater: TryGetElement over
+    /// ItemsSourceView returned nothing, and the walk silently skipped the
+    /// hover screen instead of failing, which is the same way a check stops
+    /// checking without anyone noticing.
+    /// </summary>
+    internal IEnumerable<TaskRow> RealisedRows() => Descendants<TaskRow>(Rows);
+
+    private static IEnumerable<T> Descendants<T>(DependencyObject root) where T : DependencyObject
     {
-        for (int i = 0; i < Rows.ItemsSourceView?.Count; i++)
+        int count = VisualTreeHelper.GetChildrenCount(root);
+
+        for (int i = 0; i < count; i++)
         {
-            if (Rows.TryGetElement(i) is TaskRow row) yield return row;
+            var child = VisualTreeHelper.GetChild(root, i);
+
+            if (child is T match) yield return match;
+            else
+            {
+                foreach (var deeper in Descendants<T>(child)) yield return deeper;
+            }
         }
     }
 

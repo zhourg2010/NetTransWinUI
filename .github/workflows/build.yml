@@ -300,6 +300,34 @@ jobs:
           Stop-Process -Id $fresh.Id -Force
           Remove-Item $log -ErrorAction SilentlyContinue
 
+      # 每一屏: the app walks its own states and renders each to a PNG. This is
+      # the only thing that makes "每一个页面" checkable at all -- before it,
+      # exactly one screen of about twenty had ever been looked at.
+      - name: Screens (--screens)
+        shell: pwsh
+        run: |
+          $exe = Join-Path $PWD 'publish/NetTrans/NetTrans.exe'
+          $log = Join-Path $PWD 'publish/NetTrans/NetTrans.startup.log'
+          $out = Join-Path $PWD 'screenshots/screens'
+
+          $walk = Start-Process $exe -ArgumentList '--demo','--screens',$out -PassThru
+          if (-not $walk.WaitForExit(240000)) {
+            Stop-Process -Id $walk.Id -Force
+            throw '逐屏截图没有在 4 分钟内结束'
+          }
+
+          if (Test-Path $log) { Get-Content $log | Where-Object { $_ -match '拍|逐屏' } | Write-Host }
+
+          $shots = @(Get-ChildItem $out -Filter *.png -ErrorAction SilentlyContinue)
+          "拍到 $($shots.Count) 屏"
+          $shots | Select-Object Name, @{n='KB';e={[math]::Round($_.Length/1KB)}} | Format-Table -AutoSize | Out-String -Width 120
+
+          # A walk that silently captured nothing is the failure mode that
+          # matters; every screen it does produce is evidence either way.
+          if ($shots.Count -lt 15) { throw "只拍到 $($shots.Count) 屏，应有二十屏上下 —— 走查没跑完" }
+
+          Remove-Item $log -ErrorAction SilentlyContinue
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -485,7 +513,7 @@ jobs:
       contents: write
 
     env:
-      TAG: v0.1.6
+      TAG: v0.1.7
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_REPO: ${{ github.repository }}
 
@@ -519,6 +547,13 @@ jobs:
             ls -lh "NetTrans-$TAG-first-run.png"
           fi
 
+          if [ -d screenshots/screens ]; then
+            zip -qrj "NetTrans-$TAG-screens.zip" screenshots/screens
+            pip install --quiet pillow
+            python3 tools/contact-sheet.py screenshots/screens "NetTrans-$TAG-screens.png"
+            ls -lh "NetTrans-$TAG-screens.zip" "NetTrans-$TAG-screens.png"
+          fi
+
       - name: Publish the release
         run: |
           notes=$(cat <<'TEXT'
@@ -536,6 +571,8 @@ jobs:
           shots=""
           [ -f "NetTrans-$TAG-screenshot.png" ] && shots="$shots NetTrans-$TAG-screenshot.png"
           [ -f "NetTrans-$TAG-first-run.png" ] && shots="$shots NetTrans-$TAG-first-run.png"
+          [ -f "NetTrans-$TAG-screens.png" ] && shots="$shots NetTrans-$TAG-screens.png"
+          [ -f "NetTrans-$TAG-screens.zip" ] && shots="$shots NetTrans-$TAG-screens.zip"
 
           gh release create "$TAG" "NetTrans-$TAG-win-x64.zip" $shots \
             --target "${{ github.sha }}" \

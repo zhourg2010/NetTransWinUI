@@ -13,52 +13,13 @@
         Confirmed="OnConfirmed">
 
         <StackPanel>
-            <Border Style="{StaticResource CardStyle}">
-                <StackPanel>
-                    <controls:FormRow Label="" StretchContent="True" ShowSeparator="False">
-                        <TextBox
-                            x:Name="LinkBox"
-                            HorizontalAlignment="Stretch"
-                            Style="{StaticResource FormTextBoxLeftStyle}"
-                            PlaceholderText="magnet:?xt=urn:btih:… 或种子文件路径"
-                            TextChanged="OnLinkChanged"/>
-                    </controls:FormRow>
-
-                    <controls:FormRow x:Name="FileRow" Label="种子文件" ShowChevron="True" Tapped="OnPickFileTapped"/>
-
-                    <controls:FormRow x:Name="SavePathRow" Label="保存到" ShowChevron="True" Tapped="OnSavePathTapped"/>
-
-                    <controls:FormRow Label="顺序下载">
-                        <controls:IosSwitch x:Name="SequentialSwitch"/>
-                    </controls:FormRow>
-
-                    <controls:FormRow Label="上传限速">
-                        <ComboBox x:Name="UploadLimitBox" Style="{StaticResource FormSelectStyle}">
-                            <x:String>不限</x:String>
-                            <x:String>128 KB/s</x:String>
-                            <x:String>512 KB/s</x:String>
-                            <x:String>1 MB/s</x:String>
-                            <x:String>4 MB/s</x:String>
-                        </ComboBox>
-                    </controls:FormRow>
-
-                    <controls:FormRow Label="做种限制">
-                        <ComboBox x:Name="SeedingBox" Style="{StaticResource FormSelectStyle}">
-                            <x:String>一直做种</x:String>
-                            <x:String>分享率 1.0</x:String>
-                            <x:String>分享率 2.0</x:String>
-                            <x:String>做种 60 分钟</x:String>
-                            <x:String>下完即停</x:String>
-                        </ComboBox>
-                    </controls:FormRow>
-                </StackPanel>
-            </Border>
-
             <!--
-                种子内容: what the handoff draws once a torrent is loaded, which
-                is the only state of this sheet it draws at all. The rows above
-                are the state before one is loaded, which the design leaves out
-                and a real app cannot.
+                种子内容: what the handoff draws once a torrent is loaded, and
+                the only state of this sheet it draws at all. It comes first so
+                that a loaded sheet leads with its contents, the way the design
+                does; while nothing is loaded it is collapsed and the form below
+                is what shows. That form — paste a link, pick a file — is the
+                state the design leaves out and a real app cannot.
             -->
             <StackPanel x:Name="ContentsSection" Visibility="Collapsed">
                 <Border Margin="0,14,0,0" Style="{StaticResource CardStyle}">
@@ -107,5 +68,46 @@
                 </StackPanel>
             </Border>
         </StackPanel>
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel>
+                    <controls:FormRow Label="" StretchContent="True" ShowSeparator="False">
+                        <TextBox
+                            x:Name="LinkBox"
+                            HorizontalAlignment="Stretch"
+                            Style="{StaticResource FormTextBoxLeftStyle}"
+                            PlaceholderText="magnet:?xt=urn:btih:… 或种子文件路径"
+                            TextChanged="OnLinkChanged"/>
+                    </controls:FormRow>
+
+                    <controls:FormRow x:Name="FileRow" Label="种子文件" ShowChevron="True" Tapped="OnPickFileTapped"/>
+
+                    <controls:FormRow x:Name="SavePathRow" Label="保存到" ShowChevron="True" Tapped="OnSavePathTapped"/>
+
+                    <controls:FormRow Label="顺序下载">
+                        <controls:IosSwitch x:Name="SequentialSwitch"/>
+                    </controls:FormRow>
+
+                    <controls:FormRow Label="上传限速">
+                        <ComboBox x:Name="UploadLimitBox" Style="{StaticResource FormSelectStyle}">
+                            <x:String>不限</x:String>
+                            <x:String>128 KB/s</x:String>
+                            <x:String>512 KB/s</x:String>
+                            <x:String>1 MB/s</x:String>
+                            <x:String>4 MB/s</x:String>
+                        </ComboBox>
+                    </controls:FormRow>
+
+                    <controls:FormRow Label="做种限制">
+                        <ComboBox x:Name="SeedingBox" Style="{StaticResource FormSelectStyle}">
+                            <x:String>一直做种</x:String>
+                            <x:String>分享率 1.0</x:String>
+                            <x:String>分享率 2.0</x:String>
+                            <x:String>做种 60 分钟</x:String>
+                            <x:String>下完即停</x:String>
+                        </ComboBox>
+                    </controls:FormRow>
+                </StackPanel>
+            </Border>
+
     </controls:SheetHost>
 </UserControl>

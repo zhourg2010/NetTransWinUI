@@ -156,11 +156,19 @@ public sealed partial class TorrentSheet : UserControl
 
         Host.IsRightEnabled = chosen.Count > 0 && TorrentUrl.IsTorrent(NetTrans.Net.PrivateLinks.Unwrap(LinkBox.Text));
 
+        // 总大小 tracks the ticks: unticking a file takes it off the total, which
+        // is what "未勾选的文件不会占用磁盘空间" is telling the reader.
         long bytes = chosen.Count == 0 ? 0 : FileSelection.BytesFor(_metainfo, chosen);
+        TorrentSizeRow.Value = FormatHelpers.Bytes(bytes);
 
-        // 节点 / 种子 is the design's third row; until a swarm is joined the
-        // count is not known, so it says so rather than showing a made-up 0.
-        TorrentPeersRow.Value = $"已选 {chosen.Count}/{_metainfo.Files.Count} · {FormatHelpers.Bytes(bytes)}";
+        // 节点 / 种子 is what the design's third row says, and it is about the
+        // swarm — not about what is ticked. Before the transfer starts there is
+        // no swarm to count, so it says so rather than showing a made-up 0.
+        TorrentPeersRow.Value = "开始后统计";
+
+        // The count of ticked files belongs on the confirm button, which is
+        // where the design puts it: 下载 3.
+        Host.RightLabel = chosen.Count > 0 ? $"下载 {chosen.Count}" : "下载";
     }
 
     private List<TorrentEntry> Chosen() =>

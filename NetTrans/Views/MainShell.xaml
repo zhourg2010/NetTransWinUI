@@ -94,7 +94,9 @@
                 </Button>
             </StackPanel>
 
-            <Border Grid.ColumnSpan="3" Style="{StaticResource HairlineStyle}" VerticalAlignment="Bottom"/>
+            <!-- Negative margin cancels the bar's 14px padding: the design's
+                 rule runs the full 536, not just the padded box. -->
+            <Border Grid.ColumnSpan="3" Margin="-14,0" Style="{StaticResource HairlineStyle}" VerticalAlignment="Bottom"/>
         </Grid>
 
         <!-- ── .seg ──────────────────────────────────────────────────────── -->
@@ -235,7 +237,8 @@
                 <controls:StrokeIcon Data="{StaticResource IconGear}" IconSize="22"/>
             </Button>
 
-            <Border Grid.ColumnSpan="13" Style="{StaticResource HairlineStyle}" VerticalAlignment="Top"/>
+            <!-- As in the nav bar: the rule is the full width, the padding is not. -->
+            <Border Grid.ColumnSpan="13" Margin="-18,0" Style="{StaticResource HairlineStyle}" VerticalAlignment="Top"/>
         </Grid>
 
         <!-- ── overlays: sheet / popover / toast / banner / drop ──────────── -->

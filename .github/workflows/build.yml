@@ -210,10 +210,10 @@ jobs:
       # up, so the app's own render can be put next to the handoff's render
       # instead of arguing from memory about what it looks like.
       #
-      # continue-on-error: a screenshot is evidence, not a gate. A runner that
-      # will not hand over its framebuffer must not turn the build red.
+      # Not continue-on-error: the fidelity job below measures this PNG, and a
+      # check that quietly stops running is a check that is not there -- which
+      # is exactly how the XAML probe went dead for weeks.
       - name: Screenshot (--demo)
-        continue-on-error: true
         shell: pwsh
         run: |
           # The handoff is 536x680 per window plus the island above it, and two
@@ -418,6 +418,27 @@ jobs:
           } else {
             "no startup log"
           }
+
+  # 还原度: the handoff says "按像素还原", so this measures the pixels. It reads
+  # the frame the app drew on the runner and checks the bands against the
+  # handoff's own numbers -- 536x680, a 44px title bar, a 49px toolbar, 62px
+  # task rows. Looking at the screenshot by eye found all of these; this is so
+  # nobody has to look again.
+  fidelity:
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: NetTrans-screenshots
+          path: screenshots
+
+      - name: Measure the frame against the handoff
+        run: |
+          pip install --quiet pillow
+          python3 tools/measure-frame.py screenshots/desktop.png --check
 
   # Dispatched by hand (Actions → build → Run workflow), never on a push: turns
   # the run's zip into a GitHub Release, which is a link that needs no login and

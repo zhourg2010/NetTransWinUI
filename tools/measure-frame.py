@@ -37,6 +37,9 @@ TOLERANCE = 1
 # crosses is a real full-width band rather than a glyph.
 PROBE = 6
 
+# 贴合缝那根线最多几个像素宽。两扇窗之间只有这一根线，接起来才是一对窗。
+SEAM_GAP = 3
+
 
 def is_light(pixel):
     """A window surface: near-neutral and bright. The desktop behind it is a blue gradient.
@@ -91,19 +94,36 @@ def find_frame(image):
     best = None
 
     for y in range(0, height, 4):
+        # 先把这一行的亮段收齐，再把相隔 SEAM_GAP 以内的接起来。贴合缝上
+        # 那根 rgba(0,0,0,.16) 的线本来就不亮，两扇窗于是被它切成两段 ——
+        # 之前能量对是因为投影够重，压在白卡片上正好落在 205 的另一侧；
+        # 投影一改薄，整把尺子就只看见右边那扇窗，还把探针扎到窗外去了。
+        # 缝的深浅本就不该决定"这里有几扇窗"。
+        runs = []
         start = None
         for x in range(width + 1):
             if x < width and is_light(px[x, y]):
                 if start is None:
                     start = x
             else:
-                if start is not None and x - start > 400 and (start, x) not in seen:
-                    seen.add((start, x))
-                    top, bottom = span_through(image, start + PROBE, y)
-                    area = (x - start) * (bottom - top)
-                    if best is None or area > best[0]:
-                        best = (area, start, x, top, bottom)
+                if start is not None:
+                    runs.append((start, x))
                 start = None
+
+        merged = []
+        for a, b in runs:
+            if merged and a - merged[-1][1] <= SEAM_GAP:
+                merged[-1] = (merged[-1][0], b)
+            else:
+                merged.append((a, b))
+
+        for a, b in merged:
+            if b - a > 400 and (a, b) not in seen:
+                seen.add((a, b))
+                top, bottom = span_through(image, a + PROBE, y)
+                area = (b - a) * (bottom - top)
+                if best is None or area > best[0]:
+                    best = (area, a, b, top, bottom)
 
     if best is None:
         raise SystemExit("截图里没有窗口 —— 整张图都是背景")
@@ -126,7 +146,7 @@ def find_frame(image):
     # flat, and square-cornered because it is bonded, so it is the one column
     # that is neither rounded nor shadowed.
     seam = left + FRAME_WIDTH + 4
-    if 0 <= seam < width:
+    if right - left > FRAME_WIDTH + 8 and 0 <= seam < width:
         top, bottom = span_through(image, seam, middle)
 
     return left, right, top, bottom

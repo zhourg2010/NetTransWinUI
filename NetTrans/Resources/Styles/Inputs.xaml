@@ -16,13 +16,22 @@
         <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
 
-    <!-- .frow input[type=text]: a borderless field sitting inside a form row -->
+    <!--
+        .frow input[type=text]: a borderless field sitting inside a form row.
+
+        Height 24，理由和隔壁 FormSelectStyle 的 25 一样：TextBox 的模板
+        自己撑到 32 高，MinHeight="0" 拦不住它（模板里的 ContentPresenter
+        有自己的下限）。24 + FormRow 的上下各 10 = 44，正好是设计稿里
+        .frow 的高度。v0.1.13 的视频嗅探那一屏量出来是 52，整张 sheet 因此
+        比设计稿高 9px —— 高的就是这一格。
+    -->
     <Style x:Key="FormTextBoxStyle" TargetType="TextBox">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{ThemeResource LabelBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamily}"/>
         <Setter Property="FontSize" Value="15"/>
+        <Setter Property="Height" Value="24"/>
         <Setter Property="MinHeight" Value="0"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>

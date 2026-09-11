@@ -35,15 +35,49 @@ public sealed partial class PopoverControl : UserControl
     /// <summary>Raised when the popover should be taken off screen.</summary>
     public event EventHandler? Dismissed;
 
+    /// <summary>菜单想待的位置；量出实际高度之后再据此夹进窗口里。</summary>
+    private Point _wanted;
+
     public PopoverControl()
     {
         InitializeComponent();
+        Card.SizeChanged += (_, _) => ClampIntoView();
+    }
+
+    /// <summary>
+    /// 把菜单整个收进窗口。
+    ///
+    /// 调用方原先是拿 ActualHeight - 380 去夹的 —— 380 是一个写死的"菜单
+    /// 大概多高"。行右键菜单在下载中的任务上有 11 项，远不止 380，于是它
+    /// 从列表顶一直压到窗口底下去。菜单有多高只有量过才知道，所以夹这一步
+    /// 挪到 SizeChanged 里做。
+    /// </summary>
+    private void ClampIntoView()
+    {
+        const double margin = 8;
+
+        double room = Layer.ActualWidth;
+        if (room > 0 && Card.ActualWidth > 0)
+        {
+            double most = Math.Max(margin, room - Card.ActualWidth - margin);
+            Card.Margin = new Thickness(
+                Math.Clamp(_wanted.X, margin, most), Card.Margin.Top, 0, 0);
+        }
+
+        room = Layer.ActualHeight;
+        if (room > 0 && Card.ActualHeight > 0)
+        {
+            double most = Math.Max(margin, room - Card.ActualHeight - margin);
+            Card.Margin = new Thickness(
+                Card.Margin.Left, Math.Clamp(_wanted.Y, margin, most), 0, 0);
+        }
     }
 
     /// <summary>Fills the menu and places its top-left corner at <paramref name="position"/>.</summary>
     public void Show(IEnumerable<PopoverItem> items, Point position, double width = 232)
     {
         Card.Width = width;
+        _wanted = position;
         Card.Margin = new Thickness(position.X, position.Y, 0, 0);
 
         Items.Children.Clear();

@@ -513,11 +513,10 @@ public sealed partial class MainShell : UserControl
         items.Add(new PopoverItem("删除", Glyph("IconTrash"), IsDestructive: true, SeparatorBefore: true,
             Invoke: () => ViewModel.RemoveTaskCommand.Execute(item)));
 
-        var position = new Point(
-            Math.Min(request.Position.X, ActualWidth - 244),
-            Math.Min(request.Position.Y, ActualHeight - 380));
-
-        ShowPopover(items, position, width: PopoverWidth);
+        // 不在这里夹位置：菜单有多高取决于这一行是什么状态（下载中多出
+        // 暂停 / 移到队首 / 移到队尾，已完成多出打开文件），量过才知道。
+        // PopoverControl 会在自己量完之后把整张卡收进窗口。
+        ShowPopover(items, request.Position, width: PopoverWidth);
     }
 
     private void CopyLink(DownloadItemViewModel item)

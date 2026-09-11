@@ -526,6 +526,22 @@ public sealed class ShellHost : IDisposable
         await walk.CaptureAsync("main-toast", _mainShell, w, h);
         model.Toast = null;
 
+        // 完成横幅和关机倒计时：程序里有这两片浮层，而巡回一张都没拍过。
+        // 和当初「CheckRow 写好了却没人用」是同一类 —— 没有图，就等于
+        // 没人看过。
+        if (model.VisibleTasks.FirstOrDefault(task => task.IsDone) is { } finished)
+        {
+            model.Banner = finished;
+            await walk.CaptureAsync("main-banner", _mainShell, w, h);
+            model.Banner = null;
+        }
+
+        model.PendingActionLabel = "全部完成后关机";
+        model.PendingActionSeconds = 17;
+        await walk.CaptureAsync("main-countdown", _mainShell, w, h);
+        model.PendingActionLabel = null;
+        model.PendingActionSeconds = 0;
+
         // ── the sheets ────────────────────────────────────────────────────
         foreach (var sheet in new[] { "add", "batch", "torrent", "sniff", "prefs", "tidy", "bigfiles" })
         {

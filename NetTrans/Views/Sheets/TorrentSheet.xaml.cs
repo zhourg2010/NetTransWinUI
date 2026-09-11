@@ -60,13 +60,13 @@ public sealed partial class TorrentSheet : UserControl
 
         ShowFiles(text);
 
+        // 载入成功那一支没有了：ShowFiles 会把这行整个收起来，设计稿的
+        // 种子内容那一屏底下只有「未勾选的文件不会占用磁盘空间。」一句。
         Summary.Text = !usable && text.Length > 0
             ? "无法识别：需要 magnet: 链接，或以 .torrent 结尾的文件路径 / 网址。"
             : TorrentUrl.IsMagnet(text)
                 ? "磁力链需要先向 peer 索取元数据，文件列表会在开始后出现。"
-                : _metainfo is not null
-                    ? "取消勾选的文件不会下载。"
-                    : "种子文件会在开始后读取，文件列表随即出现。";
+                : "种子文件会在开始后读取，文件列表随即出现。";
     }
 
     /// <summary>
@@ -89,6 +89,7 @@ public sealed partial class TorrentSheet : UserControl
         if (_metainfo is not { Files.Count: > 1 })
         {
             ContentsSection.Visibility = Visibility.Collapsed;
+            ShowEntryHelp(true);
             return;
         }
 
@@ -101,8 +102,8 @@ public sealed partial class TorrentSheet : UserControl
             var file = _metainfo.Files[i];
 
             var row = new CheckRow(
-                file.Path,
-                FormatHelpers.Bytes(file.Length),
+                LeafName(file.Path),
+                FormatHelpers.FileSize(file.Length),
                 isChecked: true,
                 showSeparator: i < _metainfo.Files.Count - 1);
 
@@ -116,7 +117,37 @@ public sealed partial class TorrentSheet : UserControl
         TorrentSizeRow.Value = FormatHelpers.Bytes(_metainfo.Files.Sum(f => f.Length));
 
         ContentsSection.Visibility = Visibility.Visible;
+        ShowEntryHelp(false);
         UpdateFilesHeader();
+    }
+
+    /// <summary>
+    /// 文件行只写文件名。
+    ///
+    /// 多文件种子的每个 path 都以顶层目录开头，直接摆出来就是
+    /// archlinux-2026.08\archlinux-2026.08-x86_64.iso —— 那个前缀在上面的
+    /// 「名称」行已经写过一次了，每行再重复一遍只是把真正要读的文件名挤到
+    /// 一边。设计稿的五行摆的都是叶子名。
+    /// </summary>
+    private static string LeafName(string path)
+    {
+        int cut = path.LastIndexOfAny(new[] { '/', '\\' });
+        return cut >= 0 && cut + 1 < path.Length ? path[(cut + 1)..] : path;
+    }
+
+    /// <summary>
+    /// 载入内容之后，把只跟「还没载入」有关的两段话收起来。
+    ///
+    /// 磁力链那句说的是「文件列表会在开始后出现」—— 列表已经在眼前了；
+    /// DHT 那张卡片是解释为什么有些磁力链连不上 peer，也是入口态的事。
+    /// 设计稿的种子内容那一屏两样都没有，标题也换成了「种子内容」。
+    /// </summary>
+    private void ShowEntryHelp(bool show)
+    {
+        var state = show ? Visibility.Visible : Visibility.Collapsed;
+        Summary.Visibility = state;
+        DhtNotice.Visibility = state;
+        Host.Title = show ? "种子 / 磁力链" : "种子内容";
     }
 
     private static TorrentMetainfo? ReadTorrent(string text)

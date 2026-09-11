@@ -51,6 +51,17 @@ def main() -> int:
                     f"use a concrete type (PathGeometry, SolidColorBrush, …)"
                 )
 
+        # 用户看得见的地方不该再出现旧名字。命名空间和程序集仍叫
+        # NetTrans.*，那是内部标识；Text/PlaceholderText/ToolTip 这些是
+        # 摆在人眼前的字。改名那一版就漏掉了种子 sheet 里 PT 白名单那句，
+        # 一直发到 v0.1.13 才被截图看出来。
+        for m in re.finditer(
+                r'(?:Text|PlaceholderText|Content|Header|Label|'
+                r'ToolTipService\.ToolTip)="([^"]*NetTrans[^"]*)"', text):
+            problems.append(
+                f'{name}: "{m.group(1)}" — 界面上的字还叫 NetTrans，应为 netX'
+            )
+
         for m in re.finditer(r'<PathGeometry[^>]*\sFigures="[^"]*[A-Za-z][^"]*"', text):
             problems.append(
                 f"{name}: PathGeometry Figures=\"M …\" — Figures is a "

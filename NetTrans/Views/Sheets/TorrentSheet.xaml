@@ -36,7 +36,7 @@
                     Text="选择要下载的文件"/>
 
                 <Border Style="{StaticResource CardStyle}">
-                    <ScrollViewer x:Name="FilesCard" MaxHeight="196" VerticalScrollBarVisibility="Auto">
+                    <ScrollViewer x:Name="FilesCard" MaxHeight="220" VerticalScrollBarVisibility="Auto">
                         <StackPanel x:Name="FilesPanel"/>
                     </ScrollViewer>
                 </Border>
@@ -54,6 +54,7 @@
                 Text="磁力链需要先向 peer 索取元数据，文件列表会在开始后出现。"/>
 
             <Border
+                x:Name="DhtNotice"
                 Margin="0,16,0,0"
                 Style="{StaticResource NoticeStyle}"
                 Background="{ThemeResource Fill2Brush}">
@@ -64,7 +65,7 @@
                         Text="DHT 与 PEX 尚未实现，所以没有 tracker 的磁力链暂时无法找到 peer。私有种子本来就只走 tracker，不受影响。"/>
                     <TextBlock
                         Style="{StaticResource NoteTextStyle}"
-                        Text="上传是真实统计并上报 tracker 的。PT 站还需要把客户端加入白名单，NetTrans 目前不在任何站点的名单里。"/>
+                        Text="上传是真实统计并上报 tracker 的。PT 站还需要把客户端加入白名单，netX 目前不在任何站点的名单里。"/>
                 </StackPanel>
             </Border>
             <Border Style="{StaticResource CardStyle}">

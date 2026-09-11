@@ -42,6 +42,36 @@ public class FormatHelpersTests
     public void Speed_matches_the_prototype(long bytesPerSecond, string expected) =>
         Assert.Equal(expected, FormatHelpers.Speed(bytesPerSecond));
 
+    /// <summary>
+    /// 种子内容那一屏，设计稿摆的四个大小。它们在原型里是写死的字符串
+    /// 而不是 mb() 算出来的，所以这里断言的是那四个样本本身。
+    ///
+    /// 顺带钉住 mb() 在这一档上的差别：1 KB 的文件用 Bytes() 会显示成
+    /// "0 MB"，那正是 v0.1.13 截图里的样子。
+    /// </summary>
+    [Theory]
+    [InlineData(3_371_549_327L, "3.14 GB")]
+    [InlineData(190_840_832L, "182 MB")]
+    [InlineData(1024L, "1 KB")]
+    [InlineData(2048L, "2 KB")]
+    [InlineData(1024L * 1024, "1 MB")]
+    [InlineData(1024L * 1024 * 1024, "1.00 GB")]
+    [InlineData(0L, "0 KB")]
+    public void FileSize_spans_KB_to_GB(long bytes, string expected) =>
+        Assert.Equal(expected, FormatHelpers.FileSize(bytes));
+
+    [Fact]
+    public void FileSize_differs_from_mb_only_below_a_megabyte()
+    {
+        Assert.Equal("0 MB", FormatHelpers.Bytes(1024));
+        Assert.Equal("1 KB", FormatHelpers.FileSize(1024));
+
+        foreach (long bytes in new[] { 1024L * 1024, 190_840_832L, 3_371_549_327L })
+        {
+            Assert.Equal(FormatHelpers.Bytes(bytes), FormatHelpers.FileSize(bytes));
+        }
+    }
+
     [Theory]
     [MemberData(nameof(EtaCases))]
     public void Eta_matches_the_prototype(double seconds, string expected) =>

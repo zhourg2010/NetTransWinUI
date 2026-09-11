@@ -23,6 +23,23 @@ public static class FormatHelpers
         ? Fixed(bytes / Gb, 2) + " GB"
         : Fixed(bytes / Mb, 0) + " MB";
 
+    /// <summary>
+    /// 种子里单个文件的大小。
+    ///
+    /// 不能用 <see cref="Bytes"/>：mb() 最小的档就是 MB，一个 1 KB 的
+    /// sha256sums.txt 会显示成 "0 MB"。设计稿的种子内容那一屏摆的是
+    /// 3.14 GB / 182 MB / 1 KB / 2 KB —— 四个样本把三档都写清楚了：
+    /// 1 GB 以上两位小数，1 MB 以上整数 MB，再小就是整数 KB。
+    ///
+    /// 设计稿里这四个值是手写死的字符串，不是 mb() 算出来的，所以这是
+    /// 补上设计稿没给出算法的那一档，不是改掉 mb()。
+    /// </summary>
+    public static string FileSize(double bytes) => bytes >= Gb
+        ? Fixed(bytes / Gb, 2) + " GB"
+        : bytes >= Mb
+            ? Fixed(bytes / Mb, 0) + " MB"
+            : Fixed(bytes / Kb, 0) + " KB";
+
     /// <summary>spd(): empty at zero, "1.2 MB/s" at or above 1 MB/s, otherwise whole KB/s.</summary>
     public static string Speed(double bytesPerSecond)
     {

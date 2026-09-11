@@ -21,8 +21,12 @@ public static class SampleTorrent
     {
         var files = new (string Name, long Length)[]
         {
-            ("archlinux-2026.08-x86_64.iso", 3_140_000_000),
-            ("archlinux-bootstrap.tar.zst", 182_000_000),
+            // 字节数按 1024 进制倒推设计稿上那几个字：3.14 GB 和 182 MB。
+            // 原来写的是十进制的 3_140_000_000，显示出来是 2.92 GB，截图
+            // 和设计稿并排就对不上 —— 差的是进制，不是布局。
+            // 五个加起来 3_562_394_255，正好也是设计稿的总大小 3.32 GB。
+            ("archlinux-2026.08-x86_64.iso", 3_371_549_327),
+            ("archlinux-bootstrap.tar.zst", 190_840_832),
             ("sha256sums.txt", 1024),
             ("sha256sums.txt.sig", 1024),
             ("magnet-mirrors.txt", 2048),

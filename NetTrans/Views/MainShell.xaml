@@ -317,6 +317,19 @@
             Visibility="Collapsed"
             IsHitTestVisible="False"/>
 
+        <!--
+            缝上那一根线。设计稿里它是详情窗的 border-left: .5px
+            rgba(0,0,0,.16)，和上面那片柔和的投影是两回事：投影在缝左
+            46px 里只暗下去总量的两成，剩下八成是这根线一次落下的。
+            早先把两者揉成一条渐变，结果就是一整片过重的暗带。
+        -->
+        <Rectangle
+            x:Name="BondEdge"
+            Grid.RowSpan="4"
+            Visibility="Collapsed"
+            IsHitTestVisible="False"
+            Fill="#29000000"/>
+
         <!-- ── overlays: sheet / popover / toast / banner / drop ──────────── -->
         <Grid Grid.RowSpan="4">
 

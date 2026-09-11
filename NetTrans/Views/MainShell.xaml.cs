@@ -210,22 +210,49 @@ public sealed partial class MainShell : UserControl
     internal void ClosePopover() => DismissPopover();
 
     /// <summary>How far the neighbour's shadow reaches in, measured off the handoff's render.</summary>
-    private const double BondShadowReach = 40;
+    private const double BondShadowReach = 46;
 
-    /// <summary>Black at 16% right at the seam: 242 group grey reads 203 there.</summary>
-    private const byte BondShadowAlpha = 0x29;
+    /// <summary>
+    /// 缝上那一根线：设计稿里是详情窗的 <c>border-left: .5px rgba(0,0,0,.16)</c>。
+    /// 242 的组底色被它压到 203。
+    /// </summary>
+    private const byte BondEdgeAlpha = 0x29;
+
+    /// <summary>
+    /// 柔和投影自己最深处的黑度。把设计稿里底色干净的 40 行平均出来，
+    /// 缝左 1px 相对底色只暗 3.87%，10/255 = 3.92% 是最近的一档。
+    /// 先前把整条 46px 都拉到 16%，暗了四倍，才有那片死板的暗带。
+    /// </summary>
+    private const byte BondShadowAlpha = 0x0A;
+
+    /// <summary>
+    /// 投影的形状，量自设计稿：一对对的 (位置, 占最深处的几成)，
+    /// 位置 0 是够不到的外沿，1 是缝。中间是高斯尾巴，不是直线 ——
+    /// 上一版拿两段直线拼，接缝处斜率差了 2.3 倍，肉眼就是一道棱。
+    /// </summary>
+    private static readonly (double At, double Of)[] BondShadowRamp =
+    {
+        (0.00, 0.00), (0.13, 0.08), (0.24, 0.14), (0.35, 0.20),
+        (0.46, 0.29), (0.57, 0.41), (0.67, 0.53), (0.78, 0.69),
+        (0.89, 0.86), (1.00, 1.00),
+    };
 
     /// <summary>
     /// Draws the bonded neighbour's shadow across the shared edge.
     ///
     /// Null when nothing is attached. Only the frame underneath carries it —
     /// in the handoff the inspector's own edge stays flat.
+    ///
+    /// 两层：一片 46px 的柔和渐变，加缝上一根 1px 的硬线。设计稿里这两者
+    /// 本就是两个东西（详情窗的 box-shadow 和它的 border-left），揉成一条
+    /// 渐变就会把八成的黑度摊到整片上去。
     /// </summary>
     internal void SetBondShadow(DockSide? side)
     {
         if (side is not { } edge)
         {
             BondShadow.Visibility = Visibility.Collapsed;
+            BondEdge.Visibility = Visibility.Collapsed;
             return;
         }
 
@@ -239,36 +266,49 @@ public sealed partial class MainShell : UserControl
 
         bool horizontal = edge is DockSide.Right or DockSide.Left;
 
-        BondShadow.Width = horizontal ? BondShadowReach : double.NaN;
-        BondShadow.Height = horizontal ? double.NaN : BondShadowReach;
-
-        BondShadow.HorizontalAlignment = edge switch
+        var across = edge switch
         {
             DockSide.Right => HorizontalAlignment.Right,
             DockSide.Left => HorizontalAlignment.Left,
             _ => HorizontalAlignment.Stretch,
         };
 
-        BondShadow.VerticalAlignment = edge switch
+        var down = edge switch
         {
             DockSide.Bottom => VerticalAlignment.Bottom,
             DockSide.Top => VerticalAlignment.Top,
             _ => VerticalAlignment.Stretch,
         };
 
+        BondShadow.Width = horizontal ? BondShadowReach : double.NaN;
+        BondShadow.Height = horizontal ? double.NaN : BondShadowReach;
+        BondShadow.HorizontalAlignment = across;
+        BondShadow.VerticalAlignment = down;
+
+        var stops = new GradientStopCollection();
+        foreach (var (at, of) in BondShadowRamp)
+        {
+            stops.Add(new GradientStop
+            {
+                Offset = at,
+                Color = Color.FromArgb((byte)Math.Round(BondShadowAlpha * of), 0, 0, 0),
+            });
+        }
+
         BondShadow.Fill = new LinearGradientBrush
         {
             StartPoint = from,
             EndPoint = to,
-            GradientStops =
-            {
-                new GradientStop { Offset = 0, Color = Color.FromArgb(0, 0, 0, 0) },
-                new GradientStop { Offset = 0.55, Color = Color.FromArgb((byte)(BondShadowAlpha * 0.35), 0, 0, 0) },
-                new GradientStop { Offset = 1, Color = Color.FromArgb(BondShadowAlpha, 0, 0, 0) },
-            },
+            GradientStops = stops,
         };
 
+        BondEdge.Width = horizontal ? 1 : double.NaN;
+        BondEdge.Height = horizontal ? double.NaN : 1;
+        BondEdge.HorizontalAlignment = across;
+        BondEdge.VerticalAlignment = down;
+
         BondShadow.Visibility = Visibility.Visible;
+        BondEdge.Visibility = Visibility.Visible;
     }
 
     /// <summary>The sheet currently open, so the walk can drive it into its other states.</summary>

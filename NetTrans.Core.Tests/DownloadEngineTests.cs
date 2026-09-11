@@ -338,8 +338,16 @@ public class DownloadEngineTests : IAsyncLifetime
         return bytes;
     }
 
-    /// <summary>Waits for the engine's background work to reach a state, rather than sleeping a fixed amount.</summary>
-    private static async Task Until(Func<bool> condition, int timeoutMilliseconds = 5000)
+    /// <summary>
+    /// Waits for the engine's background work to reach a state, rather than
+    /// sleeping a fixed amount.
+    ///
+    /// 30 秒不是"这些活要跑 30 秒"——条件一成立就返回，本机上全都在几十
+    /// 毫秒内。这只是等待的耐心：CI 的双核机器上七个 job 同时在跑，线程池
+    /// 被挤住的时候 24 个任务走完确实可能超过 5 秒，于是红一次，跟代码无关。
+    /// 断言一个字没放宽，只有等的时间放宽了；代价是真坏掉的时候要多等 25 秒。
+    /// </summary>
+    private static async Task Until(Func<bool> condition, int timeoutMilliseconds = 30000)
     {
         var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMilliseconds);
 

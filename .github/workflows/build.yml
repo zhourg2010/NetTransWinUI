@@ -494,6 +494,11 @@ jobs:
           pip install --quiet pillow
           python3 tools/measure-frame.py screenshots/desktop.png --check
 
+      # 两个窗口吸在一起那道缝。量的是投影的形状，不是"有没有"：
+      # 深浅对了而过渡是一道棱，看上去还是假的。
+      - name: Measure the bonded seam
+        run: python3 tools/measure-seam.py screenshots/desktop.png --check
+
   # Dispatched by hand (Actions → build → Run workflow), never on a push: turns
   # the run's zip into a GitHub Release, which is a link that needs no login and
   # does not expire -- unlike an artifact.

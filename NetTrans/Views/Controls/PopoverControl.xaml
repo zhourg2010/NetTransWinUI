@@ -2,24 +2,43 @@
     x:Class="NetTrans.Views.Controls.PopoverControl"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:ui="using:CommunityToolkit.WinUI">
+    xmlns:ui="using:CommunityToolkit.WinUI"
+    xmlns:media="using:CommunityToolkit.WinUI.Media">
 
-    <!-- `.ctx`: a blurred 13px-radius card of full-width rows. -->
+    <!--
+        `.ctx`: a blurred 13px-radius card of full-width rows。
+
+        CSS 是 background:rgba(250,250,250,.82) 加
+        backdrop-filter:saturate(180%) blur(24px)。这里两层都要：
+        底下一层 BackdropBlurBrush 把菜单后面的东西糊掉，上面一层才是
+        那个 82% 的浅底。
+
+        只做 82% 那一层是不够的 —— 之前就是这样，于是菜单底下那两行任务
+        的文字直接读得出来，而设计稿里什么都看不见。当时我量了菜单的底色
+        （250/251 对 254/255）就说"对上了"，量错了东西：底色本来就对，
+        差的是后面那片有没有被糊过。
+    -->
     <Grid x:Name="Layer" Background="Transparent" Tapped="OnScrimTapped">
         <Border
             x:Name="Card"
             HorizontalAlignment="Left"
             VerticalAlignment="Top"
             Width="232"
-            Background="{ThemeResource PopoverBrush}"
             CornerRadius="{StaticResource RadiusPopover}"
             ui:Effects.Shadow="{StaticResource PopoverShadow}"
             RenderTransformOrigin="0.5,0.1"
             Tapped="OnCardTapped">
+            <Border.Background>
+                <media:BackdropBlurBrush Amount="24"/>
+            </Border.Background>
             <Border.RenderTransform>
                 <ScaleTransform x:Name="CardScale"/>
             </Border.RenderTransform>
-            <StackPanel x:Name="Items"/>
+            <Border
+                Background="{ThemeResource PopoverBrush}"
+                CornerRadius="{StaticResource RadiusPopover}">
+                <StackPanel x:Name="Items"/>
+            </Border>
         </Border>
     </Grid>
 </UserControl>

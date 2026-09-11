@@ -54,7 +54,8 @@
 | 「完成」徽章圆角 | `border-radius:20px` | `9.5` | CSS 会把过大的圆角夹到边长一半，WinUI 不会，20 会画成透镜形 |
 | 行盒高度 | `line-height:normal` | 写死 `LineHeight` | Segoe 的行盒和交付件渲染用的字体不同；写死才能得到交付件那个 62px 的行 |
 | 字体 | SF Pro / Inter Tight | Segoe UI Variable / 微软雅黑 | 目标机器上没有那两个字体 |
-| 毛玻璃 | `backdrop-filter: blur()` | 半透明纯色 | WinUI 没有 backdrop-filter |
+| 毛玻璃 | `backdrop-filter: saturate(180%) blur()` | 只做 blur，不提饱和度 | 右键菜单用 `BackdropBlurBrush(24)` 补上了那层模糊（Win2D 已在产物里）；`saturate(180%)` 要再叠一条 PipelineBrush，而这一层几乎全是中性灰，提饱和度看不出来。banner（88%）和 toast（90%）那个不透明度下糊不糊都一样，仍是半透明纯色 |
+| 出错行的文字颜色 | 渲染出来是灰的 | 副行与右侧读数都是红的 | 交付件的 JSX 明明白白给这两处加了 `rerr`，但 `.rerr{color:var(--red)}` 在样式表第 83 行，`.rsub`/`.rpct` 的灰色在 130 / 135 行 —— 同样是单类选择器，后写的赢，红色被自己的样式表盖掉了。这是交付件的 bug 不是取舍：一行下载失败而整行没有任何颜色，比多一点红更糟。照它的**意图**做，不照它的像素 |
 
 ---
 
@@ -64,5 +65,5 @@
 的，写完之后那个 sheet 一直在用 WinUI 原生 CheckBox——因为没有人把那一屏
 渲染出来看过。
 
-现在有 `--screens`：程序自己走 24 屏、逐屏出 PNG，CI 每次推送都跑，Release
+现在有 `--screens`：程序自己走 26 屏、逐屏出 PNG，CI 每次推送都跑，Release
 挂原图和联系表。**任何"改好了"的说法，都要有那一屏的图为证。**

@@ -502,6 +502,14 @@ public sealed class ShellHost : IDisposable
             _mainShell.ShowRowMenu(task);
             await walk.CaptureAsync("main-menu-row", _mainShell, w, h);
             _mainShell.ClosePopover();
+
+            // 贴着底边再来一张。下载中的行有 11 项，菜单比半扇窗还高 ——
+            // 从窗底往上 60px 的地方点开，夹位置要是没做对，菜单就会有
+            // 一截落在窗外。默认那个 (150,150) 永远放得下，拍多少张都
+            // 照不出这个毛病。
+            _mainShell.ShowRowMenu(task, new Windows.Foundation.Point(150, h - 60));
+            await walk.CaptureAsync("main-menu-row-low", _mainShell, w, h);
+            _mainShell.ClosePopover();
         }
 
         _mainShell.ShowDropTarget(true);

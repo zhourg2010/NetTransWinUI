@@ -192,8 +192,14 @@ public sealed partial class MainShell : UserControl
 
     internal void ShowSortMenu() => ShowViewMenu("view");
 
-    internal void ShowRowMenu(DownloadItemViewModel task) =>
-        ShowContextMenu(new RowContextRequest(task, new Point(150, 150)));
+    /// <summary>
+    /// 打开某一行的右键菜单。
+    ///
+    /// <paramref name="at"/> 是给巡回用的：菜单贴着窗口底边打开时才看得出
+    /// 夹位置有没有做对，而默认那个靠上的位置永远放得下。
+    /// </summary>
+    internal void ShowRowMenu(DownloadItemViewModel task, Point? at = null) =>
+        ShowContextMenu(new RowContextRequest(task, at ?? new Point(150, 150)));
 
     internal void ShowDropTarget(bool on) =>
         DropOverlay.Visibility = on ? Visibility.Visible : Visibility.Collapsed;

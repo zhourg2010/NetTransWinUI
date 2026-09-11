@@ -543,6 +543,18 @@ jobs:
 
       - name: Zip it
         run: |
+          # 上面那些检查是真的把程序跑起来的，跑过就会在同目录写下它的
+          # 便携数据。v0.1.13 就这么把 runner 的 netX.settings.json 和
+          # netX.startup.log 一起发出去了 —— 用户解压出来，下载目录指向
+          # D:\a\NetTransWinUI\...，日志是别人机器上的。绿色版该是干净的。
+          for leftover in netX.settings.json netX.hashes.json \
+                          netX.bigfiles.json netX.tidy.json netX.startup.log; do
+            if [ -f "netX/$leftover" ]; then
+              echo "清掉跑测试时写下的 $leftover"
+              rm "netX/$leftover"
+            fi
+          done
+
           zip -qr "netX-$TAG-win-x64.zip" netX
           ls -lh "netX-$TAG-win-x64.zip"
 

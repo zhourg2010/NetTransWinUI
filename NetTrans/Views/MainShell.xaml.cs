@@ -280,10 +280,21 @@ public sealed partial class MainShell : UserControl
             _ => VerticalAlignment.Stretch,
         };
 
-        BondShadow.Width = horizontal ? BondShadowReach : double.NaN;
-        BondShadow.Height = horizontal ? double.NaN : BondShadowReach;
+        // 让开缝上那一格。设计稿里柔和投影是详情窗洒过来的、硬线是详情窗
+        // 自己的 border-left，两者不叠；这边要是让渐变一路铺到最后一列，
+        // 两层黑就乘在一起：1−(1−.039)(1−.161)=.194，242 被压到 195 而不是
+        // 203。第一版就是这么差了 8 个灰阶。
+        BondShadow.Width = horizontal ? BondShadowReach - 1 : double.NaN;
+        BondShadow.Height = horizontal ? double.NaN : BondShadowReach - 1;
         BondShadow.HorizontalAlignment = across;
         BondShadow.VerticalAlignment = down;
+        BondShadow.Margin = edge switch
+        {
+            DockSide.Right => new Thickness(0, 0, 1, 0),
+            DockSide.Left => new Thickness(1, 0, 0, 0),
+            DockSide.Bottom => new Thickness(0, 0, 0, 1),
+            _ => new Thickness(0, 1, 0, 0),
+        };
 
         var stops = new GradientStopCollection();
         foreach (var (at, of) in BondShadowRamp)

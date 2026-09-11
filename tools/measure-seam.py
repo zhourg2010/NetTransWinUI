@@ -107,7 +107,7 @@ def clean_ramp(px, seam, w, h):
             continue
         if any(line[i + 1] - line[i] > 1 for i in range(len(line) - 1)):
             continue
-        kept.append(([(bg - v) * 100.0 / total for v in line], bg, line[-1]))
+        kept.append(([(bg - v) * 100.0 / total for v in line], bg, line[-1], line))
     return kept
 
 
@@ -119,6 +119,7 @@ def check(px, seam, w, h):
 
     n = REACH + 1
     avg = [sum(k[0][i] for k in kept) / len(kept) for i in range(n)]
+    avg_raw = [sum(k[3][i] for k in kept) / len(kept) for i in range(n)]
     bg = sum(k[1] for k in kept) / len(kept)
     seam_v = sum(k[2] for k in kept) / len(kept)
 
@@ -153,6 +154,10 @@ def check(px, seam, w, h):
     # —— 缝右边应当是干净的 ——
     swing = max(band) - min(band)
     print('  缝右 2..12px 起伏 %d 灰阶，设计那边是平的' % swing)
+    # 出问题的时候光有百分比不够用，把缝附近的原始灰阶也打出来 ——
+    # 不然每查一次都要再发一版才看得到像素。
+    print('  缝左 12..0 原始灰阶 %s  底色 %.0f'
+          % (' '.join('%d' % avg_raw[i] for i in range(n - 13, n)), bg))
     if swing > FLAT:
         problems.append('缝右边不平（起伏 %d 灰阶）：详情窗自己的边该是干净的' % swing)
     return problems

@@ -26,6 +26,8 @@ FRAME_HEIGHT = 680
 NAV_HEIGHT = 44
 BAR_HEIGHT = 49
 ROW_HEIGHT = 62
+ISLAND_WIDTH = 108      # 交付件的灵动岛，收起态
+ISLAND_HEIGHT = 37
 SEG_TOP = 44      # the segmented control butts straight up under the title bar
 SEG_HEIGHT = 32
 
@@ -215,6 +217,27 @@ def separators(image, left, top, bottom):
     return merged
 
 
+def island(image, left, right, top):
+    """主窗上方那颗纯黑的胶囊。
+
+    只认纯黑（#000，`.island{background:#000}`）：CI 的桌面上还开着一个
+    控制台窗口，它的底是 (12,12,12)，按"暗"去找会连它一起框进来。
+    """
+    px = image.load()
+    points = [
+        (x, y)
+        for y in range(max(0, top - 60), top)
+        for x in range(left, right)
+        if px[x, y] == (0, 0, 0)
+    ]
+    if not points:
+        return None, None
+
+    xs = [p[0] for p in points]
+    ys = [p[1] for p in points]
+    return max(xs) - min(xs) + 1, max(ys) - min(ys) + 1
+
+
 def main():
     if len(sys.argv) < 2:
         raise SystemExit(__doc__)
@@ -273,6 +296,12 @@ def main():
         gaps = [b - a for a, b in zip(dividers, dividers[1:])]
         pitch = max(set(gaps), key=gaps.count) if gaps else None
         expect("任务行高", pitch, ROW_HEIGHT)
+
+    print()
+    print("── 灵动岛（收起）──")
+    isle_w, isle_h = island(image, left, left + FRAME_WIDTH, top)
+    expect("灵动岛宽度", isle_w, ISLAND_WIDTH)
+    expect("灵动岛高度", isle_h, ISLAND_HEIGHT)
 
     if check and problems:
         print()

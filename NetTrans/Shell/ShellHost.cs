@@ -23,9 +23,15 @@ public sealed class ShellHost : IDisposable
     private const double FrameWidth = 536;
     private const double FrameHeight = 680;
     private const double IslandGap = 14;
-    private const double IslandCollapsedWidth = 152;
+
+    // 灵动岛是独立的顶层窗口，撑不成内容宽，只能写死。高度 37 / 52 本来
+    // 就量自交付件；宽度原先是 152 / 300，是猜的 —— 把交付件的岛单独渲染
+    // 出来量，收起是 108、展开是 260。多出来的 44px 全是右边的空白：岛里
+    // 那一行的第三列是 Width="*"，收起时副标题是折叠的，多余的宽度就全
+    // 摊在它身上，看上去像文字左对齐、右边空一大块。
+    private const double IslandCollapsedWidth = 108;
     private const double IslandCollapsedHeight = 37;
-    private const double IslandExpandedWidth = 300;
+    private const double IslandExpandedWidth = 260;
     private const double IslandExpandedHeight = 52;
 
     /// <summary>Only 36px of the frame stays on screen once it is edge-hidden.</summary>
